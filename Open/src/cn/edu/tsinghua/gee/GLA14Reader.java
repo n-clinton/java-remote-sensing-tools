@@ -48,6 +48,8 @@ public class GLA14Reader {
 		toks = line.split("=");
 		int numhead = Integer.parseInt(toks[1].replace(";", "").trim());
 		start = numhead*recl;
+		reader.close();
+		
 		glasFile = new RandomAccessFile(fileName, "r");
 	}
 	
@@ -62,8 +64,8 @@ public class GLA14Reader {
 		String[] lines = new String[40];
 		
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outName));
-		String header = "rec_ndx,lat,lon,elev,SigBegOff,SigEndOff," +
-				"gpCntRngOff1,gpCntRngOff2,gpCntRngOff3,gpCntRngOff4,gpCntRngOff5,gpCntRngOff6," +
+		String header = "rec_ndx,lat,lon,elev,SigEndOff," +
+				"SigBegHt,gpCntRngOff2,gpCntRngOff3,gpCntRngOff4,gpCntRngOff5,gpCntRngOff6," +
 				"gAmp1,gAmp2,gAmp3,gAmp4,gAmp5,gAmp6," +
 				"gArea1,gArea2,gArea3,gArea4,gArea5,gArea6";
 		writer.write(header+"\n");
@@ -108,7 +110,7 @@ public class GLA14Reader {
 				}
 				lines[i] += (String.format("%.5f", i_lon*Math.pow(10, -6))+",");
 			}
-			// i_elev mm
+			// i_elev mm, uncorrected
 			for (int i=0; i<40; i++) {
 				int i_elev = glasFile.readInt();
 				if (i_elev == badInt) {
@@ -138,7 +140,7 @@ public class GLA14Reader {
 				if (i_SigBegOff[i]==badInt || i_SigBegOff[i]>0) {
 					write[i] = false;
 				}
-				lines[i] += (i_SigBegOff[i]+",");
+				//lines[i] += (i_SigBegOff[i]+",");
 			}
 			
 			// skip to i_SigEndOff
@@ -159,23 +161,27 @@ public class GLA14Reader {
 			//System.out.println("Should be 3592: "+(glasFile.getFilePointer()-start)%recl);
 			// i_gpCntRngOff mm, Centroid range increment for all six peaks
 			for (int i=0; i<40; i++) {
-				for (int g=0; g<6; g++) {
+				double height; // computed relative to first Gaussian return
+				// g==0, first Gaussian, assumed ground
+				int i_gpCntRngOff_0 = glasFile.readInt();
+				// if there is no first Gaussian, don't write
+				if (i_gpCntRngOff_0==badInt || i_gpCntRngOff_0>0) {
+					write[i] = false;
+				}
+				else { // compute height from first Gaussian to the beginning of the waveform
+					height = ((i_gpCntRngOff_0 - i_SigBegOff[i])*0.001);
+					lines[i] += (height < 0 ? 0 : String.format("%.2f", height)) +",";
+				}
+				// other, possible Gaussians
+				for (int g=1; g<6; g++) {
 					int i_gpCntRngOff = glasFile.readInt();
-					// if the first peak is bad, then this is a no-data
+					// if bad, write a zero
 					if (i_gpCntRngOff==badInt || i_gpCntRngOff>0) {
-						if (g==0) {
-							write[i] = false;
-						}
-						lines[i] += 0 + ","; // write 0 instead of badInt
+						lines[i] += 0 + ",";
 					}
-					else { // compute range, convert to meters, write
-						double height = ((i_gpCntRngOff - i_SigBegOff[i])*0.001);
-						if (height < 0) { 
-							lines[i] += 0 + ","; // don't write negative height
-						}
-						else {
-							lines[i] += String.format("%.2f", height) + ",";
-						}
+					else { // compute the height from the first Gaussian to this one
+						height = ((i_gpCntRngOff_0 - i_gpCntRngOff)*0.001);
+						lines[i] += (height < 0 ? 0 : String.format("%.2f", height)) +",";
 					}
 				}
 			}
@@ -303,9 +309,8 @@ public class GLA14Reader {
 					writer.write(lines[l]+"\n");
 				}
 			}
-
-			//break;
-		}
+		} // end while
+		writer.close();
 	}
 
 	/**
