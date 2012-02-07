@@ -42,7 +42,9 @@ public class GLA14BatchProcess {
 		if (file.isFile()) {
 			// if it's a GLA14 file
 			if (file.getName().endsWith(".DAT") || file.getName().endsWith(".dat")) {
-				String out = output.getPath() + output.separator + file.getName().substring(0, file.getName().length()-4) + "_out.csv";
+				String out = output.getPath() + output.separator; // base output directory
+				out += file.getParentFile().getName().replace(".", "_") + "_"; // add the year and date
+				out += file.getName().substring(0, file.getName().length()-4) + "_out.csv"; // input filename
 				// should be set to go
 				try {
 					System.out.println("Input: "+file.getAbsolutePath());
@@ -66,11 +68,14 @@ public class GLA14BatchProcess {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// Test
-		String test = "/Users/nclinton/Documents/urban_ag/lidar/";
-		new GLA14BatchProcess(test, test);
-		// Big process.  All GLA14 data
+		// Mac test
+		//String test = "/Users/nclinton/Documents/urban_ag/lidar/";
+		//new GLA14BatchProcess(test, test);
 		
+		// Big process.  All GLA14 data
+		String allGLA14 = "C:\\Users\\Nicholas\\Documents\\GLA14.031\\";
+		String outDir = "C:\\Users\\Nicholas\\Documents\\GLA14.031.out\\";
+		new GLA14BatchProcess(allGLA14, outDir);
 	}
 
 }
