@@ -856,8 +856,11 @@ public class JAIUtils {
 		 
 		 // This assumes that the first tie point is for upper left corner
 		 TIFFField tpField = dir.getField(GeoTIFFTagSet.TAG_MODEL_TIE_POINT);
-		 double halfX = 0.5*xScale;
-		 double halfY = 0.5*yScale;
+		 //double halfX = 0.5*xScale;
+		 //double halfY = 0.5*yScale;
+		 // per GeoTiff spec.  But software dependent (ESRI?)
+		 double halfX = 0.0;
+		 double halfY = 0.0;
 		 double ulX = tpField.getAsDouble(3)+halfX;
 		 double ulY = tpField.getAsDouble(4)-halfY;
 		 pImage.setProperty("ulX", new Double(ulX));
@@ -1169,26 +1172,40 @@ public class JAIUtils {
 		
 		// testing large image reading 20110805
 		// image input
-		String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
+		//String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
 		//String imageFile = "C:/Users/owner/Documents/ASTL/SARP2011/30June2011b/MASTERL1B_1100306_09_20110630_2334_2341_V01_tir";
 		//String imageFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/MASTERL1B_1165100_04_20110608_2305_2310_V00_vis_swir";
-		ImageReader reader;
-		try {
-			// Read the input
-			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
-			final ParameterBlockJAI pbjImageRead;
-			pbjImageRead = new ParameterBlockJAI("ImageRead");
-			pbjImageRead.setParameter("Input", new File(imageFile));
-			pbjImageRead.setParameter("reader", reader);
-			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
-			RandomIter inputIter = RandomIterFactory.create(image, null);
-			image.getHeight();
-			image.getWidth();
-			image.getNumBands();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		ImageReader reader;
+//		try {
+//			// Read the input
+//			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+//			final ParameterBlockJAI pbjImageRead;
+//			pbjImageRead = new ParameterBlockJAI("ImageRead");
+//			pbjImageRead.setParameter("Input", new File(imageFile));
+//			pbjImageRead.setParameter("reader", reader);
+//			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
+//			RandomIter inputIter = RandomIterFactory.create(image, null);
+//			image.getHeight();
+//			image.getWidth();
+//			image.getNumBands();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		
+//		String image = "/Users/nclinton/Documents/GEE/MODIS_EVI_test/MCD43A4_005_2009_09_14.EVI.tif";
+//		describeGeoTiff(image);
+//		imageStats(readImage(image));
+		
+		// 20120208 Check for outliers
+		String eviDir = "/Users/nclinton/Documents/GEE/MODIS_EVI_test/";
+		File[] files = (new File(eviDir)).listFiles();
+		for (File f : files) {
+			String fName = f.getPath();
+			// if it's a TIFF
+			if (fName.endsWith(".tif") || fName.endsWith(".TIF")) {
+				imageStats(readImage(fName));
+			}
+		}
 		
 	}
 
