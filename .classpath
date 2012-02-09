@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="trunk/Open/src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/CommonsMath"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools2.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Weka"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JAI"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/ImageIO-ext"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GDAL1.9"/>
+	<classpathentry kind="lib" path="C:/Program Files/GDAL"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
