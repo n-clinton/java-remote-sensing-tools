@@ -241,7 +241,7 @@ public class GDALtest extends JFrame implements ActionListener{
 //						poBand.getYSize(), xsize, ysize,
 //						buf_type, data);
 				
-				returnVal = poBand.ReadRaster(0, 0, poBand.getXSize(), 
+				returnVal = poBand.ReadRaster_Direct(0, 0, poBand.getXSize(),
 						poBand.getYSize(), xsize, ysize,
 						buf_type, data.array());
 				

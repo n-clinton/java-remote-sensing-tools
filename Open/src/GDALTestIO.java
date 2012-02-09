@@ -60,82 +60,82 @@ public class GDALTestIO implements Runnable
     
     public void run()
     {
-        Dataset dataset = null;
-        Driver driver = null;
-        Band band = null;
-        
-        int xsize = 4000;
-        int ysize = 400;
-        
-        driver = gdal.GetDriverByName("GTiff");
-            
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * xsize);
-        byteBuffer.order(ByteOrder.nativeOrder());
-        FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-        int[] intArray = new int[xsize];
-        float[] floatArray = new float[xsize];
-        
-        dataset = driver.Create(filename, xsize, ysize, 1, gdalconst.GDT_Float32);
-        band = dataset.GetRasterBand(1);
-        
-        for(int iter = 0; iter < nbIters; iter++)
-        {
-            if (method == METHOD_DBB)
-            {
-                for( int i = 0; i < ysize; i++) {
-                    for( int j = 0; j < xsize; j++) {
-                        floatBuffer.put(j, (float) (i + j));
-                    }
-                    band.WriteRaster_Direct(0, i, xsize, 1, gdalconst.GDT_Float32, byteBuffer);
-                }
-            }
-            else
-            {
-                for( int i = 0; i < ysize; i++) {
-                    for( int j = 0; j < xsize; j++) {
-                        floatArray[j] = (float) (i + j);
-                    }
-                    band.WriteRaster(0, i, xsize, 1, floatArray);
-                }
-            }
-        }
-        
-        dataset.delete();
-        
-        /* Open the file to check the values */
-        dataset = gdal.Open(filename);
-        band = dataset.GetRasterBand(1);
-        
-        for(int iter = 0; iter < nbIters; iter++)
-        {
-            if (method == METHOD_DBB)
-            {
-                for( int i = 0; i < ysize; i++) {
-                    band.ReadRaster_Direct(0, i, xsize, 1, xsize, 1, gdalconst.GDT_Int32, byteBuffer);
-                    for( int j = 0; j < xsize; j++) {
-                        int val = byteBuffer.getInt(j*4);
-                        if (val != (i + j))
-                            throw new RuntimeException("Bad value for (" + j + "," + i + ") : " + val);
-                    }
-                }
-            }
-            else
-            {
-                for( int i = 0; i < ysize; i++) {
-                    band.ReadRaster(0, i, xsize, 1, intArray);
-                    for( int j = 0; j < xsize; j++) {
-                        int val = intArray[j];
-                        if (val != (i + j))
-                            throw new RuntimeException("Bad value for (" + j + "," + i + ") : " + val);
-                    }
-                } 
-            }
-        }
-        
-        dataset.delete();
-        
-        /* Free the memory occupied by the /vsimem file */
-        gdal.Unlink(filename);  
+//        Dataset dataset = null;
+//        Driver driver = null;
+//        Band band = null;
+//        
+//        int xsize = 4000;
+//        int ysize = 400;
+//        
+//        driver = gdal.GetDriverByName("GTiff");
+//            
+//        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * xsize);
+//        byteBuffer.order(ByteOrder.nativeOrder());
+//        FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
+//        int[] intArray = new int[xsize];
+//        float[] floatArray = new float[xsize];
+//        
+//        dataset = driver.Create(filename, xsize, ysize, 1, gdalconst.GDT_Float32);
+//        band = dataset.GetRasterBand(1);
+//        
+//        for(int iter = 0; iter < nbIters; iter++)
+//        {
+//            if (method == METHOD_DBB)
+//            {
+//                for( int i = 0; i < ysize; i++) {
+//                    for( int j = 0; j < xsize; j++) {
+//                        floatBuffer.put(j, (float) (i + j));
+//                    }
+//                    band.WriteRaster_Direct(0, i, xsize, 1, gdalconst.GDT_Float32, byteBuffer);
+//                }
+//            }
+//            else
+//            {
+//                for( int i = 0; i < ysize; i++) {
+//                    for( int j = 0; j < xsize; j++) {
+//                        floatArray[j] = (float) (i + j);
+//                    }
+//                    band.WriteRaster(0, i, xsize, 1, floatArray);
+//                }
+//            }
+//        }
+//        
+//        dataset.delete();
+//        
+//        /* Open the file to check the values */
+//        dataset = gdal.Open(filename);
+//        band = dataset.GetRasterBand(1);
+//        
+//        for(int iter = 0; iter < nbIters; iter++)
+//        {
+//            if (method == METHOD_DBB)
+//            {
+//                for( int i = 0; i < ysize; i++) {
+//                    band.ReadRaster_Direct(0, i, xsize, 1, xsize, 1, gdalconst.GDT_Int32, byteBuffer);
+//                    for( int j = 0; j < xsize; j++) {
+//                        int val = byteBuffer.getInt(j*4);
+//                        if (val != (i + j))
+//                            throw new RuntimeException("Bad value for (" + j + "," + i + ") : " + val);
+//                    }
+//                }
+//            }
+//            else
+//            {
+//                for( int i = 0; i < ysize; i++) {
+//                    band.ReadRaster(0, i, xsize, 1, intArray);
+//                    for( int j = 0; j < xsize; j++) {
+//                        int val = intArray[j];
+//                        if (val != (i + j))
+//                            throw new RuntimeException("Bad value for (" + j + "," + i + ") : " + val);
+//                    }
+//                } 
+//            }
+//        }
+//        
+//        dataset.delete();
+//        
+//        /* Free the memory occupied by the /vsimem file */
+//        gdal.Unlink(filename);  
     }
 
     public static void main(String[] args) throws InterruptedException

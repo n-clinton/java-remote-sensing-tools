@@ -1,7 +1,7 @@
 /**
  * 
  */
-package cn.edu.tsinghua.gee;
+package cn.edu.tsinghua.lidar;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
