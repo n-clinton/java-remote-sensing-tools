@@ -28,6 +28,7 @@ import it.geosolutions.imageio.plugins.envihdr.ENVIHdrImageReaderSpi;
 import it.geosolutions.imageio.plugins.geotiff.GeoTiffImageReaderSpi;
 
 import java.awt.Point;
+import java.awt.geom.AffineTransform;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
@@ -67,6 +68,7 @@ import org.apache.commons.math.linear.Array2DRowRealMatrix;
 import org.apache.commons.math.linear.ArrayRealVector;
 import org.apache.commons.math.linear.RealVector;
 
+import com.berkenviro.gis.GISUtils;
 import com.sun.media.imageio.plugins.tiff.GeoTIFFTagSet;
 import com.sun.media.jai.codec.FileSeekableStream;
 import com.sun.media.jai.codec.ImageCodec;
@@ -78,6 +80,8 @@ import com.sun.media.jai.codec.TIFFDecodeParam;
 import com.sun.media.jai.codec.TIFFDirectory;
 import com.sun.media.jai.codec.TIFFEncodeParam;
 import com.sun.media.jai.codec.TIFFField;
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.util.AffineTransformation;
 
 /**
  * 
@@ -464,32 +468,25 @@ public class JAIUtils {
 	/**
 	 * This method takes a double[] [x,y] in the coordinate space of the 
 	 * projected image and the reference image and returns the pixel [x,y].
-	 * Returns null if the coordinates are out of bounds.
+	 * Returns null if the coordinates are out of bounds.  Unsuitable for geographic!!
 	 * 
 	 * @param ImageProjXY is the projected coordinate array {x,y}
 	 * @param pImage is the PlanarImage to search
 	 * @return an int[] of pixel {x,y}
 	 */
-	public static int[] getPixelXY(double[] ImageProjXY, PlanarImage pImage) {
+	public static int[] getPixelXY(double[] ImageProjXY, PlanarImage pImage) throws Exception {
 		// check to make sure the tiff is registered
 		if (!isRegistered(pImage)) { register(pImage); }
-		// get the registration parameters from the properties
-		double ulX = ((Double) pImage.getProperty("ulX")).doubleValue();
-		double ulY = ((Double) pImage.getProperty("ulY")).doubleValue();
-		double deltaX = ((Double) pImage.getProperty("deltaX")).doubleValue();
-		double deltaY = ((Double) pImage.getProperty("deltaY")).doubleValue();
-		// coordinate conversion
-		double pixelX = (ImageProjXY[0] - ulX + deltaX/2.0)/deltaX;
-		double pixelY = (ImageProjXY[1] - ulY + deltaY/2.0)/deltaY;
-		// the integer part is the pixel
-		int x = (int)pixelX;
-		int y = (int)pixelY;
-		// check at boundaries
-		if (x<0 | y<0 | x>pImage.getWidth() | y>pImage.getHeight()) {
-			return null;
+		
+		AffineTransformation at = GISUtils.raster2proj(pImage);
+		AffineTransformation inv = GISUtils.proj2raster(at);
+		Coordinate pix = new Coordinate();
+		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
+		if (pix.x<0 || pix.x > pImage.getWidth() || pix.y<0 || pix.y>pImage.getHeight()) {
+			throw new Exception("Impossible coordinates: "+pix);
 		}
-		int[] pixelXY = {x, y};
-		return pixelXY;
+		// this agrees with ArcGIS, not necessarily ENVI
+		return new int[] {(int)(pix.x), (int)(pix.y)};
 	}
 
 	/**
@@ -501,27 +498,18 @@ public class JAIUtils {
 	 * @param pImage is the image to use
 	 * @return a double of projected {x,y}
 	 */
-	public static double[] getProjectedXY(int[] pixelXY, PlanarImage pImage) {
+	public static double[] getProjectedXY(int[] pixelXY, PlanarImage pImage) throws Exception {
 		// check to make sure the tiff is registered
-		if (!isRegistered(pImage)) { register(pImage); }
-		// get the registration parameters from the properties
-		double ulX = ((Double) pImage.getProperty("ulX")).doubleValue();
-		double ulY = ((Double) pImage.getProperty("ulY")).doubleValue();
-		double deltaX = ((Double) pImage.getProperty("deltaX")).doubleValue();
-		double deltaY = ((Double) pImage.getProperty("deltaY")).doubleValue();
-		// check at boundaries
-		int x = pixelXY[0];
-		int y = pixelXY[1];
-		if (x<0 | y<0 | x>pImage.getWidth() | y>pImage.getHeight()) {
-			return null;
+		Coordinate pix = new Coordinate(pixelXY[0], pixelXY[1]);
+		if (pix.x<0 | pix.y<0 | pix.x>pImage.getWidth() | pix.y>pImage.getHeight()) {
+			throw new Exception("Outside image bounds: "+pix);
 		}
-		// coordinate conversion
-		double Xproj;
-		double Yproj;
-		Xproj = ulX + x*deltaX;
-		Yproj = ulY + y*deltaY;
-		double[] projectedXY = {Xproj, Yproj};
-		return projectedXY;
+		if (!isRegistered(pImage)) { register(pImage); }
+		AffineTransformation at = GISUtils.raster2proj(pImage);
+		// projected pixel, empty for now
+		Coordinate projPix = new Coordinate();
+		at.transform(pix, projPix);
+		return new double[] {projPix.x, projPix.y};
 	}
 
 	/**
@@ -586,7 +574,7 @@ public class JAIUtils {
 	 * @param pImage is the image on which to overlay
 	 * @return the pixel value
 	 */
-	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage) {
+	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage) throws Exception {
 		if (pImage.getProperty("isReferenced").getClass() != Boolean.class ||
 			(Boolean)pImage.getProperty("isReferenced").equals(false) ) {
 				register(pImage); 
@@ -598,6 +586,23 @@ public class JAIUtils {
 		return iterator.getSampleDouble(pixelXY[0],pixelXY[1],0);
 	}
 
+	/**
+	 * This method is for overlaying a georeferenced point on a referenced image.  
+	 * Assumes that the projections match.
+	 * Caller needs to instantiate the RandomIter and call JAIUtils.register(pImage) first.
+	 * 
+	 * @param pt is the point in projected coordinates
+	 * @param pImage is the image on which to overlay
+	 * @param iterator is a RandomIter for pImage
+	 * @return the pixel value
+	 */
+	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage, RandomIter iterator) throws Exception {
+		double[] xy = {pt.getX(), pt.getY()};
+		int[] pixelXY = getPixelXY(xy, pImage);
+		iterator = RandomIterFactory.create(pImage, null);
+		return iterator.getSampleDouble(pixelXY[0],pixelXY[1],0);
+	}
+	
 	/**
 	 * Checks for GeoTIFF tags.  For our purposes, these are necessary:
 	 * GeoTIFFTagSet.TAG_MODEL_PIXEL_SCALE
@@ -856,13 +861,15 @@ public class JAIUtils {
 		 
 		 // This assumes that the first tie point is for upper left corner
 		 TIFFField tpField = dir.getField(GeoTIFFTagSet.TAG_MODEL_TIE_POINT);
+		 
+		 // non-standard "PixelIsPoint space
 		 //double halfX = 0.5*xScale;
 		 //double halfY = 0.5*yScale;
-		 // per GeoTiff spec.  But software dependent (ESRI?)
-		 double halfX = 0.0;
-		 double halfY = 0.0;
-		 double ulX = tpField.getAsDouble(3)+halfX;
-		 double ulY = tpField.getAsDouble(4)-halfY;
+		 //double ulX = tpField.getAsDouble(3)+halfX;
+		 //double ulY = tpField.getAsDouble(4)-halfY;
+		 // default pixel space: http://www.remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2
+		 double ulX = tpField.getAsDouble(3);
+		 double ulY = tpField.getAsDouble(4);
 		 pImage.setProperty("ulX", new Double(ulX));
 		 pImage.setProperty("ulY", new Double(ulY));
 		 
@@ -1172,40 +1179,26 @@ public class JAIUtils {
 		
 		// testing large image reading 20110805
 		// image input
-		//String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
+		String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
 		//String imageFile = "C:/Users/owner/Documents/ASTL/SARP2011/30June2011b/MASTERL1B_1100306_09_20110630_2334_2341_V01_tir";
 		//String imageFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/MASTERL1B_1165100_04_20110608_2305_2310_V00_vis_swir";
-//		ImageReader reader;
-//		try {
-//			// Read the input
-//			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
-//			final ParameterBlockJAI pbjImageRead;
-//			pbjImageRead = new ParameterBlockJAI("ImageRead");
-//			pbjImageRead.setParameter("Input", new File(imageFile));
-//			pbjImageRead.setParameter("reader", reader);
-//			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
-//			RandomIter inputIter = RandomIterFactory.create(image, null);
-//			image.getHeight();
-//			image.getWidth();
-//			image.getNumBands();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-		
-//		String image = "/Users/nclinton/Documents/GEE/MODIS_EVI_test/MCD43A4_005_2009_09_14.EVI.tif";
-//		describeGeoTiff(image);
-//		imageStats(readImage(image));
-		
-		// 20120208 Check for outliers
-		String eviDir = "/Users/nclinton/Documents/GEE/MODIS_EVI_test/";
-		File[] files = (new File(eviDir)).listFiles();
-		for (File f : files) {
-			String fName = f.getPath();
-			// if it's a TIFF
-			if (fName.endsWith(".tif") || fName.endsWith(".TIF")) {
-				imageStats(readImage(fName));
-			}
+		ImageReader reader;
+		try {
+			// Read the input
+			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+			final ParameterBlockJAI pbjImageRead;
+			pbjImageRead = new ParameterBlockJAI("ImageRead");
+			pbjImageRead.setParameter("Input", new File(imageFile));
+			pbjImageRead.setParameter("reader", reader);
+			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
+			RandomIter inputIter = RandomIterFactory.create(image, null);
+			image.getHeight();
+			image.getWidth();
+			image.getNumBands();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+		
 		
 	}
 
