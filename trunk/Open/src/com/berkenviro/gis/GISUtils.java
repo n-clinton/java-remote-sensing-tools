@@ -499,26 +499,27 @@ public class GISUtils {
 		
 		// iterate over the centroids
 		while (centroidIter.hasNext()) {
-	
-			feature = centroidIter.next();
-			// get id
-			id = ((Integer) feature.getAttribute("id_")).intValue();
-			// get the projected coordinates of the point
-			trainPtXY[0] = ((Point)feature.getDefaultGeometry()).getX();
-			trainPtXY[1] = ((Point)feature.getDefaultGeometry()).getY();
-			// convert to pixel coordinates
-			imageXY = JAIUtils.getPixelXY(trainPtXY, image);
-			// make a polygon in pixel coordinates
-			pixelPoly = makePixelPoly(imageXY[0], imageXY[1]);
-			// get a transformation based on the image georeferencing
-			AffineTransformation pixel2proj = raster2proj(ref);
-			// transform the pixel polygon into a projected polygon
-			pixelPoly.apply(pixel2proj);
-			// update
-			pixelPoly.geometryChanged();
-				
-			pixels.add(makeBasicPolyFeature(pixelPoly, id, "pixel"));
-				
+			try {
+				feature = centroidIter.next();
+				// get id
+				id = ((Integer) feature.getAttribute("id_")).intValue();
+				// get the projected coordinates of the point
+				trainPtXY[0] = ((Point)feature.getDefaultGeometry()).getX();
+				trainPtXY[1] = ((Point)feature.getDefaultGeometry()).getY();
+				// convert to pixel coordinates
+				imageXY = JAIUtils.getPixelXY(trainPtXY, image);
+				// make a polygon in pixel coordinates
+				pixelPoly = makePixelPoly(imageXY[0], imageXY[1]);
+				// get a transformation based on the image georeferencing
+				AffineTransformation pixel2proj = raster2proj(ref);
+				// transform the pixel polygon into a projected polygon
+				pixelPoly.apply(pixel2proj);
+				// update
+				pixelPoly.geometryChanged();
+				pixels.add(makeBasicPolyFeature(pixelPoly, id, "pixel"));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		
 		DataStore ds = makeShapefileDataStore(outShpFile, 
