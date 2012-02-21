@@ -234,7 +234,7 @@ public class ArffMakr {
 		//Iterator iter = points.iterator();
 		FeatureIterator<SimpleFeature> iter = points.features();
 		while (iter.hasNext()) {
-
+			
 			curInst = new Instance(dummy.numAttributes());
 			curInst.setDataset(dummy);
 			
@@ -260,8 +260,14 @@ public class ArffMakr {
 			// set the other values from the imagery, use the order[] 
 			for(Attribute curAtt : order) {
 				curImage = (PlanarImage) images.get(curAtt);
-				curInst.setValue(curAtt, JAIUtils.imageValue(pt, curImage));
-				//System.out.println(curAtt.name()+" = "+curVal);
+				// MIGHT be MISSING!!!!
+				try {
+					curInst.setValue(curAtt, JAIUtils.imageValue(pt, curImage));
+					//System.out.println(curAtt.name()+" = "+curVal);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			try {
 				saver.writeIncremental(curInst);
