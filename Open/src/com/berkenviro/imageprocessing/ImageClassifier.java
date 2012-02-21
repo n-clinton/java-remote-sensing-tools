@@ -196,34 +196,32 @@ public class ImageClassifier {
 				// read each image into the appropriate attribute of the Instance
 				for (int x=x0; x<x1; x++) { 
 					
-					// reference image coords
-					xy[0] = x;
-					xy[1] = y;
-					// projected coords on reference image
-					projXY = com.berkenviro.imageprocessing.JAIUtils.getProjectedXY(xy, pImageR);
-					// convert to pixel coords on attribute image
-					xy = com.berkenviro.imageprocessing.JAIUtils.getPixelXY(projXY, pImage);
-					// these are the attribute image pixel coordinates, uppercase
-					X = xy[0]; 
-					Y = xy[1];
-					
-					// get sample with X,Y uppercase
-					pixelValue = iterator.getSampleDouble(X,Y,0);
-					slice[x].setValue(c, pixelValue);
-					
-					// if this is the last scan of the line, all the data has been read
-					if (c == training.numAttributes()-1 || 
-					   (c == training.numAttributes()-2 && training.classAttribute().index() == training.numAttributes()-1)) {
+					try {
+						// reference image coords
+						xy[0] = x;
+						xy[1] = y;
+						// projected coords on reference image
+						projXY = com.berkenviro.imageprocessing.JAIUtils.getProjectedXY(xy, pImageR);
+						// convert to pixel coords on attribute image
+						xy = com.berkenviro.imageprocessing.JAIUtils.getPixelXY(projXY, pImage);
+						// these are the attribute image pixel coordinates, uppercase
+						X = xy[0]; 
+						Y = xy[1];
 						
-						// the instance should now have all the data in it, classify
-						try {
+						// get sample with X,Y uppercase
+						pixelValue = iterator.getSampleDouble(X,Y,0);
+						slice[x].setValue(c, pixelValue);
+						
+						// if this is the last scan of the line, all the data has been read
+						if (c == training.numAttributes()-1 || 
+						   (c == training.numAttributes()-2 && training.classAttribute().index() == training.numAttributes()-1)) {
+							// the instance should now have all the data in it, classify
 							prediction = myP.classifyInstance(slice[x]);
-						} catch (Exception e) {
-							e.printStackTrace();
+							classifiedOut.setSample(x,y,0,(float) prediction);
 						}
-
-						classifiedOut.setSample(x,y,0,(float) prediction);
-
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
     			
 				} // end pixels
@@ -338,42 +336,41 @@ public class ImageClassifier {
 				// get the image that corresponds to the attribute
 				pImage = (PlanarImage) images.get(training.attribute(c));
 				iterator = RandomIterFactory.create(pImage, null);
-				
 				// read each image into the appropriate attribute of the Instance
 				for (int x=x0; x<x1; x++){	// each pixel
 					
-					// reference image coords
-					xy[0] = x;
-					xy[1] = y;
-					// projected coords on reference image
-					projXY = com.berkenviro.imageprocessing.JAIUtils.getProjectedXY(xy, pImageR);
-					// convert to pixel coords on attribute image
-					xy = com.berkenviro.imageprocessing.JAIUtils.getPixelXY(projXY, pImage);
-					// these are the attribute image pixel coordinates, uppercase
-					X = xy[0]; 
-					Y = xy[1];
-					
-					// get sample with X,Y uppercase
-					pixelValue = iterator.getSampleDouble(X,Y,0);
-					slice[x].setValue(c, pixelValue);
-					
-					// if this is the last scan of the line, all the data has been read
-					if (c == training.numAttributes()-1 || 
-					   (c == training.numAttributes()-2 && training.classAttribute().index() == training.numAttributes()-1)) {
+					try {
+						// reference image coords
+						xy[0] = x;
+						xy[1] = y;
+						// projected coords on reference image
+						projXY = com.berkenviro.imageprocessing.JAIUtils.getProjectedXY(xy, pImageR);
+						// convert to pixel coords on attribute image
+						xy = com.berkenviro.imageprocessing.JAIUtils.getPixelXY(projXY, pImage);
+						// these are the attribute image pixel coordinates, uppercase
+						X = xy[0]; 
+						Y = xy[1];
 						
-						// the instance should now have all the data in it, classify
-						try {
+						// get sample with X,Y uppercase
+						pixelValue = iterator.getSampleDouble(X,Y,0);
+						slice[x].setValue(c, pixelValue);
+						
+						// if this is the last scan of the line, all the data has been read
+						if (c == training.numAttributes()-1 || 
+						   (c == training.numAttributes()-2 && training.classAttribute().index() == training.numAttributes()-1)) {
+							
+							// the instance should now have all the data in it, classify
 							// the following is from the Weka book
 							classIndex = (int) myP.classifyInstance(slice[x]);
 							// named predictor
 							predictor = training.classAttribute().value(classIndex);
-						} catch (Exception e) {
-							e.printStackTrace();
+							classifiedOut.setSample(x,y,0,(int)classIndex);
 						}
-						
-						classifiedOut.setSample(x,y,0,(int)classIndex);
-
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
+					
 				} // end pixels
 			} // end layers
 		} // end lines
