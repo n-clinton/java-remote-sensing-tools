@@ -29,6 +29,8 @@ public class GLA14Reader {
 	private int recl; // record length in bytes
 	private int start; // length of header in bytes
 	
+	private boolean error; // switch for error printing
+	
 	/**
 	 * Make a reader, if possible.  If not, an exception will be thrown.
 	 * @param fileName
@@ -51,6 +53,15 @@ public class GLA14Reader {
 		reader.close();
 		
 		glasFile = new RandomAccessFile(fileName, "r");
+		error = false;
+	}
+	
+	/**
+	 * Set the errors to display.  Off is default.
+	 * @param err
+	 */
+	public void setError(boolean err) {
+		error = err;
 	}
 	
 	/**
@@ -125,7 +136,7 @@ public class GLA14Reader {
 			for (int i=0; i<40; i++) {
 				int i_sigmaatt = glasFile.readUnsignedShort();
 				if (i_sigmaatt != 0) {
-					//System.err.println("\t Bad Attitude, i= "+i+": "+i_sigmaatt);
+					if (error) { System.err.println("\t Bad Attitude, i= "+i+": "+i_sigmaatt); }
 					write[i] = false; 
 				}
 			}
@@ -225,7 +236,7 @@ public class GLA14Reader {
 			for (int i=0; i<40; i++) {
 				int i_nPeaks1 = glasFile.readUnsignedByte();
 				if (i_nPeaks1 < 1) {
-					//System.err.println("\t No peaks, i= "+i+": "+i_nPeaks1);
+					if (error) { System.err.println("\t No peaks, i= "+i+": "+i_nPeaks1); }
 					write[i] = false; 
 				}
 			}
@@ -235,7 +246,7 @@ public class GLA14Reader {
 			for (int i=0; i<40; i++) {
 				int i_LandVar = glasFile.readUnsignedShort();
 				if (i_LandVar > 20000) { // anything close to the badShort is bad
-					//System.out.println("\t SD of land Gaussian fit too high, i= "+i+": "+i_LandVar);
+					if (error) { System.err.println("\t SD of land Gaussian fit too high, i= "+i+": "+i_LandVar); }
 					write[i] = false; 
 				}
 			}
@@ -254,7 +265,7 @@ public class GLA14Reader {
 				}
 				else { // saturated
 					write[i] = false; //don't use
-					//System.err.println("\t Saturated, i= "+i+": "+loNibble);
+					if (error) { System.err.println("\t Saturated, i= "+i+": "+loNibble); }
 				}
 			}
 			
@@ -265,7 +276,7 @@ public class GLA14Reader {
 				int i_gval_rcv = glasFile.readUnsignedShort();
 				if (i_gval_rcv > 200) {
 					write[i] = false; // don't use
-					//System.err.println("\t Gain is too high, i= "+i+": "+i_gval_rcv);
+					if (error) { System.err.println("\t Gain is too high, i= "+i+": "+i_gval_rcv); }
 				}
 			}
 			
@@ -276,7 +287,7 @@ public class GLA14Reader {
 				int i_FRir_qaFlag = glasFile.readUnsignedByte();
 				if (i_FRir_qaFlag <= 12) {
 					write[i] = false; 
-					//System.err.println("\t Too cloudy, i= "+i+": "+i_FRir_qaFlag);
+					if (error) { System.err.println("\t Too cloudy, i= "+i+": "+i_FRir_qaFlag); }
 				}
 			}
 			
@@ -295,7 +306,7 @@ public class GLA14Reader {
 				//System.out.println ("SNR, i= "+i+": "+snr);
 				if (snr < 15) { // sort of arbitrary snr threshold
 					write[i] = false; // don't use
-					//System.err.println ("\t SNR too low, i= "+i+": "+snr);
+					if (error) { System.err.println ("\t SNR too low, i= "+i+": "+snr); }
 				}
 			}
 			
@@ -320,11 +331,21 @@ public class GLA14Reader {
 		
 		GLA14Reader reader;
 		try {
-			String testFile = "/Users/nclinton/Documents/urban_ag/lidar/GLA14/GLA14_05021720_r3240_428_L3B.P1655_01_00";
+			//String testFile = "/Users/nclinton/Documents/urban_ag/lidar/GLA14/GLA14_05021720_r3240_428_L3B.P1655_01_00";
 			//String testFile = "/Users/nclinton/Documents/urban_ag/lidar/2005.06.10/GLA14_531_2111_003_0225_0_01_0001.DAT";
-			reader = new GLA14Reader(testFile);
-			reader.write("/Users/nclinton/Documents/urban_ag/lidar/GLA14/GLA14_05021720_r3240_428_L3B.P1655_01_00_out.txt");
+			//reader = new GLA14Reader(testFile);
+			//reader.write("/Users/nclinton/Documents/urban_ag/lidar/GLA14/GLA14_05021720_r3240_428_L3B.P1655_01_00_out.txt");
 			//reader.write("/Users/nclinton/Documents/urban_ag/lidar/2005.06.10/GLA14_531_2111_003_0225_0_01_0001_out.txt");
+			
+			// check of 2006
+			//String test2006 = "C:\\Users\\Nicholas\\Documents\\GLA14.031\\2006.03.26\\GLA14_531_2115_002_0407_0_01_0001.DAT";
+			String test2006 = "C:\\Users\\Nicholas\\Documents\\GLA14.031\\2006.06.20\\GLA14_531_2115_003_0323_0_01_0001.DAT";
+			reader = new GLA14Reader(test2006);
+			reader.setError(true);
+			//reader.write("C:\\Users\\Nicholas\\Documents\\GLA14.031\\2006.03.26\\GLA14_531_2115_002_0407_0_01_0001_out_check.csv");
+			reader.write("C:\\Users\\Nicholas\\Documents\\GLA14.031\\2006.06.20\\GLA14_531_2115_003_0323_0_01_0001_out_check.csv");
+			// Something very wrong.  Looks like ALL error flags activated!
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
