@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="trunk/Open/src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Program Files/GDAL/java/gdal.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Program Files/GDAL"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/CommonsMath"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools2.7"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Weka"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JAI"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/ImageIO-ext"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GDAL1.9"/>
-	<classpathentry kind="lib" path="C:/Program Files/GDAL"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools2.7.4"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JavaAPIforKml"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
