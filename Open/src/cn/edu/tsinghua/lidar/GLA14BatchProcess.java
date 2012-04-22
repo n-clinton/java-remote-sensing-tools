@@ -10,6 +10,9 @@ import java.io.File;
  *
  */
 public class GLA14BatchProcess {
+	public static int GLA14_R33 = 33;
+	public static int GLA14_R31 = 31;
+	private int release;
 
 	// directories
 	private File parent;
@@ -19,8 +22,10 @@ public class GLA14BatchProcess {
 	 * 
 	 * @param parentDir
 	 * @param outputDir
+	 * @param r is either GLA14_R31 or GLA14_R33
 	 */
-	public GLA14BatchProcess(String parentDir, String outputDir) {
+	public GLA14BatchProcess(String parentDir, String outputDir, int r) {
+		release = r;
 		parent = new File(parentDir);
 		if (parent.isDirectory()) { // go in there
 			// put the output here:
@@ -33,6 +38,7 @@ public class GLA14BatchProcess {
 			}
 		}
 	}
+	
 	
 	/**
 	 * 
@@ -50,7 +56,12 @@ public class GLA14BatchProcess {
 					System.out.println("Input: "+file.getAbsolutePath());
 					System.out.println("Output: "+out);
 					GLA14Reader reader = new GLA14Reader(file.getAbsolutePath());
-					reader.write(out);
+					if (release == GLA14_R33) {
+						reader.r33write(out);
+					}
+					else {
+						reader.write(out);
+					}
 				} catch(Exception e) {
 					e.printStackTrace();
 				}
@@ -65,7 +76,9 @@ public class GLA14BatchProcess {
 	}
 	
 	/**
-	 * @param args
+	 * @param args is a String array (space separated strings) or arguments
+	 * 			args[0] is the full path of the input directory
+	 * 			args[1] is the full path of the output directory
 	 */
 	public static void main(String[] args) {
 		// Mac test
@@ -73,9 +86,16 @@ public class GLA14BatchProcess {
 		//new GLA14BatchProcess(test, test);
 		
 		// Big process.  All GLA14 data
-		String allGLA14 = "C:\\Users\\Nicholas\\Documents\\GLA14.031\\";
-		String outDir = "C:\\Users\\Nicholas\\Documents\\GLA14.031.out\\";
-		new GLA14BatchProcess(allGLA14, outDir);
+//		String allGLA14 = "C:\\Users\\Nicholas\\Documents\\GLA14.031\\";
+//		String outDir = "C:\\Users\\Nicholas\\Documents\\GLA14.031.out\\";
+//		new GLA14BatchProcess(allGLA14, outDir, GLA14BatchProcess.GLA14_R31);
+		
+		// r33
+//		String allGLA14 = "D:/GLA14.033/";
+//		String outDir = "C:/Users/Nicholas/Documents/GLA14.033.out/";
+//		new GLA14BatchProcess(allGLA14, outDir, GLA14BatchProcess.GLA14_R33);
+		
+		new GLA14BatchProcess(args[0], args[1], GLA14BatchProcess.GLA14_R33);
 	}
 
 }

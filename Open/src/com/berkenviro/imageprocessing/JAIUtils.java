@@ -295,7 +295,7 @@ public class JAIUtils {
 	
 		// set the filename property
 		im.setProperty("fileName", filename);
-		System.out.println("Loaded: "+im.getProperty("fileName"));
+		//System.out.println("Loaded: "+im.getProperty("fileName"));
 		
 	    // For now ... make x & y tiles 512 **Note:  shouldn't hardcode this
 	    SampleModel sampleModel = im.getSampleModel().createCompatibleSampleModel(512,512);
@@ -467,8 +467,8 @@ public class JAIUtils {
 
 	/**
 	 * This method takes a double[] [x,y] in the coordinate space of the 
-	 * projected image and the reference image and returns the pixel [x,y].
-	 * Returns null if the coordinates are out of bounds.  Unsuitable for geographic!!
+	 * projected image and the reference image and returns the [x,y]
+	 * indices of the pixel containing the projected point.
 	 * 
 	 * @param ImageProjXY is the projected coordinate array {x,y}
 	 * @param pImage is the PlanarImage to search
@@ -490,17 +490,16 @@ public class JAIUtils {
 	}
 
 	/**
-	 * This method takes a double[] [x,y] in the coordinate space of the 
-	 * projected image and the reference image and returns the the pixel [x,y].
-	 * Returns null if the coordinates are out of bounds.
+	 * This method takes an int[] [x,y] of the pixel coordinates and returns the 
+	 * center of the pixel in projected coordinates.
 	 * 
-	 * @param pixelXY is the pixel coordinates
+	 * @param pixelXY is the pixel indices
 	 * @param pImage is the image to use
-	 * @return a double of projected {x,y}
+	 * @return a double[] {x,y} projected coordinates of the pixel centroid
 	 */
 	public static double[] getProjectedXY(int[] pixelXY, PlanarImage pImage) throws Exception {
 		// check to make sure the tiff is registered
-		Coordinate pix = new Coordinate(pixelXY[0], pixelXY[1]);
+		Coordinate pix = new Coordinate(pixelXY[0]+0.5, pixelXY[1]+0.5);
 		if (pix.x<0 | pix.y<0 | pix.x>pImage.getWidth() | pix.y>pImage.getHeight()) {
 			throw new Exception("Outside image bounds: "+pix);
 		}
@@ -599,7 +598,6 @@ public class JAIUtils {
 	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage, RandomIter iterator) throws Exception {
 		double[] xy = {pt.getX(), pt.getY()};
 		int[] pixelXY = getPixelXY(xy, pImage);
-		iterator = RandomIterFactory.create(pImage, null);
 		return iterator.getSampleDouble(pixelXY[0],pixelXY[1],0);
 	}
 	
@@ -670,7 +668,7 @@ public class JAIUtils {
 		rt.gc();
 		rt.gc();
 		long mem = rt.freeMemory();
-		System.out.println("Free memory = "+mem);
+		//System.out.println("Free memory = "+mem);
 	}
 
 	/**

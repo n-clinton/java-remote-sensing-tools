@@ -25,15 +25,15 @@
 package com.berkenviro.gis;
 
 
-import com.berkenviro.imageprocessing.JAIUtils;
-
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -42,7 +42,7 @@ import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
 import org.apache.commons.math.linear.ArrayRealVector;
-import org.apache.commons.math.stat.StatUtils;
+import org.apache.commons.math.stat.descriptive.SummaryStatistics;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFactorySpi;
 import org.geotools.data.FeatureSource;
@@ -57,12 +57,19 @@ import org.geotools.feature.FeatureCollections;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.geotools.referencing.datum.DefaultGeodeticDatum;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.datum.Ellipsoid;
+import org.opengis.referencing.operation.MathTransform;
 
+import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
@@ -81,131 +88,107 @@ import com.vividsolutions.jts.geom.util.NoninvertibleTransformationException;
  * georegistration, etc.  Bundled here as static convenience methods.
  */
 public class GISUtils {
-
 	
-	
-	
-	/*
-	 * Method to create stats from a polygon.  Assumes same projection.
-	 * Converts the Polygon to a Geometry in input image coords first.
+	/**
+	 * Return ESRI world Mollweide according to Spatial-reference.org
+	 * @return
+	 * @throws FactoryException
 	 */
-	public static void polyStats(Polygon p, PlanarImage pi) {
-		
-		AffineTransformation at = raster2proj(pi);
-		AffineTransformation inv = proj2raster(at);
-		// transform the Shape to raster coordinates
-		p.apply(inv);
-		
-		// iterate over all the pixels in the area, put in a List
-		LinkedList<Double> pixelVals = new LinkedList<Double>();
-		Envelope env  = p.getEnvelopeInternal();
-		RandomIter iterator = RandomIterFactory.create(pi, null);
-		
-		// compute bounds from the extent of the shape and the image
-		int maxX = Math.min((int)Math.round(env.getMaxX()), pi.getWidth());
-		int maxY = Math.min((int)Math.round(env.getMaxY()), pi.getHeight());
-		int minX = Math.max((int)env.getMinX(), 0);
-		int minY = Math.max((int)env.getMinY(), 0);
-		for (int x=minX; x<=maxX; x++) {
-			for (int y=minY; y<=maxY; y++) {
-				Coordinate[] ca = {new Coordinate(x,y)};
-				CoordinateArraySequence cas = new CoordinateArraySequence(ca);
-				PrecisionModel pm = new PrecisionModel();
-				if (p.contains(new Point(cas, new GeometryFactory(pm)))){ 
-					//System.out.println("Processing pixel ("+x+", "+y+")");
-					pixelVals.add(new Double(iterator.getSampleDouble(x,y,0)));
-				}
-				else {
-					continue;
-				}
-			}
-		}
-
-		// take a Double from the list, put it into a double[]
-		double[] pixels = new double[pixelVals.size()];
-		for (int k=0; k<pixels.length; k++) {
-			pixels[k]=pixelVals.get(k).doubleValue();
-		}
-		
-		Arrays.sort(pixels);
-		// generate some stats
-		System.out.println("mean= "+StatUtils.mean(pixels));
-		System.out.println("variance= "+StatUtils.variance(pixels));
-		System.out.println("minimum= "+pixels[0]);
-		System.out.println("maximum= "+pixels[pixels.length-1]);
-		// approximate, but close enough for a large dataset
-		int median = (int)pixels.length/2;
-		System.out.println("median= "+pixels[median]);
+	public static CoordinateReferenceSystem getMollweide() throws FactoryException {
+		String wkt = "PROJCS[\"World_Mollweide\"," +
+						"GEOGCS[\"GCS_WGS_1984\",DATUM[\"WGS_1984\",SPHEROID[\"WGS_1984\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"Degree\",0.017453292519943295]]," +
+						"PROJECTION[\"Mollweide\"],PARAMETER[\"False_Easting\",0],PARAMETER[\"False_Northing\",0],PARAMETER[\"Central_Meridian\",0],UNIT[\"Meter\",1],AUTHORITY[\"EPSG\",\"54009\"]]";
+		return CRS.parseWKT(wkt);
 	}
 	
-	/*
+	/**
 	 * 
+	 * @param geoFeature
+	 * @return
 	 */
-	public static Polygon transform(Polygon p, AffineTransformation at) {
-		Coordinate[] coords = p.getCoordinates();
-		for (Coordinate c : coords) {
-			at.transform(c, c);
-		}
-		// update
-		p.geometryChanged();
-		return p;
+	public static Geometry geoBuffer(Geometry geoFeature, int meters) throws Exception {
+		CoordinateReferenceSystem wgs84 = CRS.decode("EPSG:4326");
+		//CoordinateReferenceSystem wgs84 = DefaultGeographicCRS.WGS84 // less complete
+		CoordinateReferenceSystem moll = getMollweide();
+		MathTransform transform = CRS.findMathTransform(wgs84, moll, true);
+		// move to Mollweide
+		Geometry mollGeom = JTS.transform(geoFeature, transform);
+		// buffer with meters
+		Geometry buff = mollGeom.buffer(meters);
+		// transform back to geographic
+		transform = CRS.findMathTransform(moll, wgs84, true);
+		return JTS.transform(buff, transform);
 	}
 	
-	/*
-	 * Method to create stats from a polygon.  Assumes same projection.
-	 * Converts the Polygon to a Geometry in input image coords first.
-	 * Return array is {mean, variance, min, max, median}
+	/**
+	 * Tested OK for geographic 20120402.
+	 * @param fc
+	 * @param outName
+	 * @param image
+	 * @param band
+	 * @param mask
+	 * @param maskValue
 	 */
-	public static double[] polyStatsArray(Polygon p, PlanarImage pi) {
+	public static void polygonStatsTable(FeatureCollection<SimpleFeatureType, SimpleFeature> collection, 
+										 String outName, 
+										 PlanarImage image, 
+										 int band) throws Exception {
 		
-		AffineTransformation at = raster2proj(pi);
-		AffineTransformation inv = proj2raster(at);
-		// transform the Shape to raster coordinates
-		//p.apply(inv);
-		p = GISUtils.transform(p, inv);
-		//System.out.println(p);
+		BufferedWriter writer = new BufferedWriter(new FileWriter(outName));
+		writer.write("id,avg"+"\n");
 		
-		// iterate over all the pixels in the area, put in a List
-		LinkedList<Double> pixelVals = new LinkedList<Double>();
-		Envelope env  = p.getEnvelopeInternal();
-		RandomIter iterator = RandomIterFactory.create(pi, null);
+		FeatureIterator<SimpleFeature> iter=collection.features();
+		while (iter.hasNext()) {
+			String line = "";
+			SimpleFeature feature = iter.next();
+			// Id = FID ?= feature.getID()-1
+			line+=feature.getAttribute("Id");
+			Geometry p = (Geometry) feature.getDefaultGeometry();
+			SummaryStatistics stats = polygonStats(p, image, band);
+			line+=","+stats.getMean();
+			//System.out.println(line);
+			writer.write(line);
+			writer.newLine();
+		}
+		writer.close();
+	}
+	
+	/**
+	 * 
+	 * @param p
+	 * @param image
+	 * @param band
+	 * @return
+	 * @throws Exception
+	 */
+	public static SummaryStatistics polygonStats(Geometry p, PlanarImage image, int band) throws Exception {
+		SummaryStatistics stats = new SummaryStatistics();
 		
-		// compute bounds from the extent of the shape and the image
-		int maxX = Math.min((int)Math.round(env.getMaxX()), pi.getWidth());
-		int maxY = Math.min((int)Math.round(env.getMaxY()), pi.getHeight());
-		int minX = Math.max((int)env.getMinX(), 0);
-		int minY = Math.max((int)env.getMinY(), 0);
+		// bounding box
+		Envelope bb = p.getEnvelopeInternal();
+		// these will throw Exception if outside image bounds
+		int[] ul = JAIUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, image);
+		int[] lr = JAIUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, image);
+		int minX = Math.max(ul[0]-1, 0);
+		int minY = Math.max(ul[1]-1, 0);
+		int maxX = Math.min(lr[0]+1, image.getWidth()-1);
+		int maxY = Math.min(lr[1]+1, image.getWidth()-1);
+		Rectangle bounds = new Rectangle(minX, minY, maxX-minX+1, maxY-minY+1);
+		RandomIter iter = RandomIterFactory.create(image, bounds);
+		GeometryFactory ptMakr = new GeometryFactory();
 		for (int x=minX; x<=maxX; x++) {
 			for (int y=minY; y<=maxY; y++) {
-				Coordinate[] ca = {new Coordinate(x,y)};
-				CoordinateArraySequence cas = new CoordinateArraySequence(ca);
-				PrecisionModel pm = new PrecisionModel();
-				if (p.contains(new Point(cas, new GeometryFactory(pm)))){ 
-					//System.out.println("Processing pixel ("+x+", "+y+")");
-					double pixelAbundance = iterator.getSampleDouble(x,y,0);
-					pixelVals.add(new Double(pixelAbundance));
-				}
-				else {
-					continue;
+				// pixel centroid in projected coords
+				double[] coords = JAIUtils.getProjectedXY(new int[] {x, y}, image);
+				Point check = ptMakr.createPoint(new Coordinate(coords[0], coords[1]));
+				//System.out.println("\t "+check);
+				// if the pixel centroid is in the polygon, count it
+				if (p.intersects(check)) {
+					stats.addValue(iter.getSampleDouble(x, y, band));
 				}
 			}
 		}
-
-		// take a Double from the list, put it into a double[]
-		double[] pixels = new double[pixelVals.size()];
-		for (int k=0; k<pixels.length; k++) {
-			pixels[k]=pixelVals.get(k).doubleValue();
-		}
-		
-		// approximate, but close enough for a large dataset
-		int median = (int)pixels.length/2;
-		// generate the stats
-		Arrays.sort(pixels);
-		return new double[] {StatUtils.mean(pixels), 
-							 StatUtils.variance(pixels),
-							 pixels[0],
-							 pixels[pixels.length-1],
-							 pixels[median]};
+		return stats;
 	}
 	
 	
@@ -235,7 +218,6 @@ public class GISUtils {
 		try {
 			inv = raster2projTrans.getInverse();
 		} catch (NoninvertibleTransformationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return inv;
@@ -275,7 +257,6 @@ public class GISUtils {
         builder.add("y", Float.class);
 
         return builder.buildFeatureType();
-
 	}
 	
 	/*
@@ -352,7 +333,9 @@ public class GISUtils {
 		Iterator<AttributeDescriptor> attIter = attList.iterator();
 		while (attIter.hasNext()) {
 			AttributeDescriptor desc = attIter.next();
-			System.out.println("Att "+desc.getName().toString());
+			System.out.println("Attrribute: "+desc.getName().toString() + 
+					", "+features.getSchema().getType(desc.getName()));
+			
 		}
 	}
 	
@@ -373,9 +356,9 @@ public class GISUtils {
 	 */
 	public static void printFeatures(String fileName) {
 		FeatureCollection<SimpleFeatureType, SimpleFeature> collection = getFeatureCollection(new File(fileName));
-		Iterator iter = collection.iterator();
+		FeatureIterator<SimpleFeature> iter=collection.features();
 		while (iter.hasNext()) {
-			SimpleFeature feature = (SimpleFeature) iter.next();
+			SimpleFeature feature = iter.next();
 			System.out.print(feature.getID()+", ");
 			List<AttributeDescriptor> attList = collection.getSchema().getAttributeDescriptors();
 			Iterator<AttributeDescriptor> attIter = attList.iterator();
@@ -821,14 +804,34 @@ public class GISUtils {
 		
 		
 		// 20110802
-		String footprints = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/shapefiles/SF_Building_Footprints.shp";
+		//String footprints = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/shapefiles/SF_Building_Footprints.shp";
 		//printAttributes(footprints);
 		//printFeatures(footprints);
 		//printFeatureDesc(footprints);
 		//FeatureCollection<SimpleFeatureType,SimpleFeature> foots = getFeatureCollection(new File(footprints));
 		//FeatureCollection<SimpleFeatureType,SimpleFeature>[] subs = wReplSubsets(foots, 100, 100);
 		
+		// 20120331
+//		String urbanPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2buf3k_polygons_simple_dissolve_geo_multi_erase.shp";
+//		GISUtils.printAttributes(urbanPolys);
+//		GISUtils.printFeatures(urbanPolys);
 		
+		// 20100402 polygon stats test
+//		String testPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/zonal_stats_test_shapes.shp";
+//		FeatureCollection features = GISUtils.getFeatureCollection(new File(testPolys));
+//		String testImage = "D:/MOD11A2/2010.07.04/LST_NIGHT/2010.07.04_LST_NIGHT_mosaic_geo.LST_Night_1km.tif";
+//		PlanarImage image = JAIUtils.readImage(testImage);
+//		String testOut = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/" +
+//				"polygonStatsTable_test_lst0704.csv";
+//		try {
+//			polygonStatsTable(features, testOut, image, 0);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		// OK.
+		
+		String lattice = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
+		GISUtils.printAttributes(lattice);
 	}
 	
 }
