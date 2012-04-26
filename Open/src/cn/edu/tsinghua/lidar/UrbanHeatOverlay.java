@@ -32,15 +32,20 @@ import com.vividsolutions.jts.geom.Point;
 
 /**
  * @author Nicholas
+ * Overlay of a points shapefile with 2010 MOD11 thermal data at 1km.
+ * The shapefile needs to have fields called GRID_CODE and POINTID.
+ * POINTID is the join field to be used with the output tables.  
+ * GRID_CODE is the field corresponding to the ID of the polygons used to estimate
+ * the buffer of the urban area. 
  *
  */
-public class UrbanOverlay {
+public class UrbanHeatOverlay {
 	
 	public static String DAY = "DAY";
 	public static String NIGHT = "NIGHT";
 	
-	private PlanarImage data;
-	private PlanarImage qc;
+	PlanarImage data;
+	PlanarImage qc;
 	FeatureCollection<SimpleFeatureType, SimpleFeature> polys;
 	FeatureCollection<SimpleFeatureType, SimpleFeature> id;
 	File tempTable;
@@ -53,7 +58,7 @@ public class UrbanOverlay {
 	 * @param good
 	 * @param polygonName
 	 */
-	public UrbanOverlay(String dataName, String qcName, String polygonName) throws Exception {
+	public UrbanHeatOverlay(String dataName, String qcName, String polygonName) throws Exception {
 		data = JAIUtils.readImage(dataName);
 		JAIUtils.register(data);
 		qc = JAIUtils.readImage(qcName);
@@ -68,7 +73,7 @@ public class UrbanOverlay {
 	 * @param latticeName
 	 * @param tableName
 	 */
-	public UrbanOverlay(String dataName, String qcName, String latticeName, String tableName) {
+	public UrbanHeatOverlay(String dataName, String qcName, String latticeName, String tableName) {
 		data = JAIUtils.readImage(dataName);
 		JAIUtils.register(data);
 		qc = JAIUtils.readImage(qcName);
@@ -77,6 +82,7 @@ public class UrbanOverlay {
 		tempTable = new File(tableName);
 		
 	}
+	
 	
 	/**
 	 * 
@@ -124,7 +130,7 @@ public class UrbanOverlay {
 				continue;
 			}
 			int qc = qcIter.getSample(dataXY[0], dataXY[1], 0);
-			if (!(qc == 0 || qc == 17)) {
+			if (!BitChecker.mod11ok(qc)) { // if LST error >1K or other problem
 				//System.out.println("\t QC: "+qc);
 				continue;
 			}
@@ -134,15 +140,17 @@ public class UrbanOverlay {
 				continue;
 			}
 
-			
-			int id = (int)(long)feature.getAttribute("GRID_CODE");
+			// the following doesn't compile with Java 6, Java 7 is OK
+			//int id = (int)(long)feature.getAttribute("GRID_CODE");
+			// w/GLA14, really is an Integer?
+			int id = (int)feature.getAttribute("GRID_CODE");
 			int pointID = (int)feature.getAttribute("POINTID");
 			if (temps[id-1] == 0 || temps[id-1] == Double.NaN) {
 				//System.out.println("\t Buffer: "+temps[id-1]);
 				continue;
 			}
 			
-			System.out.println("ID: "+id+" Pixel temp: "+temp+" Suburb temp: "+temps[id-1]);
+			//System.out.println("ID: "+id+" Pixel temp: "+temp+" Suburb temp: "+temps[id-1]);
 			writer.write(pointID+","+temp+","+temps[id-1]);
 			writer.newLine();
 		}
@@ -221,7 +229,7 @@ public class UrbanOverlay {
 				// if the pixel centroid is in the polygon, count it
 				if (p.intersects(check)) {
 					int qc = qcIter.getSample(x, y, 0);
-					if (qc == 0 || qc == 17) {
+					if (BitChecker.mod11ok(qc)) {
 						double temp = iter.getSampleDouble(x, y, 0)*0.02;
 						if (temp > 183.95 && temp < 343.55) { // min and max surface temperatures
 							stats.addValue(temp);
@@ -268,13 +276,13 @@ public class UrbanOverlay {
 		}
 		System.out.println("\t Found QC image  "+qcName);
 		
-		UrbanOverlay overlay;
+		UrbanHeatOverlay overlay;
 		
 		String outMeans = lstDir+"/"+(new File(polygonName)).getName().replace(".shp", "_mean_temps.csv");
 		// check for existence, continue if already there
 		if (!(new File(outMeans)).exists()) {
 			System.out.println("\t writing  "+outMeans);
-			overlay = new UrbanOverlay(lstName, qcName, polygonName);
+			overlay = new UrbanHeatOverlay(lstName, qcName, polygonName);
 			overlay.polygonStatsTable(outMeans);
 			System.out.println("\t"+Calendar.getInstance().getTime());
 		}
@@ -284,12 +292,31 @@ public class UrbanOverlay {
 		// check for existence, delete if already present
 		if (!(new File(outComp)).exists()) {
 			System.out.println("\t writing  "+outComp);
-			overlay = new UrbanOverlay(lstName, qcName, latticeName, outMeans);
+			overlay = new UrbanHeatOverlay(lstName, qcName, latticeName, outMeans);
 			overlay.makeUHI(outComp);
 			System.out.println(Calendar.getInstance().getTime());
 		}
 	}
 	
+	/**
+	 * 
+	 * @param parent
+	 * @param product
+	 * @param polygonName
+	 * @param latticeName
+	 */
+	public static void processDirs(String parent, String product, String polygonName, String latticeName) {
+		File parentDir = new File(parent);
+		File[] dirs = parentDir.listFiles();
+		for (File dir : dirs) {
+			if (!(dir.isDirectory())) { continue; }
+			try {
+				processDir(dir.getAbsolutePath(), product, polygonName, latticeName);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
 	
 	/**
 	 * 
@@ -360,6 +387,7 @@ public class UrbanOverlay {
 		writer.close();
 	}
 	
+	
 	/**
 	 * 
 	 * @param parentDir
@@ -413,25 +441,6 @@ public class UrbanOverlay {
 		writer.close();
 	}
 	
-	/**
-	 * 
-	 * @param parent
-	 * @param product
-	 * @param polygonName
-	 * @param latticeName
-	 */
-	public static void processDirs(String parent, String product, String polygonName, String latticeName) {
-		File parentDir = new File(parent);
-		File[] dirs = parentDir.listFiles();
-		for (File dir : dirs) {
-			if (!(dir.isDirectory())) { continue; }
-			try {
-				processDir(dir.getAbsolutePath(), product, polygonName, latticeName);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
 	
 	/**
 	 * @param args
@@ -479,30 +488,30 @@ public class UrbanOverlay {
 //		}
 		
 		// 20120412 Day and Night reprocess w/ QC 1,17 and fixed longitude
-		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
-		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
-		String parentDir = "D:/MOD11A2";
-		
-		//processDirs(parentDir, UrbanOverlay.NIGHT, buffPolys, latticeName);
-		
-		String outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_mean.csv";
-		try {
-			//combineUHI(parentDir, outTable, UrbanOverlay.NIGHT);
-			averageUHI(parentDir, outTable, UrbanOverlay.NIGHT);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		// Daytime 20120409, 20120412
-		//processDirs(parentDir, UrbanOverlay.DAY, buffPolys, latticeName);
-		
-		outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_mean.csv";
-		try {
-			//combineUHI(parentDir, outTable, UrbanOverlay.DAY);
-			averageUHI(parentDir, outTable, UrbanOverlay.DAY);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
+//		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
+//		String parentDir = "D:/MOD11A2";
+//		
+//		//processDirs(parentDir, UrbanOverlay.NIGHT, buffPolys, latticeName);
+//		
+//		String outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_mean.csv";
+//		try {
+//			//combineUHI(parentDir, outTable, UrbanOverlay.NIGHT);
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		// Daytime 20120409, 20120412
+//		//processDirs(parentDir, UrbanOverlay.DAY, buffPolys, latticeName);
+//		
+//		outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_mean.csv";
+//		try {
+//			//combineUHI(parentDir, outTable, UrbanOverlay.DAY);
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 		
 		// LA test
 //		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_LA_geo_buffer_5k_erased.shp";
@@ -519,6 +528,31 @@ public class UrbanOverlay {
 //		}
 		// OK.  Still some gaps.  Will miss a lot w/o relaxing the QC (e.g. including 65 nad 81, dT<=2K.)
 
+		
+		// 20120425 Day and Night process with GLA14 and improved QC
+//		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/shapefiles/GLA14_r33_mssu_points_gpt2id.shp";
+//		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
+//		String parentDir = "D:/MOD11A2";
+//		
+//		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName);
+//		
+//		String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT_mean.csv";
+//		try {
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		// Daytime
+//		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName);
+//		
+//		outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY_mean.csv";
+//		try {
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
 		
 	}
 
