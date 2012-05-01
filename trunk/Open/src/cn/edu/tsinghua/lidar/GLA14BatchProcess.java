@@ -12,11 +12,11 @@ import java.io.File;
 public class GLA14BatchProcess {
 	public static int GLA14_R33 = 33;
 	public static int GLA14_R31 = 31;
-	private int release;
+	protected int release;
 
 	// directories
-	private File parent;
-	private File output;
+	protected File parent;
+	protected File output;
 	
 	/**
 	 * 
@@ -95,7 +95,8 @@ public class GLA14BatchProcess {
 //		String outDir = "C:/Users/Nicholas/Documents/GLA14.033.out/";
 //		new GLA14BatchProcess(allGLA14, outDir, GLA14BatchProcess.GLA14_R33);
 		
-		new GLA14BatchProcess(args[0], args[1], GLA14BatchProcess.GLA14_R33);
+		//new GLA14BatchProcess(args[0], args[1], GLA14BatchProcess.GLA14_R33);
+		
 	}
 
 }

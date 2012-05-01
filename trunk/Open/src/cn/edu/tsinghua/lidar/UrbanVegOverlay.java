@@ -226,7 +226,7 @@ public class UrbanVegOverlay {
 	public static void main(String[] args) {
 		// 20120412 Day and Night reprocess w/ QC 1,17 and fixed longitude
 //		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
-//		String parentDir = "D:/MOD13A2";
+		String parentDir = "D:/MOD13A2";
 		
 		//processDirs(parentDir, UrbanVegOverlay.EVI, latticeName);
 		
@@ -243,12 +243,12 @@ public class UrbanVegOverlay {
 //		String parentDir = "D:/MOD13A2";
 //		processDirs(parentDir, UrbanVegOverlay.EVI, latticeName);
 //		
-//		String outTable = "D:/MOD13A2/GLA14_r33_mssu_points_EVI_max.csv";
-//		try {
-//			combineVI(parentDir, outTable, UrbanVegOverlay.EVI, "gpt2id_lattices_EVI.csv");
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
+		String outTable = "D:/MOD13A2/GLA14_r33_mssu_points_EVI_max.csv";
+		try {
+			combineVI(parentDir, outTable, UrbanVegOverlay.EVI, "GLA14_r33_mssu_points_gpt2id_EVI.csv");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
 
 	}
