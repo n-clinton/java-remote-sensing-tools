@@ -324,7 +324,20 @@ public class UrbanHeatOverlay {
 	 * @param outTable
 	 * @throws Exception
 	 */
-	public static void combineUHI(String parentDir, String outTable, String product) throws Exception {
+	public static void combineUHI(String parentDir, String outTable, String product, String baseTableName) throws Exception {
+		combineUHI(parentDir, outTable, product, baseTableName, 0);
+	}
+	
+	
+	/**
+	 * 
+	 * @param parentDir
+	 * @param outTable
+	 * @param product
+	 * @param cdd
+	 * @throws Exception
+	 */
+	public static void combineUHI(String parentDir, String outTable, String product, String baseTableName, double cdd) throws Exception {
 		File[] dirs = (new File(parentDir)).listFiles();
 		
 		float[][] uhis = new float[523238][2]; // column 1 is uhi, column 2 is uhs
@@ -333,8 +346,9 @@ public class UrbanHeatOverlay {
 		for (File dir : dirs) {
 			if (!(dir.isDirectory())) { continue; }
 			System.out.println("Processing dir: " +dir.getName());
-			File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/gpt2id_lattices_mean_temps.csv");
+			//File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/gpt2id_lattices_mean_temps.csv");
 			//File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/gpt2id_LA_lattice_mean_temps.csv");
+			File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/"+baseTableName);
 			BufferedReader reader = new BufferedReader(new FileReader(latticeTab));
 			reader.readLine(); // header
 			String line = null;
@@ -342,6 +356,8 @@ public class UrbanHeatOverlay {
 				String[] toks = line.split(",");
 				int id = Integer.parseInt(toks[0]);
 				float pttemp = Float.parseFloat(toks[1]);
+				// check of cooling degree days
+				if (pttemp < cdd) { continue; }
 				float buftemp = Float.parseFloat(toks[2]);
 				// compute heat island or sink
 				float uh = pttemp-buftemp;
@@ -553,6 +569,32 @@ public class UrbanHeatOverlay {
 //			e.printStackTrace();
 //		}
 		
+		// reprocess of GLA14, and do gpt2id_lattices w/293.73 cooling degree threshold 20120503
+		String parentDir = "D:/MOD11A2";
+		try {
+			// re-do of GLA14
+			String baseTableName = "GLA14_r33_mssu_points_gpt2id_mean_temps.csv";
+			
+			String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			// with cooling degree day > 20 degrees C
+			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			
+			// original w/ cooling degree day
+			baseTableName = "gpt2id_lattices_mean_temps.csv";
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
 	}
 
