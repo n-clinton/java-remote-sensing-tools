@@ -161,13 +161,24 @@ public class Overlay {
 //		}
 		
 		// overlay of nightlights
-		String table = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2id_lattices_joined2_pop.csv";
+//		String table = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2id_lattices_joined2_pop.csv";
+//		String image = "C:/Users/Nicholas/Documents/Night_Lights/F182010.v4c_web.stable_lights.tif";
+//		String outTableName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2id_lattices_joined2_pop_nightlights.csv";
+//		int xIndex = 10;
+//		int yIndex = 11;
+//		try {
+//			overlay(image, table, outTableName, xIndex, yIndex);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+		
+		String lattice = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/shapefiles/GLA14_r33_mssu_points_gpt2id_joined.shp";
 		String image = "C:/Users/Nicholas/Documents/Night_Lights/F182010.v4c_web.stable_lights.tif";
-		String outTableName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2id_lattices_joined2_pop_nightlights.csv";
-		int xIndex = 10;
-		int yIndex = 11;
+		String outTableName = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r33_mssu_points_gpt2id_joined_nightlights.csv";
 		try {
-			overlay(image, table, outTableName, xIndex, yIndex);
+			overlay(image, lattice, outTableName);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
