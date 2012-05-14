@@ -1177,26 +1177,28 @@ public class JAIUtils {
 		
 		// testing large image reading 20110805
 		// image input
-		String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
-		//String imageFile = "C:/Users/owner/Documents/ASTL/SARP2011/30June2011b/MASTERL1B_1100306_09_20110630_2334_2341_V01_tir";
-		//String imageFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/MASTERL1B_1165100_04_20110608_2305_2310_V00_vis_swir";
-		ImageReader reader;
-		try {
-			// Read the input
-			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
-			final ParameterBlockJAI pbjImageRead;
-			pbjImageRead = new ParameterBlockJAI("ImageRead");
-			pbjImageRead.setParameter("Input", new File(imageFile));
-			pbjImageRead.setParameter("reader", reader);
-			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
-			RandomIter inputIter = RandomIterFactory.create(image, null);
-			image.getHeight();
-			image.getWidth();
-			image.getNumBands();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		String imageFile = "C:/Users/owner/Documents/MASTER_imagery/SF_high_res/MASTERL1B_0800510_06_20080826_2154_2157_V02_utm10_wgs84_2m_subset_";
+//		//String imageFile = "C:/Users/owner/Documents/ASTL/SARP2011/30June2011b/MASTERL1B_1100306_09_20110630_2334_2341_V01_tir";
+//		//String imageFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/MASTERL1B_1165100_04_20110608_2305_2310_V00_vis_swir";
+//		ImageReader reader;
+//		try {
+//			// Read the input
+//			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+//			final ParameterBlockJAI pbjImageRead;
+//			pbjImageRead = new ParameterBlockJAI("ImageRead");
+//			pbjImageRead.setParameter("Input", new File(imageFile));
+//			pbjImageRead.setParameter("reader", reader);
+//			PlanarImage image = JAI.create("ImageRead", pbjImageRead);
+//			RandomIter inputIter = RandomIterFactory.create(image, null);
+//			image.getHeight();
+//			image.getWidth();
+//			image.getNumBands();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		
+		String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
+		describeGeoTiff(waterName);
 		
 	}
 
