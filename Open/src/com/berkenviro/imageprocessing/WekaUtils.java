@@ -343,10 +343,9 @@ public class WekaUtils {
 //			e.printStackTrace();
 //		}
 		
-		String filename = "/Users/nclinton/Documents/urban/gpt2id_lattices_joined4_cdd_h2o_no_zeros.csv";
-		Instances input = loadCSV(filename);
-		
-		try {
+//		String filename = "/Users/nclinton/Documents/urban/gpt2id_lattices_joined4_cdd_h2o_no_zeros.csv";
+//		Instances input = loadCSV(filename);
+//		try {
 //			Instances[] split = subset(70, input);
 //			System.out.println(split[0].toSummaryString());
 //			System.out.println(split[1].toSummaryString());
@@ -365,12 +364,12 @@ public class WekaUtils {
 //			writeArff(rem, "/Users/nclinton/Documents/urban/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhs.arff");
 //			System.out.println("Discretizing...");
 //			disc = discretize(rem, "uhs_1");
-//			writeArff(disc, "/Users/nclinton/Documents/urban/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhs_discrete.arff");
-			
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//			writeArff(disc, "/Users/nclinton/Documents/urban/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhs_discrete.arff");	
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
 		
 	}
 
