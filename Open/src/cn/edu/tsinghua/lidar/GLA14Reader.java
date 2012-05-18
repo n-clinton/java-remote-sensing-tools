@@ -578,7 +578,13 @@ public class GLA14Reader {
 				i_maxRecAmp[i] = glasFile.readUnsignedShort(); // fill with signal
 			}
 			for (int i=0; i<40; i++) {
-				double snr = i_maxRecAmp[i]/glasFile.readUnsignedShort(); // divide by noise
+				int noise = glasFile.readUnsignedShort();
+				// to prevent divide by zero, simply squash the SNR :: ERROR condition
+				if (noise == 0) {
+					noise = Integer.MAX_VALUE;
+					if (error) { System.err.println ("\t zero noise, i= "+i+": "+noise); }
+				}
+				double snr = i_maxRecAmp[i]/noise; // divide by noise
 				//System.out.println ("SNR, i= "+i+": "+snr);
 				if (snr < 20) { // sort of arbitrary snr threshold
 					write[i] = false; // don't use
@@ -631,6 +637,11 @@ public class GLA14Reader {
 //			reader.setPosition(false);
 //			reader.r33write("C:/Users/Nicholas/Documents/GLA14.033.out/GLA14_633_2115_002_0407_0_01_0001_out_check.csv");
 			// it gets a lot of records with cloud check basically off (frequent values of "0" for atm flags (insufficient data)
+			
+//			String test2007 = "D:/GLA14.033/2007.10.02/GLA14_633_2121_001_1275_0_01_0001.DAT";
+//			String out = "D:/GLA14.033.out/2007_10_02_GLA14_633_2121_001_1275_0_01_0001_out_check.csv";
+//			reader = new GLA14Reader(test2007);
+//			reader.r33write(out);
 
 			reader = new GLA14Reader(args[0]);
 			reader.r33write(args[1]);
