@@ -31,12 +31,24 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StreamTokenizer;
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.Random;
 
 import weka.attributeSelection.ASEvaluation;
 import weka.attributeSelection.ASSearch;
 import weka.attributeSelection.AttributeSelection;
+import weka.attributeSelection.CfsSubsetEval;
+import weka.attributeSelection.ChiSquaredAttributeEval;
+import weka.attributeSelection.GainRatioAttributeEval;
+import weka.attributeSelection.GreedyStepwise;
+import weka.attributeSelection.InfoGainAttributeEval;
+import weka.attributeSelection.LatentSemanticAnalysis;
+import weka.attributeSelection.Ranker;
+import weka.attributeSelection.ReliefFAttributeEval;
+import weka.attributeSelection.SymmetricalUncertAttributeEval;
+import weka.attributeSelection.WrapperSubsetEval;
+import weka.classifiers.trees.REPTree;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -187,6 +199,7 @@ public class WekaUtils {
 	public static Instances discretize(Instances in, String classatt) throws Exception {
 		Discretize dis = new Discretize();
 		dis.setAttributeIndicesArray(new int[] {in.attribute(classatt).index()});
+		dis.setIgnoreClass(true);
 		dis.setInputFormat(in);
 		dis.setBins(20);
 		dis.setUseEqualFrequency(true);
@@ -201,16 +214,156 @@ public class WekaUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static double[][] getRanking(Instances in, ASEvaluation eval, ASSearch search) throws Exception {
+	public static int[] getRanking(Instances in, ASEvaluation eval, ASSearch search) throws Exception {
 	  AttributeSelection attsel = new AttributeSelection();
-	  // defaults
-	  //CfsSubsetEval eval = new CfsSubsetEval();
-	  //GreedyStepwise search = new GreedyStepwise();
-	  //search.setSearchBackwards(true);
 	  attsel.setEvaluator(eval);
 	  attsel.setSearch(search);
+	  attsel.setRanking(true);
 	  attsel.SelectAttributes(in);
-	  return attsel.rankedAttributes();
+	  System.out.println(attsel.toResultsString());
+	  double[][] ranks = attsel.rankedAttributes();
+	  int[] indexrank = new int[in.numAttributes()];
+	  for (int i=0; i<ranks.length; i++) {
+		 indexrank[(int)ranks[i][0]] = i+1;
+		  System.out.println("Attribute "+ranks[i][0]+" is ranked "+indexrank[(int)ranks[i][0]]);
+	  }
+	  return indexrank;
+	}
+	
+	/**
+	 * 
+	 * @param in
+	 * @param out
+	 * @param classatt
+	 */
+	public static void rankContinuous(String in, String out, String classatt) {
+		Instances cont = loadArff(in);
+		//System.out.println(cont.toSummaryString());
+		cont.setClass(cont.attribute(classatt));
+		System.out.println("Evaluating class "+ cont.attribute(cont.classIndex()));
+		
+		try {
+			
+			BufferedWriter writer = new BufferedWriter(new FileWriter(new File(out)));
+			writer.write("attribute,");
+			// fill this one up
+			int[][] ranks = new int[3][cont.numAttributes()];
+			
+			int eval = 0;
+			CfsSubsetEval cfs_sub = new CfsSubsetEval();
+			GreedyStepwise greedy = new GreedyStepwise();
+			greedy.setGenerateRanking(true);
+			greedy.setSearchBackwards(false);
+			ranks[eval] = getRanking(cont, cfs_sub, greedy);
+			writer.write("CfsSubsetEval_GreedyStepwise,");
+			
+			eval++;
+			ReliefFAttributeEval relief = new ReliefFAttributeEval();
+			relief.setSampleSize((int)cont.numInstances()/2);
+			Ranker ranker = new Ranker();
+			ranker.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, relief, ranker);
+			writer.write("ReliefF_Ranker,");
+			
+//			eval++;
+//			LatentSemanticAnalysis analysis = new LatentSemanticAnalysis();
+//			Ranker ranker = new Ranker();
+//			ranker.setGenerateRanking(true);
+//			ranks[eval] = getRanking(cont, analysis, ranker);
+//			writer.write("LatentSemantic_Ranker,");
+			
+			eval++;
+			WrapperSubsetEval wrapper = new WrapperSubsetEval();
+			REPTree tree = new REPTree();
+			tree.setMinNum(100); // minimum node size, all else default
+			wrapper.setClassifier(tree);
+			greedy = new GreedyStepwise();
+			greedy.setSearchBackwards(false);
+			greedy.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, wrapper, greedy);
+			writer.write("WrappedREPTree_GreedyStepwise,");
+			
+			writer.newLine();
+			for (int a=0; a<cont.numAttributes(); a++) {
+				writer.write(cont.attribute(a).name()+",");
+				for (int c=0; c<ranks.length; c++) {
+					writer.write(ranks[c][a]+",");
+				}
+				writer.newLine();
+			}
+			
+			writer.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * 
+	 * @param in
+	 * @param out
+	 * @param classatt
+	 */
+	public static void rankDiscrete(String in, String out, String classatt) {
+		Instances cont = loadArff(in);
+		cont.setClass(cont.attribute(classatt));
+		System.out.println("Evaluating class "+ cont.attribute(cont.classIndex()));
+		
+		try {
+			
+			BufferedWriter writer = new BufferedWriter(new FileWriter(new File(out)));
+			writer.write("attribute,");
+			// fill this one up
+			int[][] ranks = new int[4][cont.numAttributes()];
+			
+			int eval = 0;
+			ChiSquaredAttributeEval chi = new ChiSquaredAttributeEval();
+			Ranker ranker = new Ranker();
+			ranker.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, chi, ranker);
+			writer.write("ChiSquared_Ranker,");
+			
+			eval++;
+			GainRatioAttributeEval gain = new  GainRatioAttributeEval();
+			ranker = new Ranker();
+			ranker.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, gain, ranker);
+			writer.write("GainRatio_Ranker,");
+			
+			eval++;
+			InfoGainAttributeEval info = new InfoGainAttributeEval();
+			ranker = new Ranker();
+			ranker.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, info, ranker);
+			writer.write("InfoGain_Ranker,");
+			
+			eval++;
+			SymmetricalUncertAttributeEval sym = new SymmetricalUncertAttributeEval();
+			ranker = new Ranker();
+			ranker.setGenerateRanking(true);
+			ranks[eval] = getRanking(cont, sym, ranker);
+			writer.write("SymmetricUncertainty_Ranker,");
+			
+			writer.newLine();
+			for (int a=0; a<cont.numAttributes(); a++) {
+				writer.write(cont.attribute(a).name()+",");
+				for (int c=0; c<ranks.length; c++) {
+					writer.write(ranks[c][a]+",");
+				}
+				writer.newLine();
+			}
+			
+			writer.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -369,7 +522,145 @@ public class WekaUtils {
 //			e.printStackTrace();
 //		}
 		
+//		// GLA14 waterbody masked
+//		String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros.csv";
+//		Instances input = loadCSV(filename);
+//		try {
+//			Instances[] split = subset(70, input);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70.arff");
+//			writeArff(split[1], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_30.arff");
+//			// uhi
+//			Instances filt = removeAttributes(split[0], new int[] {23,24,30,32,33,34,35,36}); 
+//			Instances rem = filterMissing(filt, "uhi");
+//			writeArff(rem, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhi.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhi");
+//			writeArff(disc, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhi_discrete.arff");
+//			// uhs
+//			filt = removeAttributes(split[0], new int[] {23,24,29,30,31,32,33,35}); 
+//			rem = filterMissing(filt, "uhs_1");
+//			writeArff(rem, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhs.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_1");
+//			writeArff(disc, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhs_discrete.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		// GLA14 waterbody masked CDD
+//		filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros.csv";
+//		input = loadCSV(filename);
+//		try {
+//			Instances[] split = subset(70, input);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70.arff");
+//			writeArff(split[1], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_30.arff");
+//			// uhi
+//			Instances filt = removeAttributes(split[0], new int[] {23,24,30,32,33,34,35,36}); 
+//			Instances rem = filterMissing(filt, "uhi_cdd");
+//			writeArff(rem, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhi.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhi_cdd");
+//			writeArff(disc, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhi_discrete.arff");
+//			// uhs
+//			filt = removeAttributes(split[0], new int[] {23,24,29,30,31,32,33,35}); 
+//			rem = filterMissing(filt, "uhs_cdd_1");
+//			writeArff(rem, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhs.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_cdd_1");
+//			writeArff(disc, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhs_discrete.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 		
+		
+		// 20120517 Attribute Rankings MSSU
+		// UHI ***********************************************
+		String classatt = "uhi"; 
+		String out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhi_continuous_20120517.csv";
+		String in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_h2o_no_zeros_70_uhi.arff";
+//		System.out.println(Calendar.getInstance().getTime());
+//		rankContinuous(in, out, classatt);
+//		System.out.println(Calendar.getInstance().getTime());
+//		
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhi_discrete_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_h2o_no_zeros_70_uhi_discrete.arff";
+//		rankDiscrete(in, out, classatt);
+//		
+//		// CDD
+//		classatt = "uhi_cdd";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhi_cdd_continuous_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhi.arff";
+//		rankContinuous(in, out, classatt);
+//		
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhi_cdd_discrete_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhi_discrete.arff";
+//		rankDiscrete(in, out, classatt);
+//		
+//		// UHS ***********************************************
+//		classatt = "uhs_1"; 
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhs_1_continuous_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_h2o_no_zeros_70_uhs.arff";
+//		rankContinuous(in, out, classatt);
+//		
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhs_1_discrete_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_h2o_no_zeros_70_uhs_discrete.arff";
+//		rankDiscrete(in, out, classatt);
+//		
+//		// CDD
+//		classatt = "uhs_cdd_1";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhs_cdd_1_continuous_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhs.arff";
+//		rankContinuous(in, out, classatt);
+//		
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/MSSU_uhs_cdd_1_discrete_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined4_cdd_h2o_no_zeros_70_uhs_discrete.arff";
+//		rankDiscrete(in, out, classatt);
+//		
+//		// GLA14 ***********************************************************
+//		// UHI ***********************************************
+//		classatt = "uhi"; 
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhi_continuous_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhi.arff";
+//		rankContinuous(in, out, classatt);
+//		
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhi_discrete_20120517.csv";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhi_discrete.arff";
+//		rankDiscrete(in, out, classatt);
+		
+		// CDD
+		classatt = "uhi_cdd";
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhi_cdd_continuous_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhi.arff";
+		rankContinuous(in, out, classatt);
+		
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhi_cdd_discrete_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhi_discrete.arff";
+		rankDiscrete(in, out, classatt);
+		
+		// UHS ***********************************************
+		classatt = "uhs_1"; 
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhs_1_continuous_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhs.arff";
+		rankContinuous(in, out, classatt);
+		
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhs_1_discrete_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_joined_h2o_no_zeros_70_uhs_discrete.arff";
+		rankDiscrete(in, out, classatt);
+		
+		// CDD
+		classatt = "uhs_cdd_1";
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhs_cdd_1_continuous_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhs.arff";
+		rankContinuous(in, out, classatt);
+		
+		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_uhs_cdd_1_discrete_20120517.csv";
+		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_r33_mssu_points_gpt2id_cdd_joined_h2o_no_zeros_70_uhs_discrete.arff";
+		rankDiscrete(in, out, classatt);
+				
 		
 	}
 
