@@ -45,7 +45,22 @@ public class Getter {
 		// ready
 	}
 	
+	
 	/**
+	 * UMT connect.
+	 * @param baseFolder
+	 */
+	public Getter(String baseFolder) throws Exception {
+		productFolder = baseFolder;
+		// setup the FTP client
+		client = new FTPClient();
+		client.addCommunicationListener(new Listener());
+		connectUMT();
+		// ready
+	}
+	
+	/**
+	 * USGS MODIS archive.
 	 * Keep trying until able to connect.
 	 * @throws Exception
 	 */
@@ -68,6 +83,28 @@ public class Getter {
 	
 	
 	/**
+	 * University of Montana MOD16 archive
+	 * Keep trying until able to connect.
+	 * @throws Exception
+	 */
+	private void connectUMT() throws Exception {
+		int attempt = 0;
+		while (!client.isConnected()) { // if it's disconnected
+			attempt++;
+			System.out.println("\t Trying to connect.  Attempt "+attempt+"...");
+			try {
+				client.connect("ftp.ntsg.umt.edu");
+				client.login("anonymous", "user@example.com");
+				client.setType(FTPClient.TYPE_BINARY);
+				client.changeDirectory(productFolder);
+				client.getConnector().setReadTimeout(3600);
+			} catch (Exception e) { 
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
 	 * Call this last.
 	 */
 	public void disconnect() {
@@ -88,7 +125,7 @@ public class Getter {
 	
 	
 	/**
-	 * Perform the download for the specified year and tiles.
+	 * Perform the download from the USGS archive for the specified year and tiles.
 	 * @throws Exception
 	 */
 	private void download(ArrayList<String> tiles, File localDir) throws Exception {
@@ -151,6 +188,73 @@ public class Getter {
 			}
 		}	
 	}
+	
+	
+	/**
+	 * Perform the download from the USGS archive for the specified year and tiles.
+	 * @throws Exception
+	 */
+	private void downloadMOD16(ArrayList<String> tiles, File localDir) throws Exception {
+		// get the sub-directories in the product directory
+		FTPFile[] list = client.list();
+		for (FTPFile f : list) {
+			// if it's in the right year (form of Y****)
+			if (f.getType() == FTPFile.TYPE_DIRECTORY) {
+				// go into the month subdirectory
+				client.changeDirectory(f.getName());
+				System.out.println("\t Checking: "+f.getName());
+				// reproduce this directory structure locally
+				File dir = new File(localDir.getAbsoluteFile()+"/"+f.getName());
+				if (!dir.exists()) { // if the directory doesn't already exist
+					if (!dir.mkdir()) { // make it, or...
+						throw new Exception("Can't make: "+dir.getAbsolutePath()); 
+					}
+				}
+				// get only the tiles needed
+				System.out.println("\t\t Building tile list...");
+				list = client.list();
+				ArrayList<FTPFile> downloads = getFileList(list, tiles);
+				// check all the files
+				for (FTPFile file : downloads) {
+					File local = null;
+					try { 
+						// the local file
+						local = new File(dir.getAbsolutePath()+"/"+file.getName());
+						if (!local.exists()) {  // if the local file doesn't exist, get it
+							System.out.println(Calendar.getInstance().getTime());
+							client.download(file.getName(), local);
+						}
+						else { // otherwise, just print a message
+							System.out.println("\t\t\t Skipping: "+local.getAbsoluteFile());
+						}
+					} catch (Exception e1) {
+						e1.printStackTrace();
+						// wait a few seconds
+						Thread.sleep(10000); 
+						if (!client.isConnected()) { // if disconnected in the middle
+							connectUMT();
+						}
+						else { // try reconnecting
+							client.disconnect(false);
+							connectUMT();
+						}
+						// go back to the right directory
+						client.changeDirectory(f.getName());
+						// if the local file matches the remote file, just keep going
+						if (local.exists()) {
+							if (local.length() != file.getSize()) {
+								// try again
+								client.download(file.getName(), new File(dir.getAbsolutePath()+"/"+file.getName()));
+							}
+						}
+					}
+				}
+				// go back to the parent directory
+				client.changeDirectoryUp();
+			}
+		}	
+	}
+	
 	
 	/**
 	 * Helper to get only the files for the specified tiles.
@@ -270,6 +374,25 @@ public class Getter {
 //		} finally {
 //			getter.disconnect();
 //		}
+		
+		
+		// MOD16 from UMT
+//		String remoteFolder = "pub/MODIS/Mirror/MOD16/MOD16A2_MONTHLY.MERRA_GMAO_1kmALB/Y2010";
+//		// Made from the shapefile by selecting tiles that intersect continents
+//		String tileFile = "C:/Users/Nicholas/Documents/shapefiles/modis_sinusoidal/Continental_tiles_20120305.txt";
+//		Getter getter = null;
+//		try {
+//			getter = new Getter(remoteFolder);
+//			// header: "FID_","cat","h","v"
+//			ArrayList<String> tiles = readTilesFromFile(tileFile, 2, 3);
+//			File localDir = new File("C:/Users/Nicholas/Documents/MOD16A2/");
+//			getter.downloadMOD16(tiles, localDir);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			getter.disconnect();
+//		}
+		// 20120601 Done
 		
 	}
 	

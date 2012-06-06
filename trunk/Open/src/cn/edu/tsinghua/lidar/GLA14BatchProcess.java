@@ -97,6 +97,11 @@ public class GLA14BatchProcess {
 		
 		//new GLA14BatchProcess(args[0], args[1], GLA14BatchProcess.GLA14_R33);
 		
+		// reprocess due to zero SD divide-by-zero error:
+		String allGLA14 = "D:/GLA14.033/";
+		String outDir = "C:/Users/Nicholas/Documents/GLA14.033.out/";
+		new GLA14BatchProcess(allGLA14, outDir, GLA14BatchProcess.GLA14_R33);
+		
 	}
 
 }

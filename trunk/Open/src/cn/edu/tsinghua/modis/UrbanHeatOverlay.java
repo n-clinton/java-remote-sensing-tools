@@ -1,7 +1,7 @@
 /**
  * 
  */
-package cn.edu.tsinghua.lidar;
+package cn.edu.tsinghua.modis;
 
 import java.awt.Rectangle;
 import java.io.BufferedReader;
@@ -21,6 +21,8 @@ import org.geotools.feature.FeatureIterator;
 import org.geotools.referencing.CRS;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+
+import cn.edu.tsinghua.lidar.BitChecker;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
@@ -154,6 +156,7 @@ public class UrbanHeatOverlay {
 			writer.write(pointID+","+temp+","+temps[id-1]);
 			writer.newLine();
 		}
+		iter.close();
 		writer.close();
 	}
 	
@@ -197,10 +200,6 @@ public class UrbanHeatOverlay {
 	/**
 	 * 
 	 * @param p
-	 * @param image
-	 * @param band
-	 * @param mask
-	 * @param maskValue is the value that must be TRUE
 	 * @return
 	 * @throws Exception
 	 */
@@ -570,31 +569,33 @@ public class UrbanHeatOverlay {
 //		}
 		
 		// reprocess of GLA14, and do gpt2id_lattices w/293.73 cooling degree threshold 20120503
-		String parentDir = "D:/MOD11A2";
-		try {
-			// re-do of GLA14
-			String baseTableName = "GLA14_r33_mssu_points_gpt2id_mean_temps.csv";
-			
-			String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
-			// with cooling degree day > 20 degrees C
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT_ccd.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY_ccd.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
-			
-			// original w/ cooling degree day
-			baseTableName = "gpt2id_lattices_mean_temps.csv";
-			outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_ccd.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
-			outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_ccd.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		String parentDir = "D:/MOD11A2";
+//		try {
+//			// re-do of GLA14
+//			String baseTableName = "GLA14_r33_mssu_points_gpt2id_mean_temps.csv";
+//			
+//			String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+//			// with cooling degree day > 20 degrees C
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_NIGHT_ccd.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_LST_DAY_ccd.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+//			
+//			// original w/ cooling degree day
+//			baseTableName = "gpt2id_lattices_mean_temps.csv";
+//			outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_ccd.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+//			outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_ccd.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
 		
 	}
 

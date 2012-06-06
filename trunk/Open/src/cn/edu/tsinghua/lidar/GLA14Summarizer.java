@@ -13,6 +13,8 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 
 import javax.media.jai.PlanarImage;
+import javax.media.jai.iterator.RandomIter;
+import javax.media.jai.iterator.RandomIterFactory;
 
 import com.berkenviro.imageprocessing.JAIUtils;
 
@@ -199,6 +201,8 @@ public class GLA14Summarizer {
 		}
 	}
 	
+	
+	
 	/**
 	 * 
 	 * @throws Exception
@@ -255,6 +259,122 @@ public class GLA14Summarizer {
 		writer.close();
 	}
 	
+	
+	/**
+	 *  
+	 * @param fileName
+	 * @throws Exception
+	 */
+	public void summarize4() throws Exception {
+		
+		RandomIter iter = RandomIterFactory.create(image, null);
+		// iterate over the input files
+		for (int f=0; f<files.length; f++) {
+			System.out.println("Processing file "+files[f].getName());
+			BufferedReader reader = new BufferedReader(new FileReader(files[f]));
+			// skip the header
+			String line = reader.readLine();
+			while ((line = reader.readLine()) != null) {
+				try {
+					GLA14shot shot = new GLA14shot(line);
+					// don't bother with high latitudes
+					if (shot.lat < -60.0 || shot.lat > 70) { continue; }
+					//System.out.println("lat "+shot.lat+" lon "+shot.lon);
+					// get the pixel coordinates
+					int[] pixelXY = JAIUtils.getPixelXY(new double[] {shot.lon<0 ? shot.lon+360 : shot.lon, shot.lat}, image);
+					Pixel pixel = new Pixel();
+					pixel.x = pixelXY[0];
+					pixel.y = pixelXY[1];
+					pixel.id = iter.getSample(pixel.x, pixel.y, 0);
+					
+					double[][] vals;
+					if (pixels.containsKey(pixel)) {
+						//System.out.println("Yay! I found "+pixel);
+						vals = pixels.get(pixel);
+					}
+					else {
+						vals = new double[2][6];
+						pixels.put(pixel, vals);
+					}
+					
+					// retrieval of lidar parameters /*******************/
+					if (shot.SigBegHt != 0) {
+						vals[1][0]+=shot.SigBegHt;
+						vals[0][0]++;
+					}
+					double ht1 = shot.getWeightedHt1();
+					if(ht1 != 0) {
+						vals[1][1]+=ht1;
+						vals[0][1]++;
+					}
+					double ht2 = shot.getWeightedHt2();
+					if (ht2 != 0) {
+						vals[1][2]+=ht2;
+						vals[0][2]++;
+					}
+					double density = shot.getDensity();
+					if (density != 0) {
+						vals[1][3]+=density;
+						vals[0][3]++;
+					}
+					double hw1 = shot.hw1();
+					if (hw1 != 0) {
+						vals[1][4]+=hw1;
+						vals[0][4]++;
+					}
+					double hw2 = shot.hw2();
+					if (hw2 != 0) {
+						vals[1][5]+=hw2;
+						vals[0][5]++;
+					}
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		reader.close();
+		}
+	}
+	
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	public void write4() throws Exception {
+		writer.write("id,lon,lat,n,sigBegHt,ht1,ht2,density,hw1,hw2");
+		writer.newLine();
+		
+		String line = "";
+		
+		Enumeration<Pixel> keys = pixels.keys();
+		while (keys.hasMoreElements()) {
+			Pixel pix = keys.nextElement();
+			// coordinates
+			double[] coords = JAIUtils.getProjectedXY(new int[] {pix.x,pix.y}, image);
+			line = (int)pix.id+",";
+			line += String.format("%.4f,%.4f,",coords[1], coords[0]);
+			
+			// averages
+			double[][] vals = pixels.get(pix);
+			line += (int)vals[0][0]+",";
+			for (int i=0;i<6;i++) {
+				if (vals [0][i] > 0) {
+					line+=String.format("%.4f,", vals[1][i]/vals[0][i]);
+				} else {
+					line+=",";
+				}
+			}
+
+			System.out.println(line);
+			writer.write(line);
+			writer.newLine();
+		}
+		writer.close();
+	}
+	
+	
+	
 	/**
 	 * Pixel thingy.
 	 * @author Nicholas
@@ -263,6 +383,7 @@ public class GLA14Summarizer {
 	class Pixel {
 		int x;
 		int y;
+		int id;
 		
 		@Override
 		public String toString() {
@@ -314,20 +435,40 @@ public class GLA14Summarizer {
 //		String[] files = {
 //				  "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/GLA14_r31_mssu2_2009.csv"
 //				  };
-		String[] files = {
-				  "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/GLA14_r31_mssu.csv"
-				  };
-		String image = "C:/Users/Nicholas/Documents/urban/Landscan2010/derived_data/gpt2pop_.tif";
-		//String output = "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/overlay_2009_pixels.csv";
-		String output = "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/overlay_2003_2009_pixels.csv";
-		try {
-			GLA14Summarizer sum = new GLA14Summarizer(image, files, output);
-			sum.summarize3();
-			sum.write3();
-			System.out.println(Calendar.getInstance().getTime());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		String[] files = {
+//				  "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/GLA14_r31_mssu.csv"
+//				  };
+//		String image = "C:/Users/Nicholas/Documents/urban/Landscan2010/derived_data/gpt2pop_.tif";
+//		//String output = "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/overlay_2009_pixels.csv";
+//		String output = "C:/Users/Nicholas/Documents/urban/Landscan2010/overlay_with_GLA14/overlay_2003_2009_pixels.csv";
+//		try {
+//			GLA14Summarizer sum = new GLA14Summarizer(image, files, output);
+//			sum.summarize3();
+//			sum.write3();
+//			System.out.println(Calendar.getInstance().getTime());
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20120526
+//		String[] files = {
+//				  "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r31_mssu2_2005.csv",
+//				  "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r31_mssu2_2006.csv",
+//				  "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r31_mssu2_2007.csv",
+//				  "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r31_mssu2_2008.csv",
+//				  "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r31_mssu2_2009.csv"
+//				  };
+//
+//		String image = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/lat_id1.tif";
+//		String output = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/overlay_2005_2009_heights_density_hw.csv";
+//		try {
+//			GLA14Summarizer sum = new GLA14Summarizer(image, files, output);
+//			sum.summarize4();
+//			sum.write4();
+//			System.out.println(Calendar.getInstance().getTime());
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 		
 		
 	}

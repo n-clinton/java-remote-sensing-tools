@@ -1,7 +1,7 @@
 /**
  * 
  */
-package cn.edu.tsinghua.lidar;
+package cn.edu.tsinghua.modis;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -18,6 +18,8 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+
+import cn.edu.tsinghua.lidar.BitChecker;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;

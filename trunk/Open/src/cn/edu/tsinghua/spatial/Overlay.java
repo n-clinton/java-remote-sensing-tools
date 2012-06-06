@@ -150,7 +150,7 @@ public class Overlay {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// Overlay of gpt2lattice
+		// Overlay of gpt2lattice and population
 //		String lattice = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices_joined2.shp";
 //		String image = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2pop_.tif";
 //		String outTableName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2id_lattices_joined2_pop.csv";
@@ -173,7 +173,7 @@ public class Overlay {
 //		}
 		
 		
-		
+		// GLA14 already has population in it
 		String lattice = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/shapefiles/GLA14_r33_mssu_points_gpt2id_joined.shp";
 		String image = "C:/Users/Nicholas/Documents/Night_Lights/F182010.v4c_web.stable_lights.tif";
 		String outTableName = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r33_mssu_points_gpt2id_joined_nightlights.csv";
