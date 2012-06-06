@@ -258,6 +258,73 @@ public class GLA14shot {
 		return top2weight() + thirdWeight();
 	}
  	
+	/*******************************************************************************************/
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public int numPeaks() {
+		int n = 0;
+		for (int h=1; h<6; h++) {
+			if (heights[h]!=0) { n++; }
+		}
+		return n;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public double getWeightedHt1() {
+		if (numPeaks() == 0) { return 0; }
+		double ht = 0;
+		double weight = 0;
+		for (int i=1; i<6; i++) {
+			ht += heights[i]*areas[i];
+			weight += areas[i];
+		}
+		if (weight != 0) { return ht/weight; }
+		return 0;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public double getWeightedHt2() {
+		return SigBegHt*(1.0 / (numPeaks()+1.0)) + getWeightedHt1()*(numPeaks() / (numPeaks()+1.0));
+	}
+	
+	/**
+	 * 
+	 * @return density in percent
+	 */
+	public double getDensity() {
+		double notGround = areas[1] + areas[2] + areas[3] + areas[4] + areas[5];
+		if (notGround == 0) { return Double.MIN_NORMAL; }
+		if (areas[0] != 0) { return 100*notGround/(areas[0] + notGround); }
+		return 0;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public double hw1() {
+		if (areas[0] != 0) { return SigBegHt/Math.sqrt(areas[0]); }
+		return 0;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public double hw2() {
+		if (areas[0] != 0) { return getWeightedHt2()/Math.sqrt(areas[0]); }
+		return 0;
+	}
+	
 	/**
 	 * @param args
 	 */

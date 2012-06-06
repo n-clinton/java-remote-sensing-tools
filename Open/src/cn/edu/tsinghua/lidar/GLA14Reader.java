@@ -307,7 +307,13 @@ public class GLA14Reader {
 				i_maxRecAmp[i] = glasFile.readUnsignedShort(); // fill with signal
 			}
 			for (int i=0; i<40; i++) {
-				double snr = i_maxRecAmp[i]/glasFile.readUnsignedShort(); // divide by noise
+				int noise = glasFile.readUnsignedShort();
+				// to prevent divide by zero, simply squash the SNR :: ERROR condition
+				if (noise == 0) {
+					noise = Integer.MAX_VALUE;
+					if (error) { System.err.println ("\t zero noise, i= "+i+": "+noise); }
+				}
+				double snr = i_maxRecAmp[i]/noise; // divide by noise
 				//System.out.println ("SNR, i= "+i+": "+snr);
 				if (snr < 15) { // sort of arbitrary snr threshold
 					write[i] = false; // don't use
