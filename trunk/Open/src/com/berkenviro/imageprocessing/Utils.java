@@ -585,7 +585,7 @@ public class Utils {
 			// initialize
 			ArrayList[] listArr = new ArrayList[columns];
 			for (int a=0; a<columns; a++) {
-				listArr[a] = new ArrayList();
+				listArr[a] = new ArrayList<Object>();
 			}
 			// get strings from first line
 			for (int s=0; s<columns; s++) {
@@ -621,6 +621,72 @@ public class Utils {
 		return output;	
 	}
 	
+	
+	/**
+	 * Generic function to read a text file into a double[][] with an arbitrary number of columns.
+	 * 
+	 * @param file is the full path of the text file to read.
+	 * @param header is the number of lines of header to skip
+	 * @return double[][] {column_1, ..., column_N}
+	 */
+	public static String[][] readTextFile(File file, int header) {
+
+		String[][] output = null;
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new FileReader(file));
+			// skip the header
+			for (int i=1; i<=header; i++) {
+				reader.readLine();
+			}
+			// first line, set up number of columns
+			String line = reader.readLine();
+			String[] tokens = tokenize(line);
+			int columns = tokens.length;
+			// initialize
+			ArrayList[] listArr = new ArrayList[columns];
+			for (int a=0; a<columns; a++) {
+				listArr[a] = new ArrayList<String>();
+			}
+			// get strings from first line
+			for (int s=0; s<columns; s++) {
+				listArr[s].add(tokens[s]);
+			}
+			// read the rest of the file, adding token strings to the lists
+			while ((line = reader.readLine()) != null) {
+				tokens = tokenize(line);
+				if (tokens.length < columns) {
+					for (int i=0; i<tokens.length; i++) {
+						System.out.println(i+" = "+tokens[i]);
+					}
+				}
+				for (int s=0; s<columns; s++) {
+					String string = tokens[s];
+					listArr[s].add(string);
+				}
+			}
+			// arraylists full of strings, read to arrays
+			output = new String [columns][listArr[0].size()];
+			for (int i=0; i<listArr[0].size(); i++) {
+				for (int a=0; a<columns; a++) {
+					output[a][i] = (String)listArr[a].get(i);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+		
+		finally {
+			try {
+				reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return output;	
+	}
 	
 	/**
 	 * Tokenizing helper.  Works on space, tab and comma separated files.
@@ -722,6 +788,43 @@ public class Utils {
 	
 	
 	/**
+	 * Write an int[][] with an arbitrary number of columns to a file.
+	 * @param toWrite is an int[][] to write
+	 * @param outName is the full output path
+	 * @return true if successfully completed.
+	 */
+	public static boolean writeFile(String[][] toWrite, String outName) {
+		BufferedWriter writer = null;
+		try {
+			writer = new BufferedWriter(new FileWriter(new File(outName)));
+			for (int l=0; l<toWrite[0].length; l++) {
+				String line = "";
+				for (int c=0; c<toWrite.length; c++) {
+					if (c == toWrite.length-1) {
+						line += toWrite[c][l];
+					}
+					else {
+						line+= toWrite[c][l] +",";
+					}
+				}
+				writer.write(line);
+				writer.newLine();
+				writer.flush();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			try {
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return true;
+	}
+	
+	/**
 	 * Create a directory.
 	 * @param containerDir is the parent directory in which to make a new directory
 	 * @param name is the name of the directory
@@ -749,6 +852,55 @@ public class Utils {
 	
 	
 	/**
+	 * 
+	 * @param strings1
+	 * @param strings2
+	 * @param j1a
+	 * @param j1b
+	 * @param j2a
+	 * @param j2b
+	 * @return
+	 */
+	public static String[][] nestedJoin(String[][] strings1, String[][] strings2, int j1a, int j1b, int j2a, int j2b) {
+		// return strings2 joined to strings1
+		String[][] joinedStrings = new String[strings1.length+strings2.length][strings1[0].length];
+		// 
+		for (int i=0; i<strings1[j1a].length; i++) {
+			//System.out.println("Processing record "+i);
+			for (int j=0; j<strings2[j2a].length; j++) {
+				// if right join 'a' field, ...
+				if (strings2[j2a][j].equals(strings1[j1a][i])) {
+					//System.out.println("\t"+strings2[j2a][j]+" = "+strings1[j1a][i]);
+					// find one matching record
+					int k=j;
+					while (k<strings2[j2a].length && strings2[j2a][k].equals(strings1[j1a][i])) {
+						//System.out.println("\t\t Checking record "+k+" : "+ strings1[j1b][i]);
+						if(strings2[j2b][k].equals(strings1[j1b][i])) {
+							//System.out.println("\t\t\t"+strings2[j2b][k]+" = "+strings1[j1b][i]);
+							// copy to output table
+							for (int s1=0; s1<strings1.length; s1++) {
+								joinedStrings[s1][i] = strings1[s1][i];
+								System.out.print(joinedStrings[s1][i]+",");
+							}
+							for (int s2=0; s2<strings2.length; s2++) {
+								joinedStrings[strings1.length+s2][i] = strings2[s2][k];
+								System.out.print(joinedStrings[strings1.length+s2][i]+",");
+							}
+							System.out.println();
+							break;
+						}
+						k++;
+					}
+					break;
+				}
+			}
+		}
+		
+		return joinedStrings;
+	}
+	
+	
+	/**
 	 * Test code and processing log.
 	 * @param args
 	 */
@@ -761,6 +913,23 @@ public class Utils {
 		}
 		*/ //OK
 		
+		// yield 1
+//		File file = new File("C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_comp.csv");
+//		String[][] strings1 = readTextFile(file, 1);
+//		file = new File("C:/Users/Nicholas/Documents/urban/agriculture/FAO_producer_price.csv");
+//		String[][] strings2 = readTextFile(file, 1);
+//		
+//		String[][] joinedStrings = nestedJoin(strings1, strings2, 2, 3, 1, 2);
+//		writeFile(joinedStrings, "C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_prices.csv");
+		
+		// yield2
+		File file = new File("C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_comp2.csv");
+		String[][] strings1 = readTextFile(file, 1);
+		file = new File("C:/Users/Nicholas/Documents/urban/agriculture/FAO_producer_price.csv");
+		String[][] strings2 = readTextFile(file, 1);
+		
+		String[][] joinedStrings = nestedJoin(strings1, strings2, 2, 3, 1, 2);
+		writeFile(joinedStrings, "C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_prices2.csv");
 		
 	}
 

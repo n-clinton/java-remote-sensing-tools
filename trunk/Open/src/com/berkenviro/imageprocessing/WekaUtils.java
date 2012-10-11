@@ -49,6 +49,8 @@ import weka.attributeSelection.ReliefFAttributeEval;
 import weka.attributeSelection.SymmetricalUncertAttributeEval;
 import weka.attributeSelection.WrapperSubsetEval;
 import weka.classifiers.trees.REPTree;
+import weka.clusterers.Clusterer;
+import weka.clusterers.SimpleKMeans;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -364,6 +366,17 @@ public class WekaUtils {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	
+	/**
+	 * 
+	 * @param in
+	 * @param clusterer
+	 * @param outPlotName
+	 */
+	public static void clusterChart(Instances clusters, String outPlotName) throws Exception {
+		System.out.println(clusters.toString());
 	}
 	
 	/**

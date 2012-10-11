@@ -3,6 +3,7 @@
  */
 package com.berkenviro.imageprocessing;
 
+import weka.clusterers.SimpleKMeans;
 import weka.core.Instances;
 
 /**
@@ -521,6 +522,424 @@ public class WekaUtilsProcessing extends WekaUtils {
 //		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_dn_gt_50_uhs_cdd_discrete.arff";
 //		rankDiscrete(in, out, classatt);
 		
+		
+		
+		// added response variables
+//		String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros.csv";
+//		Instances input = loadCSV(filename);
+//		try {
+//			Instances filt = removeAttributes(input, new int[] {0,1,27,34}); 
+//			Instances[] split = subset(70, filt);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff");
+//			writeArff(split[1], "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_30.arff");
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+//		try {
+//			String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff";
+//			Instances input = loadArff(filename);
+//			SimpleKMeans kMeans = new SimpleKMeans();
+//			kMeans.setNumClusters(20);
+//			kMeans.setMaxIterations(200);
+//			kMeans.buildClusterer(input);
+//			Instances clusters = kMeans.getClusterCentroids();
+//			writeArff(clusters, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_k20.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+//		try {
+//			String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff";
+//			Instances input = loadArff(filename);
+//			Instances filt = removeAttributes(input, new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,26,27,28,29,30,31,32,33,34}); 
+//			Instances rem = filterMissing(filt, "uhbar");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhbar");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_discrete.arff");
+			
+//			Instances filt = removeAttributes(input, new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,
+//					30,31,32,33,34}); 
+//			Instances rem = filterMissing(filt, "uhbar_1");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_d.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhbar_1");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_d_discrete.arff");
+			
+//			
+//			filt = removeAttributes(input, new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34}); 
+//			rem = filterMissing(filt, "uhi_12");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhi_12.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhi_12");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhi_12_discrete.arff");
+//			
+//			filt = removeAttributes(input, new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,33,34}); 
+//			rem = filterMissing(filt, "uhs_12_13");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhs_12_13.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_12_13");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhs_12_13_discrete.arff");
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+		// ranking
+		// added responses.  All CDD.
+//		String classatt;
+//		String out;
+//		String in;
+//		classatt = "uhbar";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhi_12";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhi_12.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhi_12_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhi_12_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhi_12_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhs_12_13";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhs_12_13.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhs_12_13_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhs_12_13_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhs_12_13_disc.csv";
+//		rankDiscrete(in, out, classatt);
+		
+		// Non-CDD*****************************************************************************************************
+//		String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros.csv";
+//		Instances input = loadCSV(filename);
+//		try {
+//			Instances filt = removeAttributes(input, new int[] {0,1,27,34}); 
+//			Instances[] split = subset(70, filt);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70.arff");
+//			writeArff(split[1], "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_30.arff");
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,26,27,28,29,30,31,32,33,34}); 
+//			Instances rem = filterMissing(filt, "uhbar");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhbar");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_discrete.arff");
+		
+//		String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70.arff";
+//		Instances input = loadArff(filename);
+//		Instances filt = removeAttributes(input, new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,
+//				30,31,32,33,34}); 
+//		Instances rem = filterMissing(filt, "uhbar_1");
+//		writeArff(rem, 
+//				"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_d.arff");
+//		System.out.println("Discretizing...");
+//		Instances disc = discretize(rem, "uhbar_1");
+//		writeArff(disc, 
+//				"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_d_discrete.arff");
+		
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34}); 
+//			rem = filterMissing(filt, "uhi_12");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_70_uhi_12.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhi_12");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhi_12_discrete.arff");
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,33,34}); 
+//			rem = filterMissing(filt, "uhs_12_13");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhs_12_13.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_12_13");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhs_12_13_discrete.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+		// ranking 
+//		String classatt;
+//		String out;
+//		String in;
+//		classatt = "uhbar_1";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_d.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_d_ann_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_d_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_d_ann_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhbar_1";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_d.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_d_cdd_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_uhbar_d_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_d_cdd_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_ann_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhbar_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhbar_ann_disc.csv";
+//		rankDiscrete(in, out, classatt);
+		
+//		classatt = "uhi_12";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhi_12.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhi_12_ann_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhi_12_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhi_12_ann_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhs_12_13";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhs_12_13.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhs_12_13_ann_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_ann_no_zeros_70_uhs_12_13_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/gpt2id_joined7_cumulative_responses_uhs_12_13_ann_disc.csv";
+//		rankDiscrete(in, out, classatt);
+		
+		
+		// GLA14 overlay *****************************************************************************************************
+//		String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros.csv";
+//		Instances input = loadCSV(filename);
+//		try {
+//			Instances filt = removeAttributes(input, new int[] {0,1,25,34,41,48,55}); 
+//			Instances[] split = subset(70, filt);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70.arff");
+//			writeArff(split[1], "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_30.arff");
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52}); 
+//			Instances rem = filterMissing(filt, "uhbar_n");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n.arff");
+//			System.out.println("Discretizing...");
+//			Instances disc = discretize(rem, "uhbar_n");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_discrete.arff");
+//			
+//			/*
+//			 * Haven't done this for the GPT2 lattices, above.
+//			 */
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhbar_d");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhbar_d");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_discrete.arff");
+//			/*
+//			 * */
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhi_n");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhi_n");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_discrete.arff");
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,35,36,37,39,40,41,42,43,44,45,46,47,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhs_d");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_d");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_discrete.arff");
+//	
+//			// CDD----------------------------------------
+//
+//
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,35,36,37,38,39,40,42,43,44,45,46,47,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhbar_n_cdd");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhbar_n_cdd");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd_discrete.arff");
+//			
+//			/*
+//			 * Haven't done this for the GPT2 lattices, above.
+//			 */
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhbar_d_cdd");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhbar_d_cdd");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd_discrete.arff");
+//			/*
+//			 * */
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,52}); 
+//			rem = filterMissing(filt, "uhi_n_cdd");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhi_n_cdd");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd_discrete.arff");
+//			
+//			filt = removeAttributes(split[0], new int[] {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,
+//					29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,51,52}); 
+//			rem = filterMissing(filt, "uhs_d_cdd");
+//			writeArff(rem, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd.arff");
+//			System.out.println("Discretizing...");
+//			disc = discretize(rem, "uhs_d_cdd");
+//			writeArff(disc, 
+//					"C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd_discrete.arff");
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// ranking
+
+//		String classatt;
+//		String out;
+//		String in;
+//		classatt = "uhbar_n";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhbar_d";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhi_n";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhi_n_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhs_d";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhs_d_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		// CDD
+//		classatt = "uhbar_n_cdd";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_n_cdd_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhbar_d_cdd";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhbar_d_cdd_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhi_n_cdd";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhi_n_cdd_disc.csv";
+//		rankDiscrete(in, out, classatt);
+//		
+//		classatt = "uhs_d_cdd";
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd_cont.csv";
+//		rankContinuous(in, out, classatt);
+//		
+//		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd_discrete.arff";
+//		out = "C:/Users/Nicholas/Documents/urban/uhi/rankings/GLA14_2005_2009_responses_no_zeros_70_uhs_d_cdd_disc.csv";
+//		rankDiscrete(in, out, classatt);
+		
+		
+		// 20120717
+		try {
+			//String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70.arff";
+			String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff";
+			Instances input = loadArff(filename);
+			SimpleKMeans kMeans = new SimpleKMeans();
+			kMeans.setNumClusters(50);
+			kMeans.setMaxIterations(500);
+			kMeans.buildClusterer(input);
+			Instances clusters = kMeans.getClusterCentroids();
+			//writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_k20.arff");
+			writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_k50.arff");
+			int[] membership = kMeans.getAssignments();
+			for (int i=0; i<membership.length; i++) {
+				System.out.println(i+", "+membership[i]);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }
