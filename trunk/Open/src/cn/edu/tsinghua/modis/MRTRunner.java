@@ -43,8 +43,20 @@ public class MRTRunner {
 	static String COMPOSITE_DOY = 			"0 0 0 0 0 0 0 0 0 0 1 0";
 	static String PIXEL_RELIABILITY = 		"0 0 0 0 0 0 0 0 0 0 0 1";	
 	
+	static String MOD16_ET = 				"1 0 0 0";
+	static String MOD16_LE = 				"0 1 0 0";
+	static String MOD16_PET = 				"0 0 1 0";
+	static String MOD16_PLE = 				"0 0 0 1";
+	
+	static String MOD44_TREE = 				"1 0 0 0";
+	static String MOD44_QC = 				"0 1 0 0";
+	static String MOD44_TREE_SD = 			"0 0 1 0";
+	static String MOD44_CLOUD = 			"0 0 0 1";
+	
 	static int MOD11 = 11;
 	static int MOD13 = 13;
+	static int MOD16 = 16;
+	static int MOD44 = 44;
 	
 	private int modnum;
 	
@@ -192,7 +204,7 @@ public class MRTRunner {
 	 * @throws Exception
 	 */
 	public void processDir(String dir, String subset) throws Exception {
-		
+		System.out.println("Processing directory: "+dir);
 		File dataDir = new File(dir);
 		if (!dataDir.isDirectory()) {
 			throw new Exception("processDir error: dir is not a directory");
@@ -206,8 +218,9 @@ public class MRTRunner {
 		System.out.println("\t Building list of files to mosaic...");
 		String fileList = buildMosaicList(dir);
 		
+		// MUST have an hdf output
 		String mosaicName = dataDir.getName()+"_"+name+"_mosaic.hdf";
-		System.out.println("\t Mosaicking...");
+		System.out.println("\t Mosaicking ...");
 		runMosaic(newDir, fileList, mosaicName, subset);
 		
 		// now, reproject and reformat
@@ -250,7 +263,6 @@ public class MRTRunner {
 				}
 			}
 		}
-		
 	}
 	
 	
@@ -297,6 +309,35 @@ public class MRTRunner {
 				return "VI_RELIABILITY";
 			}
 		}
+		else if (modnum == MOD16) {
+			if (subset.equals(MRTRunner.MOD16_ET)) {
+				return "ET";
+			}
+			if (subset.equals(MRTRunner.MOD16_LE)) {
+				return "LE";
+			}
+			if (subset.equals(MRTRunner.MOD16_PET)) {
+				return "PET";
+			}
+			if (subset.equals(MRTRunner.MOD16_PLE)) {
+				return "PLE";
+			}
+		}
+		else if (modnum == MOD44) {
+			if (subset.equals(MRTRunner.MOD44_TREE)) {
+				return "TREE";
+			}
+			if (subset.equals(MRTRunner.MOD44_QC)) {
+				return "TREE_QC";
+			}
+			if (subset.equals(MRTRunner.MOD44_TREE_SD)) {
+				return "TREE_SD";
+			}
+			if (subset.equals(MRTRunner.MOD44_CLOUD)) {
+				return "CLOUD";
+			}
+		}
+		
 		return null;
 	}
 	
@@ -405,13 +446,27 @@ public class MRTRunner {
 //			e.printStackTrace();
 //		}
 		
-		try {
-		new MRTRunner(MRTRunner.MOD13).processDir("D:/MOD13A2/2010.01.17", MRTRunner.MOD13_EVI);
-		new MRTRunner(MRTRunner.MOD13).processDir("D:/MOD13A2/2010.01.17", MRTRunner.MOD13_VI_QUALITY);
-	} catch (Exception e) {
-		e.printStackTrace();
-	}
 		
+		// 20120607
+//		try {
+//			String productDir = "C:/Users/Nicholas/Documents/MOD16A2/";
+//			new MRTRunner(MRTRunner.MOD16).processDirs(productDir, MRTRunner.MOD16_ET);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+//		try {
+//			String productDir = "C:/Users/Nicholas/Documents/MOD44B.005/";
+//			new MRTRunner(MRTRunner.MOD44).processDirs(productDir, MRTRunner.MOD44_TREE);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20121011
+		String productDir = "D:/MOD13A2/2011";
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
 		
 		
 	}

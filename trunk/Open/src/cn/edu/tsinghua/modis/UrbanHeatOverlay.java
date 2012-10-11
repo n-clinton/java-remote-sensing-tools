@@ -407,19 +407,20 @@ public class UrbanHeatOverlay {
 	 * 
 	 * @param parentDir
 	 * @param outTable
+	 * @param product
+	 * @param cdd
 	 * @throws Exception
 	 */
-	public static void averageUHI(String parentDir, String outTable, String product) throws Exception {
+	public static void countUHI(String parentDir, String outTable, String product, String baseTableName, double cdd) throws Exception {
 		File[] dirs = (new File(parentDir)).listFiles();
 		
-		float[][] uhis = new float[523238][2]; // column 1 is sum, column 2 is ss
-		int[] n = new int[523238]; // n
+		float[][] uhs = new float[523238][2]; // column 1 is uhi, column 2 is uhs
+		int[][] counts = new int[523238][2]; // column 1 is uhi, column 2 is uhs
 		
 		for (File dir : dirs) {
 			if (!(dir.isDirectory())) { continue; }
 			System.out.println("Processing dir: " +dir.getName());
-			File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/gpt2id_lattices_mean_temps.csv");
-			//File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/gpt2id_LA_lattice_mean_temps.csv");
+			File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/"+baseTableName);
 			BufferedReader reader = new BufferedReader(new FileReader(latticeTab));
 			reader.readLine(); // header
 			String line = null;
@@ -427,25 +428,89 @@ public class UrbanHeatOverlay {
 				String[] toks = line.split(",");
 				int id = Integer.parseInt(toks[0]);
 				float pttemp = Float.parseFloat(toks[1]);
+				// check of cooling degree days
+				if (pttemp < cdd) { continue; }
 				float buftemp = Float.parseFloat(toks[2]);
 				// compute heat island or sink
 				float uh = pttemp-buftemp;
-				uhis[id-1][0]+=uh; // sum
-				uhis[id-1][1]+=uh*uh; // sum of squares
+
+				if (uh > 0) { // heat island
+					counts[id-1][0]++;
+					uhs[id-1][0]+=uh;
+				}
+				else if (uh < 0) { // heat sink
+					counts[id-1][1]++;
+					uhs[id-1][1]+=uh;
+				}
+				else { // zero, error or very unlikely situation
+					System.err.println("\t Buffer is the same temp as the core: "+pttemp+", "+buftemp);
+				}
+			}
+			reader.close();
+		}
+		// Arrays should be full, write out
+
+		BufferedWriter writer = new BufferedWriter(new FileWriter(outTable));
+		writer.write("id,uhi,uhs,n_i,n_s");
+		writer.newLine();
+		
+		for (int i=0; i<uhs.length; i++) {
+			writer.write((i+1)+","+uhs[i][0]+","+uhs[i][1]+","+counts[i][0]+","+counts[i][1]);
+			writer.newLine();
+		}
+		writer.close();
+	}
+	
+	/**
+	 * 
+	 * @param parentDir
+	 * @param outTable
+	 * @throws Exception
+	 */
+	public static void averageUHI(String parentDir, String outTable, String product, String baseTableName, double cdd) throws Exception {
+		File[] dirs = (new File(parentDir)).listFiles();
+		
+		float[][] uhs = new float[523238][2]; // column 1 is sum, column 2 is ss
+		int[] n = new int[523238]; // n
+		
+		for (File dir : dirs) {
+			if (!(dir.isDirectory())) { continue; }
+			System.out.println("Processing dir: " +dir.getName());
+			File latticeTab = new File(dir.getAbsolutePath()+"/LST_"+product+"/"+baseTableName);
+			BufferedReader reader = new BufferedReader(new FileReader(latticeTab));
+			reader.readLine(); // header
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				String[] toks = line.split(",");
+				int id = Integer.parseInt(toks[0]);
+				float pttemp = Float.parseFloat(toks[1]);
+				// check of cooling degree days
+				if (pttemp < cdd) { continue; }
+				float buftemp = Float.parseFloat(toks[2]);
+				// compute heat island or sink
+				float uh = pttemp-buftemp;
+				uhs[id-1][0]+=uh; // sum
+				uhs[id-1][1]+=uh*uh; // sum of squares
 				n[id-1]++;
 			}
 			reader.close();
 		}
 		// Arrays should be full, write out
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outTable));
-		writer.write("id,uhimean,uhisd,n");
+		writer.write("id,uhbar,uhsd,n");
 		writer.newLine();
 		
-		for (int i=0; i<uhis.length; i++) {
-			if (n[i]-1 > 0) {
-				double mean = uhis[i][0]/n[i];
-				double ms = uhis[i][1]/n[i];
-				double sd = Math.sqrt(n[i]/(n[i]-1))*Math.sqrt(ms-Math.pow(mean, 2));
+		for (int i=0; i<uhs.length; i++) {
+			if (n[i] > 0) {
+				double mean = uhs[i][0]/n[i];
+				double ms = uhs[i][1]/n[i];
+				double sd;
+				if (n[i] > 1) {
+					sd = Math.sqrt(n[i]/(n[i]-1))*Math.sqrt(ms-Math.pow(mean, 2));
+				}
+				else {
+					sd = 0;
+				}
 				writer.write((i+1)+","+mean+","+sd+","+n[i]);
 			}
 			else {
@@ -594,7 +659,6 @@ public class UrbanHeatOverlay {
 //		} catch (Exception e) {
 //			e.printStackTrace();
 //		}
-		
 		
 		
 	}

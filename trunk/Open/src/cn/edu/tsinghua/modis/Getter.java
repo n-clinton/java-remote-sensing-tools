@@ -394,6 +394,24 @@ public class Getter {
 //		}
 		// 20120601 Done
 		
+		
+		// MOD44, 250m
+//		String remoteFolder = "MODIS_Composites/MOLT/MOD44B.005";
+//		// Made from the shapefile by selecting tiles that intersect continents
+//		String tileFile = "C:/Users/Nicholas/Documents/shapefiles/modis_sinusoidal/Continental_tiles_20120305.txt";
+//		Getter getter = null;
+//		try {
+//			getter = new Getter(remoteFolder, 2010);
+//			// header: "FID_","cat","h","v"
+//			ArrayList<String> tiles = readTilesFromFile(tileFile, 2, 3);
+//			File localDir = new File("C:/Users/Nicholas/Documents/MOD44B.005/");
+//			getter.download(tiles, localDir);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			getter.disconnect();
+//		}
+		
 	}
 	
 }
