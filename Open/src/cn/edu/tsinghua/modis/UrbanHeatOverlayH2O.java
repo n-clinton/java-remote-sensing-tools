@@ -318,26 +318,58 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 //		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
 		
 		// reprocess GLA14 w/ water body mask, 20120514
+//		String parentDir = "D:/MOD11A2";
+//		try {
+//			// re-do of GLA14
+//			String baseTableName = "GLA14_r33_mssu_points_gpt2id_mean_temps_h2o.csv";
+//			
+//			String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_NIGHT_h2o.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_DAY_h2o.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+//			// with cooling degree day > 20 degrees C
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_NIGHT_ccd_h2o.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+//			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_DAY_ccd_h2o.csv";
+//			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+
+		
+		// 20120618 count and average UH
 		String parentDir = "D:/MOD11A2";
 		try {
-			// re-do of GLA14
-			String baseTableName = "GLA14_r33_mssu_points_gpt2id_mean_temps_h2o.csv";
+			// original w/ cooling degree day
+//			String baseTableName = "gpt2id_latticesmean_temps_h2o.csv";
+//			String outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_cdd.csv";
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_cdd.csv";
+//			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+//			
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_mean_ccd.csv";
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count_ccd.csv";
+//			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
 			
-			String outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_NIGHT_h2o.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_DAY_h2o.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
-			// with cooling degree day > 20 degrees C
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_NIGHT_ccd_h2o.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
-			outTable = "D:/MOD11A2/GLA14_r33_mssu_points_gpt2id_LST_DAY_ccd_h2o.csv";
-			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+//			String baseTableName = "gpt2id_latticesmean_temps_h2o.csv";
+//			String outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean.csv";
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_count.csv";
+//			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+//			
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_mean.csv";
+//			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+//			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count.csv";
+//			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
 			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-
+				
+				
 	}
 
 }
