@@ -6,6 +6,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.util.Map;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 
@@ -250,13 +254,34 @@ public class MRTRunner {
 	 */
 	public void processDirs(String parentDir, String subset) {
 		
+		// parallel 20121011
+//		int threads = Runtime.getRuntime().availableProcessors()-1;
+//		ExecutorService service = Executors.newFixedThreadPool(threads);
+//		// Give it to a completion service
+//		CompletionService ecs = new ExecutorCompletionService(service);
+		
 		File dir = new File(parentDir);
 		if (dir.isDirectory()) {
 			File[] files = dir.listFiles();
 			for (File f : files) {
 				try {
 					if (f.isDirectory()) {
-						processDir(f.getAbsolutePath(), subset);
+						/*
+						 * This works, but the disk read/write load is really significant.
+						 * Not sure if this is going to create problems in the long run:
+						 * fragmentation, disk failure, etc.  Do it the old-fashioned way.
+						 */
+//						ecs.submit(new Runnable() {
+//							public void run() {
+//								try {
+//									processDir(f.getAbsolutePath(), subset);
+//								} catch (Exception e) {
+//									e.printStackTrace();
+//								}
+//							}
+//						}, null);
+						
+						processDir(f.getAbsolutePath(), subset); // serial way
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -464,9 +489,9 @@ public class MRTRunner {
 //		}
 		
 		// 20121011
-		String productDir = "D:/MOD13A2/2011";
-		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
-		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
+//		String productDir = "D:/MOD13A2/2011";
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
 		
 		
 	}
