@@ -154,7 +154,7 @@ public class GISUtils {
 	}
 	
 	/**
-	 * 
+	 * Tested OK for geographic 20120402.
 	 * @param p
 	 * @param image
 	 * @param band
