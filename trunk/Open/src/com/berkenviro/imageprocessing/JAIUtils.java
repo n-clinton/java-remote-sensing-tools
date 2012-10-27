@@ -190,35 +190,7 @@ public class JAIUtils {
 		}
 	}
 	
-	/**
-	 * Get the GeoTiff Fields.
-	 * @param imageFileName is the absolute path of the file
-	 * @return com.sun.media.jai.codec.TIFFField[]
-	 */
-	public static TIFFField[] getGeoTiffFields(String imageFileName) {
-		TIFFDirectory dir = getTiffDirectory(imageFileName);
-		
-		GeoTIFFTagSet geoTags = GeoTIFFTagSet.getInstance();
-		SortedSet ss = geoTags.getTagNumbers();
-		Object[] ints = ss.toArray();
-		ArrayList fieldList = new ArrayList();
-		TIFFField geoField = null;
-		int tag;
-		for (int i=0; i<ints.length; i++) {
-			tag = ((Integer)ints[i]).intValue();
-			// works with JAI TIFFField
-			geoField = dir.getField(tag);
-			if (geoField != null) {
-				fieldList.add(geoField);
-			}
-
-		}
-		TIFFField[] geoFields = new TIFFField[fieldList.size()];
-		for (int j=0; j<fieldList.size(); j++) {
-			geoFields[j] = (TIFFField) fieldList.get(j);
-		}
-		return geoFields;
-	}
+	
 	
 	/**
 	 * Create an image of the specified normalized index.  The index is of the form
@@ -378,6 +350,38 @@ public class JAIUtils {
 		return ti;
 	}
 
+	
+	/**
+	 * Get the GeoTiff Fields.
+	 * @param imageFileName is the absolute path of the file
+	 * @return com.sun.media.jai.codec.TIFFField[]
+	 */
+	public static TIFFField[] getGeoTiffFields(String imageFileName) {
+		TIFFDirectory dir = getTiffDirectory(imageFileName);
+		
+		GeoTIFFTagSet geoTags = GeoTIFFTagSet.getInstance();
+		SortedSet ss = geoTags.getTagNumbers();
+		Object[] ints = ss.toArray();
+		ArrayList fieldList = new ArrayList();
+		TIFFField geoField = null;
+		int tag;
+		for (int i=0; i<ints.length; i++) {
+			tag = ((Integer)ints[i]).intValue();
+			// works with JAI TIFFField
+			geoField = dir.getField(tag);
+			if (geoField != null) {
+				fieldList.add(geoField);
+			}
+
+		}
+		TIFFField[] geoFields = new TIFFField[fieldList.size()];
+		for (int j=0; j<fieldList.size(); j++) {
+			geoFields[j] = (TIFFField) fieldList.get(j);
+		}
+		return geoFields;
+	}
+	
+	
 	/**
 	 * This method gets all the header information from the 
 	 * GeoTIFF directories and prints it to the screen.  See GeoTIFF
@@ -405,23 +409,23 @@ public class JAIUtils {
 		 System.out.println("TAG_MODEL_PIXEL_SCALE="+GeoTIFFTagSet.TAG_MODEL_PIXEL_SCALE);
 		 System.out.println("TAG_MODEL_TIE_POINT="+GeoTIFFTagSet.TAG_MODEL_TIE_POINT);
 		 System.out.println("TAG_MODEL_TRANSFORMATION="+GeoTIFFTagSet.TAG_MODEL_TRANSFORMATION);
-		 System.out.println();
+		 System.out.println("TAG_MODEL_TRANSFORMATION="+GeoTIFFTagSet.TAG_MODEL_TRANSFORMATION);
 		 // look for the geoTags, report
 		 GeoTIFFTagSet geoTags = GeoTIFFTagSet.getInstance();
-		 SortedSet ss = geoTags.getTagNumbers();
-		 Object[] ints = ss.toArray();
+		 SortedSet ss = geoTags.getTagNumbers(); // tag numbers
+		 Object[] ints = ss.toArray();  // tag numbers
 		 TIFFField f;
 		 int tag;
 		 for (int i=0; i<ints.length; i++) {
-			 tag = ((Integer)ints[i]).intValue();
+			 tag = ((Integer)ints[i]).intValue();  // tag number
 			 // works with JAI TIFFField
-			 f = dir.getField(tag);
+			 f = dir.getField(tag); // field associated with tag
 			 if (f == null) {
 				 System.out.println("No Directory:"+geoTags.getTag(tag).getName());
 				 System.out.println();
 			 }
 			 else {
-				 System.out.println(geoTags.getTag(tag).getName()+":");
+				 System.out.println("Tag: "+geoTags.getTag(tag).getName());
 				 System.out.println("Tag type: "+printType(f));
 				 System.out.println("Number of keys = "+f.getCount());
 				 
@@ -430,10 +434,12 @@ public class JAIUtils {
 				 double d;
 				 switch (f.getTag()) {
 				 	case GeoTIFFTagSet.TAG_GEO_KEY_DIRECTORY:
-				 		// int conversion apparently necessary for the JAI TIFFField
+				 		// KeyEntry = { KeyID, TIFFTagLocation, Count, Value_Offset }
+				 		// every 4 values
 				 		for (j=0; j<f.getCount(); j++) {
-				 			val = f.getAsInt(j);
+				 			val = f.getAsInt(j); // int conversion apparently necessary for the JAI TIFFField
 					 		System.out.println("key: "+j+", value: "+val);
+					 		
 				 		}
 				 		break;
 				 	case GeoTIFFTagSet.TAG_GEO_ASCII_PARAMS:
@@ -479,18 +485,18 @@ public class JAIUtils {
 		if (!isRegistered(pImage)) { register(pImage); }
 		
 		AffineTransformation at = GISUtils.raster2proj(pImage);
+		//System.out.println("JAI affine: "+at);
 		AffineTransformation inv = GISUtils.proj2raster(at);
 		Coordinate pix = new Coordinate();
 		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
-		if (pix.x<0 || pix.x > pImage.getWidth() || pix.y<0 || pix.y>pImage.getHeight()) {
+		if (pix.x < 0 || pix.x >= pImage.getWidth() || pix.y < 0 || pix.y >= pImage.getHeight()) {
 			throw new Exception("Impossible coordinates: "+pix);
 		}
-		// this agrees with ArcGIS, not necessarily ENVI
-		return new int[] {(int)(pix.x), (int)(pix.y)};
+		return new int[] {(int)pix.x, (int)pix.y};
 	}
 
 	/**
-	 * This method takes an int[] [x,y] of the pixel coordinates and returns the 
+	 * This method takes an int[] [x,y] of ZERO indexed pixel coordinates and returns the 
 	 * center of the pixel in projected coordinates.
 	 * 
 	 * @param pixelXY is the pixel indices
@@ -498,7 +504,6 @@ public class JAIUtils {
 	 * @return a double[] {x,y} projected coordinates of the pixel centroid
 	 */
 	public static double[] getProjectedXY(int[] pixelXY, PlanarImage pImage) throws Exception {
-		// check to make sure the tiff is registered
 		Coordinate pix = new Coordinate(pixelXY[0]+0.5, pixelXY[1]+0.5);
 		if (pix.x<0 | pix.y<0 | pix.x>pImage.getWidth() | pix.y>pImage.getHeight()) {
 			throw new Exception("Outside image bounds: "+pix);
@@ -631,6 +636,24 @@ public class JAIUtils {
 		return true;
 	}
 
+	
+	/**
+	 * Utility method for transferring georeferenceing 
+	 * @param source
+	 * @param dest
+	 */
+	public static void transferGeo(PlanarImage source, PlanarImage dest) {
+		if (!JAIUtils.isRegistered(source)) { JAIUtils.register(source); }
+		
+		dest.setProperty("ulX", source.getProperty("ulX"));
+		dest.setProperty("ulY", source.getProperty("ulY"));
+		dest.setProperty("deltaX", source.getProperty("deltaX"));
+		dest.setProperty("deltaY", source.getProperty("deltaY"));
+		
+		dest.setProperty("isReferenced", new Boolean(true));
+	}
+	
+	
 	/**
 	 * Get a pixel.	
 	 * @param pImage
@@ -860,17 +883,31 @@ public class JAIUtils {
 		 // This assumes that the first tie point is for upper left corner
 		 TIFFField tpField = dir.getField(GeoTIFFTagSet.TAG_MODEL_TIE_POINT);
 		 
-		 // non-standard "PixelIsPoint space
-		 //double halfX = 0.5*xScale;
-		 //double halfY = 0.5*yScale;
-		 //double ulX = tpField.getAsDouble(3)+halfX;
-		 //double ulY = tpField.getAsDouble(4)-halfY;
-		 // default pixel space: http://www.remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2
-		 double ulX = tpField.getAsDouble(3);
-		 double ulY = tpField.getAsDouble(4);
-		 pImage.setProperty("ulX", new Double(ulX));
-		 pImage.setProperty("ulY", new Double(ulY));
+		 // check the Raster Space coordinate system used, GTRasterTypeGeoKey
+		 boolean pixelIsArea = false;
+		 TIFFField geoKeyField = dir.getField(GeoTIFFTagSet.TAG_GEO_KEY_DIRECTORY);
+		 for (int j=0; j<geoKeyField.getCount(); j++) {
+ 			if (geoKeyField.getAsInt(j) == 1025) {
+ 				if (geoKeyField.getAsInt(j+3) == 2) {
+ 					pixelIsArea = true; 
+ 				}
+ 			}
+		 }
 		 
+		 double ulX, ulY;
+		 if (pixelIsArea) { // the UL coordinate in the TIFFfield is for the center of the pixel
+			 double halfX = 0.5*xScale;
+			 double halfY = 0.5*yScale;
+			 ulX = tpField.getAsDouble(3)-halfX;
+			 ulY = tpField.getAsDouble(4)+halfY;
+			 pImage.setProperty("pixelIsArea", new Boolean(true));
+		 } else {
+			 ulX = tpField.getAsDouble(3);
+			 ulY = tpField.getAsDouble(4);
+		 }
+		 
+		 pImage.setProperty("ulX", new Double(ulX));
+		 pImage.setProperty("ulY", new Double(ulY)); 
 		 pImage.setProperty("isReferenced", new Boolean(true));
 	}
 
@@ -1153,6 +1190,7 @@ public class JAIUtils {
 		}
 	}
 	
+
 	/**
 	 * Test code and procesing log.
 	 * @param args
@@ -1197,8 +1235,9 @@ public class JAIUtils {
 //			e.printStackTrace();
 //		}
 		
-		String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
-		describeGeoTiff(waterName);
+		//String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
+		String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
+		describeGeoTiff(file);
 		
 	}
 
