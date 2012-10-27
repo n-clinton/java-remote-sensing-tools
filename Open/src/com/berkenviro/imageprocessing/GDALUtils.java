@@ -26,12 +26,20 @@ package com.berkenviro.imageprocessing;
 
 import it.geosolutions.imageio.plugins.envihdr.ENVIHdrImageReaderSpi;
 
+import java.awt.image.BandedSampleModel;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
+import java.awt.image.DataBufferShort;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -41,11 +49,23 @@ import javax.imageio.ImageReader;
 import javax.media.jai.JAI;
 import javax.media.jai.ParameterBlockJAI;
 import javax.media.jai.PlanarImage;
+import javax.media.jai.iterator.RandomIter;
+import javax.media.jai.iterator.RandomIterFactory;
 
+import org.gdal.gdal.Band;
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.Driver;
 import org.gdal.gdal.gdal;
 import org.gdal.gdalconst.gdalconst;
+import org.gdal.gdalconst.gdalconstConstants;
+
+import com.berkenviro.gis.GISUtils;
+import com.sun.media.imageio.plugins.tiff.GeoTIFFTagSet;
+import com.sun.media.jai.codec.TIFFDirectory;
+import com.sun.media.jai.codec.TIFFField;
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.util.AffineTransformation;
 
 /**
  * @author owner
@@ -68,9 +88,7 @@ public class GDALUtils {
 	 * @return the metadata values as a double[]
 	 */
 	public static double[] getWavelengths(String fileName) {
-		
-		File f = new File(fileName);
-		Dataset poDataset = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_ReadOnly);
+		Dataset poDataset = getDataset(fileName);
 		double[] wavelengths = new double[poDataset.getRasterCount()];
 		Hashtable dict = poDataset.GetMetadata_Dict("");
 		Enumeration keys = dict.keys();
@@ -137,8 +155,7 @@ public class GDALUtils {
 	 * @return
 	 */
 	public static double[] getAttribute(String fileName, String attribute) {
-		File f = new File(fileName);
-		Dataset poDataset = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_ReadOnly);
+		Dataset poDataset = getDataset(fileName);
 		double[] array = new double[poDataset.getRasterCount()];
 		String hdrName = fileName+".hdr";
 		BufferedReader reader = null;
@@ -180,14 +197,181 @@ public class GDALUtils {
 	}
 	
 	/**
+	 * 
+	 * @param fileName
+	 * @return
+	 */
+	public static Dataset getDataset(String fileName) {
+		File f = new File(fileName);
+		Dataset data = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_ReadOnly);
+		return data;
+	}
+	
+	/**
+	 * AffineTransformation:
+	 * 	|x'| = 	| m00 m01 m02 |*|x|
+     	|y'|	| m10 m11 m12 | |y|
+     	|1 |	|  0   0   1  | |1|
+     		
+     * GDAL:
+     * 	Xp = padfTransform[0] + P*padfTransform[1] + L*padfTransform[2];
+   		Yp = padfTransform[3] + P*padfTransform[4] + L*padfTransform[5];
+   		
+	 * @param data
+	 * @return
+	 */
+	public static AffineTransformation raster2proj(Dataset data) {	
+		double[] padfTransform = data.GetGeoTransform();
+		double m02 = padfTransform[0];
+		double m00 = padfTransform[1];
+		double m01 = padfTransform[2];
+		double m12 = padfTransform[3];
+		double m10 = padfTransform[4];
+		double m11 = padfTransform[5];
+		return new AffineTransformation(m00, m01, m02, m10, m11, m12);
+	}
+	
+	/**
+	 * This method takes a double[] [x,y] in the coordinate space of the 
+	 * projected image and the reference image and returns the [x,y]
+	 * indices of the pixel containing the projected point.
+	 * 
+	 * @param ImageProjXY is the projected coordinate array {x,y}
+	 * @param pImage is the PlanarImage to search
+	 * @return an int[] of pixel {x,y} ZERO INDEXED
+	 */
+	public static int[] getPixelXY(double[] ImageProjXY, Dataset data) throws Exception {
+		AffineTransformation at = raster2proj(data);
+		AffineTransformation inv = GISUtils.proj2raster(at);
+		Coordinate pix = new Coordinate();
+		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
+		if (pix.x<=0 || pix.x > data.getRasterXSize() || pix.y<=0 || pix.y>data.getRasterYSize()) {
+			throw new Exception("Impossible coordinates: "+pix);
+		}
+		return new int[] {(int)(pix.x), (int)(pix.y)};
+	}
+
+	/**
+	 * This method takes an int[] [x,y] ZERO INDEXED of the pixel coordinates and returns the 
+	 * center of the pixel in projected coordinates.
+	 * 
+	 * @param pixelXY is the pixel indices
+	 * @param pImage is the image to use
+	 * @return a double[] {x,y} projected coordinates of the pixel centroid
+	 */
+	public static double[] getProjectedXY(int[] pixelXY, Dataset data) throws Exception {
+		Coordinate pix = new Coordinate(pixelXY[0]+0.5, pixelXY[1]+0.5);
+		if (pix.x<0 | pix.y<0 | pix.x>data.getRasterXSize() | pix.y>data.getRasterYSize()) {
+			throw new Exception("Outside image bounds: "+pix);
+		}
+		AffineTransformation at = raster2proj(data);
+		// projected pixel, empty for now
+		Coordinate projPix = new Coordinate();
+		at.transform(pix, projPix);
+		return new double[] {projPix.x, projPix.y};
+	}
+	
+	/**
+	 * This method is for overlaying a georeferenced point on a referenced image.  
+	 * Assumes that the projections match.
+	 * 
+	 * @param data
+	 * @param pt
+	 * @param band
+	 * @return
+	 */
+	public static double imageValue(Dataset data, Point pt, int b) throws Exception {
+		double[] xy = {pt.getX(), pt.getY()};
+		int[] pixelXY = getPixelXY(xy, data);
+		return pixelValue(data, pixelXY[0], pixelXY[1], b);
+	}
+
+	/**
+	 * 
+	 * @param data
+	 * @param x
+	 * @param y
+	 * @param b
+	 * @return
+	 */
+	public static double pixelValue(Dataset data, int x, int y, int b) {
+		Band band = data.GetRasterBand(b);
+		int buf_type = band.getDataType();
+		int buf_size = gdal.GetDataTypeSize(buf_type) / 8;
+		ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
+		pixel.order(ByteOrder.nativeOrder());
+		// offset by pixel-1 to start reading at pixel
+		band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
+
+		if (buf_type == gdalconstConstants.GDT_Byte) {
+			return ((int)pixel.get()) & 0xff;
+		} else if(buf_type == gdalconstConstants.GDT_Int16) {
+			return pixel.getShort();
+		} else if(buf_type == gdalconstConstants.GDT_Int32) {
+			return pixel.getInt();
+		} else if(buf_type == gdalconstConstants.GDT_Float32) {
+			return pixel.getFloat();
+		} else if(buf_type == gdalconstConstants.GDT_Float64) {
+			return pixel.getDouble();
+		} else if(buf_type == gdalconstConstants.GDT_UInt16) {
+			return pixel.getChar(); // ?????????????
+		}
+		
+		return Double.NaN;
+	}
+	
+	
+	/**
 	 * Test code and processing log.
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		//String hFile = "H:/headwall/CIRPAS_2010/11-783-02_2010_10_11_19_30_39_9_rad";
-		String aFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/f110609t01p00r06rdn_a/f110609t01p00r06rdn_a_sc01_ort_img";
-		double[] waves = getENVIfwhm(aFile);
-
+//		String aFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/f110609t01p00r06rdn_a/f110609t01p00r06rdn_a_sc01_ort_img";
+//		double[] waves = getENVIfwhm(aFile);
+		
+		// 20121026 test code
+//		try {
+//			String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
+//			PlanarImage pImage = JAIUtils.readImage(file);
+//			System.out.println("UL:");
+//			double[] projXY = JAIUtils.getProjectedXY(new int[] {0,0}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 0, 0, 0));
+//			System.out.println("LR:");
+//			projXY = JAIUtils.getProjectedXY(new int[] {pImage.getWidth()-1, pImage.getHeight()-1}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, pImage.getWidth()-1, pImage.getHeight()-1, 0));
+//			System.out.println("arbitrary land:");
+//			projXY = JAIUtils.getProjectedXY(new int[] {23870, 6388}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 23870, 6388, 0));
+//			System.out.println("\t long,lat = -121.0, 38.0");
+//			System.out.println("\t data = "+JAIUtils.imageValue(GISUtils.makePoint(-121.0, 38.0), pImage));
+//			
+//			Dataset data = GDALUtils.getDataset(file);
+//			System.out.println("UL:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {0,0}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 0, 0, 1));
+//			System.out.println("LR:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {data.getRasterXSize()-1, data.getRasterYSize()-1}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, data.getRasterXSize()-1, data.getRasterYSize()-1, 1));
+//			System.out.println("arbitrary land:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {23870, 6388}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 23870, 6388, 1));
+//			System.out.println("\t long,lat = -121.0, 38.0");
+//			System.out.println("\t data = "+GDALUtils.imageValue(data, GISUtils.makePoint(-121.0, 38.0), 1));
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+//		System.out.println(
+//				getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif").GetDescription());
+		
 	}
 
 }
