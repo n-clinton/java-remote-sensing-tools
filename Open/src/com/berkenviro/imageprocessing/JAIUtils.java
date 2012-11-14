@@ -24,14 +24,9 @@
  */
 package com.berkenviro.imageprocessing;
 
-import it.geosolutions.imageio.plugins.envihdr.ENVIHdrImageReaderSpi;
-import it.geosolutions.imageio.plugins.geotiff.GeoTiffImageReaderSpi;
-
 import java.awt.Point;
-import java.awt.geom.AffineTransform;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
-import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
@@ -41,7 +36,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -49,13 +43,9 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.SortedSet;
 
-import javax.imageio.ImageReader;
 import javax.media.jai.JAI;
-import javax.media.jai.OpImage;
-import javax.media.jai.ParameterBlockJAI;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.ROIShape;
 import javax.media.jai.RasterFactory;
@@ -92,6 +82,11 @@ import com.vividsolutions.jts.geom.util.AffineTransformation;
  */
 public class JAIUtils {
 
+	// set for x64 systems
+	static {
+		System.setProperty("com.sun.media.jai.disableMediaLib", "true");
+	}
+	
 	/**
 	 * Write an image as a float Tiff.
 	 * 

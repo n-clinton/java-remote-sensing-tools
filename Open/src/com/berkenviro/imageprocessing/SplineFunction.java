@@ -25,17 +25,19 @@
 package com.berkenviro.imageprocessing;
 
 import org.apache.commons.math.FunctionEvaluationException;
+import org.apache.commons.math.analysis.DifferentiableUnivariateRealFunction;
 import org.apache.commons.math.analysis.UnivariateRealFunction;
 import org.apache.commons.math.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
 
 /**
  * A utility class for using a SplineInterpolator as if it were a function.
  * @author Nicholas Clinton
  */
 public class SplineFunction extends SplineInterpolator implements
-		UnivariateRealFunction {
+		UnivariateRealFunction, DifferentiableUnivariateRealFunction {
 
-	private UnivariateRealFunction spline;
+	private PolynomialSplineFunction spline;
 	
 	/**
 	 * Constructor initializes a spline on the array
@@ -61,6 +63,11 @@ public class SplineFunction extends SplineInterpolator implements
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public UnivariateRealFunction derivative() {
+		return spline.derivative();
 	}
 
 }
