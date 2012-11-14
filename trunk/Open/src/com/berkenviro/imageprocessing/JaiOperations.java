@@ -24,6 +24,8 @@
  */
 package com.berkenviro.imageprocessing;
 
+import java.util.Arrays;
+
 import javax.imageio.ImageIO;
 import javax.media.jai.JAI;
 import javax.media.jai.OperationDescriptor;
@@ -55,6 +57,7 @@ public class JaiOperations {
 		JAI jai = JAI.getDefaultInstance();
 		OperationRegistry or = jai.getOperationRegistry();
 		String[] ops = or.getDescriptorNames(OperationDescriptor.class);
+		Arrays.sort(ops);
 		for(String s: ops) {
 			System.out.println("***"+s+"***");
 			try {
