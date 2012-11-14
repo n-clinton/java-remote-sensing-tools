@@ -172,7 +172,7 @@ public class GISUtils {
 		int minX = Math.max(ul[0]-1, 0);
 		int minY = Math.max(ul[1]-1, 0);
 		int maxX = Math.min(lr[0]+1, image.getWidth()-1);
-		int maxY = Math.min(lr[1]+1, image.getWidth()-1);
+		int maxY = Math.min(lr[1]+1, image.getHeight()-1);
 		Rectangle bounds = new Rectangle(minX, minY, maxX-minX+1, maxY-minY+1);
 		RandomIter iter = RandomIterFactory.create(image, bounds);
 		GeometryFactory ptMakr = new GeometryFactory();
