@@ -265,14 +265,14 @@ public class GLA14Overlay {
 //		}
 		
 		// Release 33, 20120328
-		String gpt2pop = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2pop_.tif";
-		String glaDir = "C:/Users/Nicholas/Documents/GLA14.033.out/";
-		String outFile = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r33_mssu.csv";
-		try {
-			(new GLA14Overlay(gpt2pop, outFile)).processDir(glaDir);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		String gpt2pop = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/gpt2pop_.tif";
+//		String glaDir = "C:/Users/Nicholas/Documents/GLA14.033.out/";
+//		String outFile = "C:/Users/Nicholas/Documents/urban/Landscan/overlay_with_GLA14/GLA14_r33_mssu.csv";
+//		try {
+//			(new GLA14Overlay(gpt2pop, outFile)).processDir(glaDir);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 		
 		
 	}

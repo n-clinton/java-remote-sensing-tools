@@ -484,7 +484,8 @@ public class JAIUtils {
 		AffineTransformation inv = GISUtils.proj2raster(at);
 		Coordinate pix = new Coordinate();
 		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
-		if (pix.x < 0 || pix.x >= pImage.getWidth() || pix.y < 0 || pix.y >= pImage.getHeight()) {
+		if ((int)pix.x < 0 || (int)pix.x >= pImage.getWidth() || 
+			(int)pix.y < 0 || (int)pix.y >= pImage.getHeight()) {
 			throw new Exception("Impossible coordinates: "+pix);
 		}
 		return new int[] {(int)pix.x, (int)pix.y};

@@ -19,6 +19,7 @@ import org.apache.commons.math.FunctionEvaluationException;
 import org.apache.commons.math.analysis.UnivariateRealFunction;
 import org.apache.commons.math.complex.Complex;
 import org.apache.commons.math.stat.StatUtils;
+import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 import org.apache.commons.math.transform.FastFourierTransformer;
 
 import JSci.awt.DefaultGraph2DModel;
@@ -47,7 +48,7 @@ import ru.sscc.util.data.RealVectors;
  * 20121113 All methods converted to double[][] inputs and/or generic spline inputs.
  */
 public class TSUtils {
-
+	
 	/**
 	 * 
 	 * @param series

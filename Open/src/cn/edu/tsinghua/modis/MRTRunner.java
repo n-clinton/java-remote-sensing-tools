@@ -493,6 +493,28 @@ public class MRTRunner {
 //		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
 //		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
 		
+		// 20121113 What happened to this image?
+//		try {
+//			new MRTRunner(MRTRunner.MOD13).processDir("D:/MOD13A2/2011/2011.11.01", MRTRunner.MOD13_VI_QUALITY);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20121123 accidentally deleted with GDAL
+//		try {
+//			MRTRunner runner = new MRTRunner(MRTRunner.MOD13);
+//			runner.processDir("I:/MOD13A2/2010/2010.01.01", MRTRunner.MOD13_EVI);
+//			runner.processDir("I:/MOD13A2/2010/2010.01.01", MRTRunner.MOD13_VI_QUALITY);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		String productDir = "I:/MOD13A2/2010";
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
+		productDir = "I:/MOD13A2/2011";
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
 		
 	}
 	
