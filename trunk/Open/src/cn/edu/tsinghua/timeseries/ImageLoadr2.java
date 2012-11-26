@@ -24,13 +24,13 @@ import com.vividsolutions.jts.geom.Point;
 
 /**
  * @author Nicholas
- *
+ * Load a time series of imagery.
  */
-public class ImageLoadr2 {
+public class ImageLoadr2 implements Loadr {
 
-	
 	private ArrayList<DatedQCImage> imageList;
 	private double[] x;
+	private Calendar date0;
 	
 	/**
 	 * 
@@ -39,6 +39,8 @@ public class ImageLoadr2 {
 	 */
 	public ImageLoadr2(String[] directories) throws Exception {
 		System.out.println("Initializing image loader...");
+		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "2");
+		gdal.SetCacheMax(64);
 		imageList = new ArrayList<DatedQCImage>();
 		
 		for (int d=0; d<directories.length; d++) {
@@ -76,28 +78,37 @@ public class ImageLoadr2 {
 			}
 		}
 		
+		
 		// Keep the list in chronological order
 		Collections.sort(imageList);
 		System.out.println("\t Done!");
+		
+		// reference to the first image, unless otherwise specified
+		date0 = imageList.get(0).cal;
 		
 		// set the X vector
 		x = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
-			x[i] = diffDays(getFirst(), dImage);
+			x[i] = diffDays(dImage);
 		}
 	}
 	
+	
 	/**
-	 * 
-	 * @return
+	 * Optionally set the zero reference for the time series, i.e. the reference time compared
+	 * to which the t-coordinate of the images will be computed.
+	 * @param cal
 	 */
-	public DatedQCImage getFirst() {
-		if (imageList != null) {
-			return imageList.get(0);
+	public void setDateZero(Calendar cal) {
+		date0 = cal;
+		// rebuild X
+		for (int i=0; i<imageList.size(); i++) {
+			DatedQCImage dImage = imageList.get(i);
+			x[i] = diffDays(dImage);
 		}
-		return null;
 	}
+	
 	
 	/**
 	 * 
@@ -127,7 +138,7 @@ public class ImageLoadr2 {
 	 * @return
 	 */
 	public int getLengthDays() {
-		return diffDays(getFirst().cal, getLast().cal);
+		return diffDays(imageList.get(0).cal, getLast().cal);
 	}
 	
 	/**
@@ -149,8 +160,8 @@ public class ImageLoadr2 {
 	 * @param im2
 	 * @return
 	 */
-	public int diffDays(DatedQCImage im1, DatedQCImage im2) {
-		return diffDays(im1.cal, im2.cal);
+	public int diffDays(DatedQCImage im2) {
+		return diffDays(date0, im2.cal);
 	}
 	
 	/**
@@ -171,13 +182,14 @@ public class ImageLoadr2 {
 	}
 	
 	/**
-	 * 
+	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
 	 * @param pt
 	 * @return
 	 */
-	public List<double[]> getSeries(Point pt) {		
+	public synchronized List<double[]> getSeries(Point pt) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
+		
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
 			Dataset image = GDALUtils.getDataset(dImage.imageName);
@@ -189,14 +201,17 @@ public class ImageLoadr2 {
 					continue;
 				}
 				// else, write the time offset and the image data
-				double t = diffDays(getFirst(), dImage);
+				double t = diffDays(dImage);
 				double data = GDALUtils.imageValue(image, pt, 1);
 				out.add(new double[] {t, data});
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} finally {
-				gdal.Unlink(dImage.imageName);
-				gdal.Unlink(dImage.qcImageName);
+				image.delete();
+				qcImage.delete();
+				image = null;
+				qcImage = null;
+				//System.gc();
 			}
 		}
 		return out;
@@ -216,7 +231,7 @@ public class ImageLoadr2 {
 	 * @param pt is a georeferenced point with the same coordinate system as the images.
 	 * @return a vector of Y values where missing values are interpolated
 	 */
-	public double[] getY(Point pt) throws Exception {
+	public synchronized double[] getY(Point pt) throws Exception {
 		// get the time series under the point
 		List<double[]> series = getSeries(pt);
 		if (series.size() == imageList.size()) {
@@ -247,8 +262,8 @@ public class ImageLoadr2 {
 	public static void main(String[] args) {
 		
 		// 2010, 2011 EVI
-		String dir1 = "D:/MOD13A2/2010/";
-		String dir2 = "D:/MOD13A2/2011/";
+		String dir1 = "I:/MOD13A2/2010/";
+		String dir2 = "I:/MOD13A2/2011/";
 		
 		try {
 			ImageLoadr2 loadr = new ImageLoadr2(new String[] {dir2, dir1});

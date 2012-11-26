@@ -47,6 +47,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
+import javax.media.jai.PlanarImage;
+
 import org.gdal.gdal.Band;
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
@@ -236,7 +238,8 @@ public class GDALUtils {
 		AffineTransformation inv = GISUtils.proj2raster(at);
 		Coordinate pix = new Coordinate();
 		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
-		if (pix.x<=0 || pix.x > data.getRasterXSize() || pix.y<=0 || pix.y>data.getRasterYSize()) {
+		if ((int)pix.x < 0 || (int)pix.x >= data.getRasterXSize() 
+		 || (int)pix.y < 0 || (int)pix.y >= data.getRasterYSize()) {
 			throw new Exception("Impossible coordinates: "+pix);
 		}
 		return new int[] {(int)(pix.x), (int)(pix.y)};
@@ -513,8 +516,13 @@ public class GDALUtils {
 //		}
 		
 //		System.out.println(
-//				getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif").GetDescription());
+//				(getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif")).GetProjection());
+		//System.out.println(gdal.GetCacheMax());
 		
+		Dataset d = getDataset("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");
+		d.delete();
+		//gdal.Unlink("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");  // don't do this!
+		//d.delete();
 	}
 
 }
