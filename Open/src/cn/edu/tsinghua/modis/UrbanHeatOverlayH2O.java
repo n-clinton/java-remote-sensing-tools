@@ -9,18 +9,27 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import javax.media.jai.PlanarImage;
 import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
 import org.apache.commons.math.stat.descriptive.SummaryStatistics;
+import org.gdal.gdal.Dataset;
 import org.geotools.feature.FeatureIterator;
 import org.opengis.feature.simple.SimpleFeature;
 
 import cn.edu.tsinghua.lidar.BitChecker;
 
+import com.berkenviro.gis.GISUtils;
+import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -34,7 +43,7 @@ import com.vividsolutions.jts.geom.Point;
  */
 public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 
-	PlanarImage water;
+	Dataset water;
 	
 	/**
 	 * @param dataName
@@ -44,8 +53,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 	 */
 	public UrbanHeatOverlayH2O(String dataName, String qcName, String polygonName, String waterName) throws Exception {
 		super(dataName, qcName, polygonName);
-		water = JAIUtils.readImage(waterName);
-		JAIUtils.register(water);
+		water = GDALUtils.getDataset(waterName);
 	}
 
 	/**
@@ -56,8 +64,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 	 */
 	public UrbanHeatOverlayH2O(String dataName, String qcName, String latticeName, String tableName,  String waterName) {
 		super(dataName, qcName, latticeName, tableName);
-		water = JAIUtils.readImage(waterName);
-		JAIUtils.register(water);
+		water = GDALUtils.getDataset(waterName);
 	}
 
 	
@@ -71,10 +78,6 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outTable));
 		writer.write("POINTID,pttemp,bufftemp");
 		writer.newLine();
-		
-		RandomIter dataIter = RandomIterFactory.create(data, null);
-		RandomIter qcIter = RandomIterFactory.create(qc, null);
-		RandomIter waterIter = RandomIterFactory.create(water, null);
 		
 		// read in the buffer information
 		BufferedReader reader = new BufferedReader(new FileReader(tempTable));
@@ -103,34 +106,34 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 			double[] xy = {x, pt.getCoordinate().y};
 			int[] dataXY = null;
 			try {
-				dataXY = JAIUtils.getPixelXY(xy, data);
+				dataXY = GDALUtils.getPixelXY(xy, data);
 			} catch (Exception e) {
 				//System.err.println("\t Can't get pixel coordinates...");
 				continue;
 			}
-			int qc = qcIter.getSample(dataXY[0], dataXY[1], 0);
-			if (!BitChecker.mod11ok(qc)) { // if LST error >1K or other problem
+			int qcVal = (int)GDALUtils.pixelValue(qc, dataXY[0], dataXY[1], 1);
+			if (!BitChecker.mod11ok(qcVal)) { // if LST error >1K or other problem
 				//System.out.println("\t QC: "+qc);
 				continue;
 			}
-			double temp = dataIter.getSampleDouble(dataXY[0], dataXY[1], 0)*0.02;
+			double temp = GDALUtils.pixelValue(data, dataXY[0], dataXY[1], 1)*0.02;
 			if (temp == 0 || temp < 183.95 || temp > 343.55) {
 				//System.out.println("\t Temp: "+temp);
 				continue;
 			}
 			
 			// water check 20120510
-			int[] waterXY = JAIUtils.getPixelXY(xy, water); // should always be in bounds
-			double h2o = waterIter.getSampleDouble(waterXY[0], waterXY[1], 0);
+			int[] waterXY = GDALUtils.getPixelXY(xy, water); // should always be in bounds
+			double h2o = GDALUtils.pixelValue(water, waterXY[0], waterXY[1], 1);
 			if (h2o == 0) {
-				System.out.println("\t Water: "+feature);
+				//System.out.println("\t Water: "+feature);
 				continue;
 			}
 
 			// the following doesn't compile with Java 6, Java 7 is OK
-			//int id = (int)(long)feature.getAttribute("GRID_CODE");
+			int id = (int)(long)feature.getAttribute("GRID_CODE");
 			// w/GLA14, really is an Integer?
-			int id = (int)feature.getAttribute("GRID_CODE");
+			//int id = (int)feature.getAttribute("GRID_CODE");
 			int pointID = (int)feature.getAttribute("POINTID");
 			if (temps[id-1] == 0 || temps[id-1] == Double.NaN) {
 				//System.out.println("\t Buffer: "+temps[id-1]);
@@ -153,43 +156,36 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 	 * @throws Exception
 	 */
 	@Override
-	public SummaryStatistics polygonStatsMasked(Geometry p) throws Exception {
-		SummaryStatistics stats = new SummaryStatistics();
+	public SummaryStatistics polygonStatsMasked(final Geometry p) throws Exception {
+		final SummaryStatistics stats = new SummaryStatistics();
 		
 		// bounding box
 		Envelope bb = p.getEnvelopeInternal();
-		// these will throw Exception if outside image bounds
-		int[] ul = JAIUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, data);
-		int[] lr = JAIUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, data);
+		// these will throw Exception if outside image bounds, don't process this polygon
+		int[] ul = GDALUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, data);
+		int[] lr = GDALUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, data);
 		int minX = Math.max(ul[0]-1, 0);
 		int minY = Math.max(ul[1]-1, 0);
-		int maxX = Math.min(lr[0]+1, data.getWidth()-1);
-		int maxY = Math.min(lr[1]+1, data.getWidth()-1);
-		Rectangle bounds = new Rectangle(minX, minY, maxX-minX+1, maxY-minY+1);
-		RandomIter iter = RandomIterFactory.create(data, bounds);
-		RandomIter qcIter = RandomIterFactory.create(qc, bounds);
-		RandomIter waterIter = RandomIterFactory.create(water, null); // 20120510
-		GeometryFactory ptMakr = new GeometryFactory();
+		int maxX = Math.min(lr[0]+1, data.getRasterXSize()-1);
+		int maxY = Math.min(lr[1]+1, data.getRasterYSize()-1);
+
 		for (int x=minX; x<=maxX; x++) {
 			for (int y=minY; y<=maxY; y++) {
 				// pixel centroid in projected coords
-				double[] coords = JAIUtils.getProjectedXY(new int[] {x, y}, data);
-				Point check = ptMakr.createPoint(new Coordinate(coords[0], coords[1]));
-				//System.out.println("\t "+check);
+				double[] coords = GDALUtils.getProjectedXY(new int[] {x, y}, data);
+				// projected point
+				Point check = GISUtils.makePoint(coords[0], coords[1]);
 				// if the pixel centroid is in the polygon, count it
 				if (p.intersects(check)) {
-					int qc = qcIter.getSample(x, y, 0);
-					if (BitChecker.mod11ok(qc)) {
-						double temp = iter.getSampleDouble(x, y, 0)*0.02;
+					int qcVal = (int)GDALUtils.pixelValue(qc, x, y, 1);
+					if (BitChecker.mod11ok(qcVal)) {
+						double temp = GDALUtils.pixelValue(data, x, y, 1)*0.02;
 						if (temp > 183.95 && temp < 343.55) { // min and max surface temperatures
-							
 							// water check 20120510
-							int[] waterXY = JAIUtils.getPixelXY(coords, water); // should always be in bounds
-							double h2o = waterIter.getSampleDouble(waterXY[0], waterXY[1], 0);
+							double h2o = GDALUtils.imageValue(water, check, 1);
 							if (h2o != 0) {
 								stats.addValue(temp);
 							}
-
 						}
 					}
 				}
@@ -197,6 +193,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 		}
 		return stats;
 	}
+	
 	
 	/**
 	 * 
@@ -229,7 +226,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 		}
 		System.out.println("\t Found QC image  "+qcName);
 		
-		UrbanHeatOverlay overlay;
+		UrbanHeatOverlayH2O overlay;
 		
 		String outMeans = lstDir+"/"+(new File(polygonName)).getName().replace(".shp", "_mean_temps_h2o.csv");
 		// check for existence, continue if already there
@@ -241,12 +238,24 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 		}
 		
 		String outComp = lstDir+"/"+(new File(latticeName)).getName().replace(".shp", "_mean_temps_h2o.csv");
-		// check for existence, delete if already present
-		if (!(new File(outComp)).exists()) {
+		if (!(new File(outComp)).exists()) { // if it does NOT already exist, make it
 			System.out.println("\t writing  "+outComp);
 			overlay = new UrbanHeatOverlayH2O(lstName, qcName, latticeName, outMeans, waterName);
 			overlay.makeUHI(outComp);
 			System.out.println(Calendar.getInstance().getTime());
+		}
+		/*
+		 *  20121130 added the else to account for second polygon processing.
+		 *  Should have named this table after both lattice and polygons input files.
+		 */
+		else { // if it DOES exist, make a new filename
+			if (outMeans.contains("_10k_")) {
+				outComp = lstDir+"/"+(new File(latticeName)).getName().replace(".shp", "_mean_temps_h2o_big.csv");
+				System.out.println("\t writing  "+outComp);
+				overlay = new UrbanHeatOverlayH2O(lstName, qcName, latticeName, outMeans, waterName);
+				overlay.makeUHI(outComp);
+				System.out.println(Calendar.getInstance().getTime());
+			}
 		}
 	}
 	
@@ -340,8 +349,8 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 
 		
 		// 20120618 count and average UH
-		String parentDir = "D:/MOD11A2";
-		try {
+//		String parentDir = "D:/MOD11A2";
+//		try {
 			// original w/ cooling degree day
 //			String baseTableName = "gpt2id_latticesmean_temps_h2o.csv";
 //			String outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_cdd.csv";
@@ -353,7 +362,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 //			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
 //			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count_ccd.csv";
 //			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
-			
+//			
 //			String baseTableName = "gpt2id_latticesmean_temps_h2o.csv";
 //			String outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean.csv";
 //			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
@@ -364,12 +373,35 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 //			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
 //			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count.csv";
 //			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+				
 			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-				
-				
+		// 20121129 post-review re-do.  Small polygons, AQUA
+		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
+		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
+		String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
+		String parentDir = "D:/MYD11A2/2010";  // AQUA
+		// Night time
+		//processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+		// Day time
+		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+		
+		// 20121129 post-review re-do.  BIG polygons, AQUA 
+		buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_10k_erased.shp";
+		// Night time
+		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+		// Day time
+		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+		
+		// 20121130 BIG polygons, TERRA
+		parentDir = "D:/MOD11A2/2010";  // TERRA
+		// Night time
+		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+		// Day time
+		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
 	}
 
 }
