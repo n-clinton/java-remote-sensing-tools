@@ -16,6 +16,7 @@ import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
 import org.apache.commons.math.stat.descriptive.SummaryStatistics;
+import org.gdal.gdal.Dataset;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.referencing.CRS;
@@ -25,6 +26,7 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import cn.edu.tsinghua.lidar.BitChecker;
 
 import com.berkenviro.gis.GISUtils;
+import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -39,6 +41,7 @@ import com.vividsolutions.jts.geom.Point;
  * POINTID is the join field to be used with the output tables.  
  * GRID_CODE is the field corresponding to the ID of the polygons used to estimate
  * the buffer of the urban area. 
+ * 20121129 converted to GDAL
  *
  */
 public class UrbanHeatOverlay {
@@ -46,8 +49,10 @@ public class UrbanHeatOverlay {
 	public static String DAY = "DAY";
 	public static String NIGHT = "NIGHT";
 	
-	PlanarImage data;
-	PlanarImage qc;
+//	PlanarImage data;
+//	PlanarImage qc;
+	Dataset data;
+	Dataset qc;
 	FeatureCollection<SimpleFeatureType, SimpleFeature> polys;
 	FeatureCollection<SimpleFeatureType, SimpleFeature> id;
 	File tempTable;
@@ -61,10 +66,12 @@ public class UrbanHeatOverlay {
 	 * @param polygonName
 	 */
 	public UrbanHeatOverlay(String dataName, String qcName, String polygonName) throws Exception {
-		data = JAIUtils.readImage(dataName);
-		JAIUtils.register(data);
-		qc = JAIUtils.readImage(qcName);
-		JAIUtils.register(qc);
+//		data = JAIUtils.readImage(dataName);
+//		JAIUtils.register(data);
+//		qc = JAIUtils.readImage(qcName);
+//		JAIUtils.register(qc);
+		data = GDALUtils.getDataset(dataName);
+		qc = GDALUtils.getDataset(qcName);
 		polys =  GISUtils.getFeatureCollection(new File(polygonName));
 	}
 	
@@ -76,13 +83,14 @@ public class UrbanHeatOverlay {
 	 * @param tableName
 	 */
 	public UrbanHeatOverlay(String dataName, String qcName, String latticeName, String tableName) {
-		data = JAIUtils.readImage(dataName);
-		JAIUtils.register(data);
-		qc = JAIUtils.readImage(qcName);
-		JAIUtils.register(qc);
+//		data = JAIUtils.readImage(dataName);
+//		JAIUtils.register(data);
+//		qc = JAIUtils.readImage(qcName);
+//		JAIUtils.register(qc);
+		data = GDALUtils.getDataset(dataName);
+		qc = GDALUtils.getDataset(qcName);
 		id =  GISUtils.getFeatureCollection(new File(latticeName));
 		tempTable = new File(tableName);
-		
 	}
 	
 	
@@ -96,8 +104,8 @@ public class UrbanHeatOverlay {
 		writer.write("POINTID,pttemp,bufftemp");
 		writer.newLine();
 		
-		RandomIter dataIter = RandomIterFactory.create(data, null);
-		RandomIter qcIter = RandomIterFactory.create(qc, null);
+//		RandomIter dataIter = RandomIterFactory.create(data, null);
+//		RandomIter qcIter = RandomIterFactory.create(qc, null);
 		
 		// read in the buffer information
 		BufferedReader reader = new BufferedReader(new FileReader(tempTable));
@@ -126,17 +134,20 @@ public class UrbanHeatOverlay {
 			double[] xy = {x, pt.getCoordinate().y};
 			int[] dataXY = null;
 			try {
-				dataXY = JAIUtils.getPixelXY(xy, data);
+				//dataXY = JAIUtils.getPixelXY(xy, data);
+				dataXY = GDALUtils.getPixelXY(xy, data);
 			} catch (Exception e) {
 				//System.err.println("\t Can't get pixel coordinates...");
 				continue;
 			}
-			int qc = qcIter.getSample(dataXY[0], dataXY[1], 0);
-			if (!BitChecker.mod11ok(qc)) { // if LST error >1K or other problem
+			//int qc = qcIter.getSample(dataXY[0], dataXY[1], 0);
+			int qcVal = (int)GDALUtils.pixelValue(qc, dataXY[0], dataXY[1], 1);
+			if (!BitChecker.mod11ok(qcVal)) { // if LST error >1K or other problem
 				//System.out.println("\t QC: "+qc);
 				continue;
 			}
-			double temp = dataIter.getSampleDouble(dataXY[0], dataXY[1], 0)*0.02;
+			//double temp = dataIter.getSampleDouble(dataXY[0], dataXY[1], 0)*0.02;
+			double temp = GDALUtils.pixelValue(data, dataXY[0], dataXY[1], 1)*0.02;
 			if (temp == 0 || temp < 183.95 || temp > 343.55) {
 				//System.out.println("\t Temp: "+temp);
 				continue;
@@ -209,27 +220,34 @@ public class UrbanHeatOverlay {
 		// bounding box
 		Envelope bb = p.getEnvelopeInternal();
 		// these will throw Exception if outside image bounds
-		int[] ul = JAIUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, data);
-		int[] lr = JAIUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, data);
+//		int[] ul = JAIUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, data);
+//		int[] lr = JAIUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, data);
+		int[] ul = GDALUtils.getPixelXY(new double[] {bb.getMinX(), bb.getMaxY()}, data);
+		int[] lr = GDALUtils.getPixelXY(new double[] {bb.getMaxX(), bb.getMinY()}, data);
 		int minX = Math.max(ul[0]-1, 0);
 		int minY = Math.max(ul[1]-1, 0);
-		int maxX = Math.min(lr[0]+1, data.getWidth()-1);
-		int maxY = Math.min(lr[1]+1, data.getWidth()-1);
+//		int maxX = Math.min(lr[0]+1, data.getWidth()-1);
+//		int maxY = Math.min(lr[1]+1, data.getHeight()-1);
+		int maxX = Math.min(lr[0]+1, data.getRasterXSize()-1);
+		int maxY = Math.min(lr[1]+1, data.getRasterYSize()-1);
 		Rectangle bounds = new Rectangle(minX, minY, maxX-minX+1, maxY-minY+1);
-		RandomIter iter = RandomIterFactory.create(data, bounds);
-		RandomIter qcIter = RandomIterFactory.create(qc, bounds);
+//		RandomIter iter = RandomIterFactory.create(data, bounds);
+//		RandomIter qcIter = RandomIterFactory.create(qc, bounds);
 		GeometryFactory ptMakr = new GeometryFactory();
 		for (int x=minX; x<=maxX; x++) {
 			for (int y=minY; y<=maxY; y++) {
 				// pixel centroid in projected coords
-				double[] coords = JAIUtils.getProjectedXY(new int[] {x, y}, data);
+//				double[] coords = JAIUtils.getProjectedXY(new int[] {x, y}, data);
+				double[] coords = GDALUtils.getProjectedXY(new int[] {x, y}, data);
 				Point check = ptMakr.createPoint(new Coordinate(coords[0], coords[1]));
 				//System.out.println("\t "+check);
 				// if the pixel centroid is in the polygon, count it
 				if (p.intersects(check)) {
-					int qc = qcIter.getSample(x, y, 0);
-					if (BitChecker.mod11ok(qc)) {
-						double temp = iter.getSampleDouble(x, y, 0)*0.02;
+					//int qc = qcIter.getSample(x, y, 0);
+					int qcVal = (int)GDALUtils.pixelValue(qc, x, y, 1);
+					if (BitChecker.mod11ok(qcVal)) {
+						//double temp = iter.getSampleDouble(x, y, 0)*0.02;
+						double temp = GDALUtils.pixelValue(data, x, y, 1)*0.02;
 						if (temp > 183.95 && temp < 343.55) { // min and max surface temperatures
 							stats.addValue(temp);
 						}
