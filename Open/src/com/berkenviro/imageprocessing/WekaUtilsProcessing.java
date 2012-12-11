@@ -522,6 +522,22 @@ public class WekaUtilsProcessing extends WekaUtils {
 //		in = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_dn_gt_50_uhs_cdd_discrete.arff";
 //		rankDiscrete(in, out, classatt);
 		
+//		String filename = "/Users/nclinton/Documents/urban/tables/gpt2_GLA14_pixel_averaging/" +
+//				"gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_no_zeros_all.csv";
+//		Instances input = loadCSV(filename);
+//		System.out.println(input.toSummaryString());
+//		try {
+//			Instances[] split = subset(70, input);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "/Users/nclinton/Documents/urban/tables/gpt2_GLA14_pixel_averaging/" +
+//					"gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_no_zeros_all_70.arff");
+//			writeArff(split[1], "/Users/nclinton/Documents/urban/tables/gpt2_GLA14_pixel_averaging/" +
+//					"gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_no_zeros_all_30.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
 		// from Mac.  Not sure what this is:
 //		String filename = "/Users/nclinton/Documents/urban/tables/gpt2_GLA14_pixel_averaging/" +
 //		"gpt2id_lattices_joined5_GLA14_2005_2009_heights_density_hw_no_zeros_all.csv";
