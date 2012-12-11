@@ -1,5 +1,3 @@
-
-
 /******************************************************************************
  * $Id$
  *
@@ -29,20 +27,16 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
 import java.awt.image.DataBufferShort;
-import java.awt.image.DataBufferUShort;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
 
-import javax.media.jai.PlanarImage;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -92,8 +86,7 @@ public class GDALtest extends JFrame implements ActionListener{
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
 		this.setSize(1024, 768);
-		//this.show();
-		this.setVisible(true);
+		this.show();
 	}
 	
 	public void setImage(BufferedImage image) {
@@ -188,7 +181,6 @@ public class GDALtest extends JFrame implements ActionListener{
 		int buf_type = 0, buf_size = 0;
 
 		for(int band = 0; band < bandCount; band++) {
-			System.out.println("Loading band: "+(band+1));
 			/* Bands are not 0-base indexed, so we must add 1 */
 			poBand = poDataset.GetRasterBand(band+1);
 			
@@ -201,7 +193,7 @@ public class GDALtest extends JFrame implements ActionListener{
 					+ gdal.GetColorInterpretationName(poBand
 							.GetRasterColorInterpretation()));
 			
-			System.out.println(" Band size is: " + poBand.getXSize() + "x"
+			System.out.println("Band size is: " + poBand.getXSize() + "x"
 					+ poBand.getYSize());
 	
 			poBand.GetMinimum(min);
@@ -210,7 +202,7 @@ public class GDALtest extends JFrame implements ActionListener{
 				System.out.println("  Min=" + min[0] + " Max="
 						+ max[0]);
 			} else {
-				System.out.println(" No Min/Max values stored in raster.");
+				System.out.println("  No Min/Max values stored in raster.");
 			}
 	
 			if (poBand.GetOverviewCount() > 0) {
@@ -227,12 +219,9 @@ public class GDALtest extends JFrame implements ActionListener{
 				}
 			}
 			
-			// start tracking performance
-			Date t0 = Calendar.getInstance().getTime();
-			System.out.println("  Allocating ByteBuffer of size: " + buf_size);
+			System.out.println("Allocating ByteBuffer of size: " + buf_size);
 
 			ByteBuffer data = ByteBuffer.allocateDirect(buf_size);
-			//ByteBuffer data = ByteBuffer.allocate(buf_size);
 			data.order(ByteOrder.nativeOrder());
 
 			int returnVal = 0;
@@ -240,11 +229,6 @@ public class GDALtest extends JFrame implements ActionListener{
 				returnVal = poBand.ReadRaster_Direct(0, 0, poBand.getXSize(), 
 						poBand.getYSize(), xsize, ysize,
 						buf_type, data);
-				
-//				returnVal = poBand.ReadRaster_Direct(0, 0, poBand.getXSize(),
-//						poBand.getYSize(), xsize, ysize,
-//						buf_type, data.array());
-				
 			} catch(Exception ex) {
 				System.err.println("Could not read raster data.");
 				System.err.println(ex.getMessage());
@@ -258,10 +242,6 @@ public class GDALtest extends JFrame implements ActionListener{
 			}
 			banks[band] = band;
 			offsets[band] = 0;
-			// check load time and memory
-			Date t1 = Calendar.getInstance().getTime();
-			System.out.println("  Load time: "+(t1.getTime()-t0.getTime()));
-			System.out.println("  Free memory: "+Runtime.getRuntime().freeMemory());
 		}
 
 		DataBuffer imgBuffer = null;
@@ -303,26 +283,8 @@ public class GDALtest extends JFrame implements ActionListener{
 			sampleModel = new BandedSampleModel(buffer_type, 
 					xsize, ysize, xsize, banks, offsets);
 			data_type = BufferedImage.TYPE_CUSTOM;
-		
-			// the following is a test 20110519
-		} else if(buf_type == gdalconstConstants.GDT_UInt16) {
-			short[][] uShorts = new short[bandCount][];
-			for(int i = 0; i < bandCount; i++) {				
-				uShorts[i] = new short[pixels];
-				//bands[i].asIntBuffer().get(ints[i]);
-				bands[i].asShortBuffer().get(uShorts[i]);
-			}
-			//imgBuffer = new DataBufferInt(ints, pixels);
-			imgBuffer = new DataBufferUShort(uShorts, pixels);
-			buffer_type = DataBuffer.TYPE_USHORT;
-			sampleModel = new BandedSampleModel(buffer_type, 
-					xsize, ysize, xsize, banks, offsets);
-			data_type = BufferedImage.TYPE_CUSTOM;
 		}
-		else {
-			//??
-		}
-		
+
 		WritableRaster raster = Raster.createWritableRaster(sampleModel, imgBuffer, null);
 		BufferedImage img = null;
 		ColorModel cm = null;
@@ -336,18 +298,11 @@ public class GDALtest extends JFrame implements ActionListener{
 		} else {
 			ColorSpace cs = null;
 			if(bandCount > 2){
-				cs = ColorSpace.getInstance(ColorSpace.CS_sRGB);  // doesn't like it?
+				cs = ColorSpace.getInstance(ColorSpace.CS_sRGB);
 				cm = new ComponentColorModel(cs, false, false, 
 						ColorModel.OPAQUE, buffer_type);
-//				cm = PlanarImage.createColorModel(raster.getSampleModel()); //??
-//				cm = PlanarImage.getDefaultColorModel(buffer_type, bandCount); //??
-				//System.out.println("Color space: "+cs.toString());
-				System.out.println("ColorModel: "+cm.toString());
-				System.out.println("SampleModel: "+raster.getSampleModel().toString());
-				System.out.println("Buffer type bits: "+DataBuffer.getDataTypeSize(buffer_type));
 				img = new BufferedImage(cm, raster, true, null);
 			} else {
-				
 				img = new BufferedImage(xsize, ysize,
 						data_type);
 				img.setData(raster);

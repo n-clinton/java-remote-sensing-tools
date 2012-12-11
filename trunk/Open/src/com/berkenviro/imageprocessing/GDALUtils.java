@@ -281,10 +281,10 @@ public class GDALUtils {
 	}
 
 	/**
-	 * This method is for overlaying a georeferenced point on a referenced image.
+	 * Return image value from pixel coordinates.
 	 * @param data is the Dataset
-	 * @param x is location in geographic coordinates
-	 * @param y is location in geographic coordinates
+	 * @param x is pixel
+	 * @param y is line
 	 * @param b is one-indexed band
 	 * @return
 	 */
