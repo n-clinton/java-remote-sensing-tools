@@ -518,11 +518,11 @@ public class MRTRunner {
 		
 		
 		// AQUA Day/Night 20111128
-		String productDir = "D:/MYD11A2/2010";
-		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_NIGHT);
-		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_NIGHT);
-		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
-		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
+//		String productDir = "D:/MYD11A2/2010";
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_NIGHT);
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_NIGHT);
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
 		
 		
 		

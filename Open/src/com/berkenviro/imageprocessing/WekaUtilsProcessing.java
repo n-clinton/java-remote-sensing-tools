@@ -954,24 +954,764 @@ public class WekaUtilsProcessing extends WekaUtils {
 		
 		
 		// 20120717
-		try {
-			//String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70.arff";
-			String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff";
-			Instances input = loadArff(filename);
-			SimpleKMeans kMeans = new SimpleKMeans();
-			kMeans.setNumClusters(50);
-			kMeans.setMaxIterations(500);
-			kMeans.buildClusterer(input);
-			Instances clusters = kMeans.getClusterCentroids();
-			//writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_k20.arff");
-			writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_k50.arff");
-			int[] membership = kMeans.getAssignments();
-			for (int i=0; i<membership.length; i++) {
-				System.out.println(i+", "+membership[i]);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		try {
+//			//String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70.arff";
+//			String filename = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70.arff";
+//			Instances input = loadArff(filename);
+//			SimpleKMeans kMeans = new SimpleKMeans();
+//			kMeans.setNumClusters(50);
+//			kMeans.setMaxIterations(500);
+//			kMeans.buildClusterer(input);
+//			Instances clusters = kMeans.getClusterCentroids();
+//			//writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/GLA14_pix_avg_responses/GLA14_2005_2009_responses_no_zeros_70_k20.arff");
+//			writeArff(clusters, "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_responses/gpt2id_joined7_cumulative_responses_no_zeros_no_zeros_70_k50.arff");
+//			int[] membership = kMeans.getAssignments();
+//			for (int i=0; i<membership.length; i++) {
+//				System.out.println(i+", "+membership[i]);
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20130103
+//		String fileName = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses.csv";
+//		Instances instances = loadCSV(fileName);
+//		
+//		// TERRA big
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_min_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_min_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_sum_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_sum_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_sum_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_sum_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//
+//		// AQUA big
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_min_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_max_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_min_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_sum_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_sum_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_sum_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_sum_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/gpt2id_lattices_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
+//		// GLA14, 20130117
+//		String fileName = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses.csv";
+//		Instances instances = loadCSV(fileName);
+//		
+//		// TERRA big
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_min_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_min_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhbar_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_sum_n_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_sum_d_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhi_sum_n_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		// 
+//		try {
+//			String classatt = "uhs_sum_d_cdd_big_ter"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//
+//		// AQUA big
+//		// 
+//		try {
+//			String classatt = "uhi_max_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_min_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_max_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_min_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_sum_n_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_sum_d_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhi_sum_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,74,75,76,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhs_sum_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,77,78,79,80,81,82,83,84,85,86,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_n_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,87};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		try {
+//			String classatt = "uhbar_d_cdd_big_aq"; // to keep
+//			int[] toRemove = {7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86};
+//			Instances filtered = removeAttributes(instances, toRemove); 
+//			Instances continuous = filterMissing(filtered, classatt);
+//			String out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_continuous.csv";
+//			rankContinuous(continuous, out, classatt);
+//			
+//			Instances discrete = discretize(continuous, classatt);
+//			out = "C:/Users/Nicholas/Documents/urban/uhi/tables/gpt2lattices_GLA14_terra_aqua/GLA14_joined8_2_responses_"+classatt+"_discrete.csv";
+//			rankDiscrete(discrete, out, classatt);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+
+		
 	}
 
 }

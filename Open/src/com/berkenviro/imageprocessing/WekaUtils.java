@@ -152,7 +152,7 @@ public class WekaUtils {
 	 * Instances.removeAttributeAt() is apparently broken.  Observe that methods
 	 * invoked on rm must be applied EXACTLY in this order, or it won't work.
 	 * @param in
-	 * @param toRemove is the attribute indices to remove
+	 * @param toRemove is the attribute indices to remove, zero-indexed
 	 */
 	public static Instances removeAttributes(Instances in, int[] toRemove) throws Exception {
 		Remove rm = new Remove();
@@ -233,6 +233,7 @@ public class WekaUtils {
 	  return indexrank;
 	}
 	
+	
 	/**
 	 * 
 	 * @param in
@@ -241,6 +242,17 @@ public class WekaUtils {
 	 */
 	public static void rankContinuous(String in, String out, String classatt) {
 		Instances cont = loadArff(in);
+		rankContinuous(cont, out, classatt);
+	}
+	
+	
+	/**
+	 * 
+	 * @param in
+	 * @param out
+	 * @param classatt
+	 */
+	public static void rankContinuous(Instances cont, String out, String classatt) {
 		//System.out.println(cont.toSummaryString());
 		cont.setClass(cont.attribute(classatt));
 		System.out.println("Evaluating class "+ cont.attribute(cont.classIndex()));
@@ -304,7 +316,6 @@ public class WekaUtils {
 		}
 	}
 	
-	
 	/**
 	 * 
 	 * @param in
@@ -313,6 +324,18 @@ public class WekaUtils {
 	 */
 	public static void rankDiscrete(String in, String out, String classatt) {
 		Instances cont = loadArff(in);
+		rankDiscrete(cont, out, classatt);
+	}
+	
+	
+	/**
+	 * 
+	 * @param in
+	 * @param out
+	 * @param classatt
+	 */
+	public static void rankDiscrete(Instances cont, String out, String classatt) {
+
 		cont.setClass(cont.attribute(classatt));
 		System.out.println("Evaluating class "+ cont.attribute(cont.classIndex()));
 		
