@@ -3,14 +3,9 @@ package cn.edu.tsinghua.gui;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.image.DataBuffer;
-import java.awt.image.renderable.ParameterBlock;
 import java.util.List;
 
-import javax.media.jai.JAI;
-import javax.media.jai.ParameterBlockJAI;
 import javax.media.jai.PlanarImage;
-import javax.media.jai.RenderedOp;
 
 import cn.edu.tsinghua.timeseries.ImageLoadr2;
 import cn.edu.tsinghua.timeseries.TSUtils;
@@ -18,8 +13,6 @@ import cn.edu.tsinghua.timeseries.TSUtils;
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
 import com.sun.media.jai.widget.DisplayJAI;
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.util.AffineTransformation;
 
 /**
  * @author Nicholas Clinton
@@ -56,38 +49,15 @@ public class ImageDisplayer extends DisplayJAI implements MouseMotionListener, M
 		width = myImage.getWidth();
 		height = myImage.getHeight();
 		
-//		ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
-//		ColorModel cm = new ComponentColorModel(cs, false, false, ColorModel.OPAQUE, DataBuffer.TYPE_SHORT);
-//		this.set(myImage.getAsBufferedImage(myImage.getBounds(), cm));
-
-	    ParameterBlock pbMaxMin = new ParameterBlock();
-	    pbMaxMin.addSource(myImage);
-	    RenderedOp extrem = JAI.create("Extrema", pbMaxMin);
-	    double[][] extrema = (double[][]) extrem.getProperty("Extrema");
-		double min = extrema[0][0];
-		double max = extrema[1][0];
-
-	    // Rescale the image with the parameters
-	    double[] scale = {255.0 / (max - min)};
-	    double[] offset = {(255.0 * min) / (min - max)};
-	    ParameterBlockJAI pbRescale = new ParameterBlockJAI("Rescale");
-	    pbRescale.addSource(myImage);
-	    pbRescale.setParameter("constants", scale);
-	    pbRescale.setParameter("offsets", offset);
-	    PlanarImage surrogateImage = (PlanarImage)JAI.create("Rescale", pbRescale, null);
-
-	    ParameterBlock pbConvert = new ParameterBlock();
-	    pbConvert.addSource(surrogateImage);
-	    pbConvert.add(DataBuffer.TYPE_BYTE);
-	    surrogateImage = JAI.create("format", pbConvert);
-	    
+		// display
+		PlanarImage surrogateImage = JAIUtils.byteScale(myImage);
 	    set(surrogateImage);
 	    
 		addMouseMotionListener(this);
 		addMouseListener(this);
 	}
-
-
+	
+	
 	public void mouseDragged(MouseEvent e) { }
 	
 	/**

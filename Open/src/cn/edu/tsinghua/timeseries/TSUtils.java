@@ -86,7 +86,7 @@ public class TSUtils {
 	 * @param spline
 	 * @param min
 	 * @param max
-	 * @param p the proportion of frequency components to keep.
+	 * @param p the proportion of frequency components to REMOVE.
 	 * @return
 	 */
 	public static double[][] smoothFunction(final Object spline, double min, double max, double p) {
@@ -95,17 +95,25 @@ public class TSUtils {
 		FastFourierTransformer fft = new FastFourierTransformer();
 		try {
 			// transform
-			Complex[] transform = fft.transform2(new UnivariateRealFunction() {
+			Complex[] transform = fft.transform(new UnivariateRealFunction() {
 				public double value(double x) throws FunctionEvaluationException {
 					return TSUtils.value(spline, x);
 				}
 			}, min, max, n);
-			// blast the high frequency components
-			for (int c=transform.length-1; c>transform.length*p; c--) {
-				transform[c] = Complex.ZERO;
+			// symmetric series, keep the zero-frequencies on the ends
+			int keep = (int)(n*(1.0-p))/2;
+			System.out.println(keep);
+			for (int c=0; c<transform.length; c++) {
+				if (c>keep-1 && c<n-keep) {
+					// blast the high frequency components
+					transform[c] = Complex.ZERO;
+				}
+				else {
+					//transform[c] = transform[c].add(Complex.ONE);
+				}
 			}
 			// invert
-			Complex[] smoothed = fft.inversetransform2(transform);
+			Complex[] smoothed = fft.inversetransform(transform);
 			// get the real part
 			smooth = new double[smoothed.length];
 			for (int i=0; i<smooth.length; i++) {

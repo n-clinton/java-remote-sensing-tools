@@ -31,8 +31,11 @@ import java.awt.image.ColorModel;
 import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferDouble;
+import java.awt.image.DataBufferFloat;
 import java.awt.image.DataBufferInt;
 import java.awt.image.DataBufferShort;
+import java.awt.image.DataBufferUShort;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
@@ -48,6 +51,8 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 
 import javax.media.jai.PlanarImage;
+import javax.media.jai.RasterFactory;
+import javax.media.jai.TiledImage;
 
 import org.gdal.gdal.Band;
 import org.gdal.gdal.Dataset;
@@ -318,153 +323,86 @@ public class GDALUtils {
 	
 	/**
 	 * 
-	 * @param poDataset
+	 * @param data
+	 * @param x
+	 * @param y
 	 * @return
 	 */
-	public static BufferedImage getBufferedImage(Dataset poDataset) { 
-		Band poBand = null;
-		double[] adfMinMax = new double[2];
-		Double[] max = new Double[1];
-		Double[] min = new Double[1];
-		
-		int bandCount = poDataset.getRasterCount();
-		ByteBuffer[] bands = new ByteBuffer[bandCount];
-		int[] banks = new int[bandCount];
-		int[] offsets = new int[bandCount];
-		
-		int xsize = 1024;//poDataset.getRasterXSize();
-		int ysize = 1024;//poDataset.getRasterYSize();
-		int pixels = xsize * ysize;
-		int buf_type = 0, buf_size = 0;
-
-		for(int band = 0; band < bandCount; band++) {
-			/* Bands are not 0-base indexed, so we must add 1 */
-			poBand = poDataset.GetRasterBand(band+1);
-			
-			buf_type = poBand.getDataType();
-			buf_size = pixels * gdal.GetDataTypeSize(buf_type) / 8;
-
-			System.out.println(" Data Type = "
-					+ gdal.GetDataTypeName(poBand.getDataType()));
-			System.out.println(" ColorInterp = "
-					+ gdal.GetColorInterpretationName(poBand
-							.GetRasterColorInterpretation()));
-			
-			System.out.println("Band size is: " + poBand.getXSize() + "x"
-					+ poBand.getYSize());
-	
-			poBand.GetMinimum(min);
-			poBand.GetMaximum(max);
-			if(min[0] != null || max[0] != null) {
-				System.out.println("  Min=" + min[0] + " Max="
-						+ max[0]);
-			} else {
-				System.out.println("  No Min/Max values stored in raster.");
-			}
-	
-			if (poBand.GetOverviewCount() > 0) {
-				System.out.println("Band has " + poBand.GetOverviewCount()
-						+ " overviews.");
-			}
-	
-			if (poBand.GetRasterColorTable() != null) {
-				System.out.println("Band has a color table with "
-						+ poBand.GetRasterColorTable().GetCount() + " entries.");
-				for(int i = 0; i < poBand.GetRasterColorTable().GetCount(); i++) {
-					System.out.println(" " + i + ": " + 
-							poBand.GetRasterColorTable().GetColorEntry(i));
-				}
-			}
-			
-			System.out.println("Allocating ByteBuffer of size: " + buf_size);
-
-			ByteBuffer data = ByteBuffer.allocateDirect(buf_size);
-			data.order(ByteOrder.nativeOrder());
-
-			int returnVal = 0;
-			try {
-				returnVal = poBand.ReadRaster_Direct(0, 0, poBand.getXSize(), 
-						poBand.getYSize(), xsize, ysize,
-						buf_type, data);
-			} catch(Exception ex) {
-				System.err.println("Could not read raster data.");
-				System.err.println(ex.getMessage());
-				ex.printStackTrace();
-				return null;
-			}
-			if(returnVal == gdalconstConstants.CE_None) {
-				bands[band] = data;
-			}
-			banks[band] = band;
-			offsets[band] = 0;
+	public static double[] pixelValues(Dataset data, int x, int y) {
+		double[] values = new double[data.getRasterCount()];
+		for (int b=0; b<values.length; b++) {
+			values[b] = pixelValue(data, x, y, b+1);
 		}
-
-		DataBuffer imgBuffer = null;
-		SampleModel sampleModel = null;
-		int data_type = 0, buffer_type = 0;
-		
-		if(buf_type == gdalconstConstants.GDT_Byte) {
-			byte[][] bytes = new byte[bandCount][];
-			for(int i = 0; i < bandCount; i++) {				
-				bytes[i] = new byte[pixels];
-				bands[i].get(bytes[i]);
-			}
-			imgBuffer = new DataBufferByte(bytes, pixels);
-			buffer_type = DataBuffer.TYPE_BYTE;
-			sampleModel = new BandedSampleModel(buffer_type, 
-					xsize, ysize, xsize, banks, offsets);
-			data_type = (poBand.GetRasterColorInterpretation() == 
-				gdalconstConstants.GCI_PaletteIndex)? 
-				BufferedImage.TYPE_BYTE_INDEXED : BufferedImage.TYPE_BYTE_GRAY;
-		} else if(buf_type == gdalconstConstants.GDT_Int16) {
-			short[][] shorts = new short[bandCount][];
-			for(int i = 0; i < bandCount; i++) {				
-				shorts[i] = new short[pixels];
-				bands[i].asShortBuffer().get(shorts[i]);
-			}
-			imgBuffer = new DataBufferShort(shorts, pixels);
-			buffer_type = DataBuffer.TYPE_USHORT;
-			sampleModel = new BandedSampleModel(buffer_type, 
-					xsize, ysize, xsize, banks, offsets);
-			data_type = BufferedImage.TYPE_USHORT_GRAY;
-		} else if(buf_type == gdalconstConstants.GDT_Int32) {
-			int[][] ints = new int[bandCount][];
-			for(int i = 0; i < bandCount; i++) {				
-				ints[i] = new int[pixels];
-				bands[i].asIntBuffer().get(ints[i]);
-			}
-			imgBuffer = new DataBufferInt(ints, pixels);
-			buffer_type = DataBuffer.TYPE_INT;
-			sampleModel = new BandedSampleModel(buffer_type, 
-					xsize, ysize, xsize, banks, offsets);
-			data_type = BufferedImage.TYPE_CUSTOM;
-		}
-
-		WritableRaster raster = Raster.createWritableRaster(sampleModel, imgBuffer, null);
-		BufferedImage img = null;
-		ColorModel cm = null;
-
-		if(poBand.GetRasterColorInterpretation() == 
-			gdalconstConstants.GCI_PaletteIndex) {
-			data_type = BufferedImage.TYPE_BYTE_INDEXED;
-			cm = poBand.GetRasterColorTable().getIndexColorModel(
-								gdal.GetDataTypeSize(buf_type));
-			img = new BufferedImage(cm, raster, false, null);
-		} else {
-			ColorSpace cs = null;
-			if(bandCount > 2){
-				cs = ColorSpace.getInstance(ColorSpace.CS_sRGB);
-				cm = new ComponentColorModel(cs, false, false, 
-						ColorModel.OPAQUE, buffer_type);
-				img = new BufferedImage(cm, raster, true, null);
-			} else {
-				img = new BufferedImage(xsize, ysize,
-						data_type);
-				img.setData(raster);
-			}
-		}
-		return img;
+		return values;
 	}
+	
+	/**
+	 * 
+	 * @param poDataset
+	 * @param band is one-indexed
+	 * @return
+	 */
+	public static BufferedImage getBufferedImage(Dataset poDataset, int band) { 
+		int xsize = poDataset.getRasterXSize();
+		int ysize = poDataset.getRasterYSize();
+		int pixels = xsize * ysize;
+		Band poBand = poDataset.GetRasterBand(band);
+		int buf_type = poBand.getDataType();
+		int buf_size = pixels * gdal.GetDataTypeSize(buf_type) / 8;
+		// image data
+		ByteBuffer data = ByteBuffer.allocateDirect(buf_size);
+		data.order(ByteOrder.nativeOrder());
+		// read into the ByteBuffer
+		poBand.ReadRaster_Direct(0, 0, poBand.getXSize(), 
+				poBand.getYSize(), xsize, ysize,
+				buf_type, data);
+		DataBuffer buff = null;
+		int data_type;
+		if(buf_type == gdalconstConstants.GDT_Byte) {  // warning on signed bytes
+			data_type = DataBuffer.TYPE_BYTE;
+			byte[] bytes = new byte[pixels];
+			data.get(bytes);
+			buff = new DataBufferByte(bytes, pixels);
+		} else if(buf_type == gdalconstConstants.GDT_UInt16) { // warning unsigned
+			data_type = DataBuffer.TYPE_USHORT;
+			short[] shorts = new short[pixels];
+			data.asShortBuffer().get(shorts);
+			buff = new DataBufferUShort(shorts, pixels);
+		} else if(buf_type == gdalconstConstants.GDT_Int16) {
+			data_type = DataBuffer.TYPE_SHORT;
+			short[] shorts = new short[pixels];
+			data.asShortBuffer().get(shorts);
+			buff = new DataBufferShort(shorts, pixels);
+		} else if(buf_type == gdalconstConstants.GDT_Int32) {
+			data_type = DataBuffer.TYPE_INT;
+			int[] ints = new int[pixels];
+			data.asIntBuffer().get(ints);
+			buff = new DataBufferInt(ints, pixels);
+		} else if(buf_type == gdalconstConstants.GDT_Float32) {
+			data_type = DataBuffer.TYPE_FLOAT;
+			float[] floats = new float[pixels];
+			data.asFloatBuffer().get(floats);
+			buff = new DataBufferFloat(floats, pixels);
+		} else if(buf_type == gdalconstConstants.GDT_Float64) {
+			data_type = DataBuffer.TYPE_DOUBLE;
+			double[] doubles = new double[pixels];
+			data.asDoubleBuffer().get(doubles);
+			buff = new DataBufferDouble(doubles, pixels);
+		} else {
+			data_type = DataBuffer.TYPE_UNDEFINED;
+		}
+		SampleModel sModel = new BandedSampleModel(data_type, xsize, ysize, 1);
+		ColorModel cModel = new ComponentColorModel(
+										ColorSpace.getInstance(ColorSpace.CS_GRAY), 
+										false, 
+										false, 
+										ColorModel.OPAQUE, 
+										data_type);
+		WritableRaster raster = Raster.createWritableRaster(sModel, buff, new java.awt.Point(0,0)); 
+		
+		return new BufferedImage(cModel, raster, false, null);
+	}
+	
 	
 	
 	/**
@@ -519,10 +457,13 @@ public class GDALUtils {
 //				(getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif")).GetProjection());
 		//System.out.println(gdal.GetCacheMax());
 		
-		Dataset d = getDataset("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");
-		d.delete();
-		//gdal.Unlink("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");  // don't do this!
+		//Dataset d = getDataset("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");
 		//d.delete();
+
+		// 20130202
+		String filename = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/Delta_Hymap_12.img";
+		Dataset poDataset = getDataset(filename);
+		BufferedImage buff = getBufferedImage(poDataset, 1);
 	}
 
 }
