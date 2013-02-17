@@ -15,6 +15,8 @@ import javax.swing.JFrame;
 import javax.swing.JTextArea;
 
 import org.apache.commons.math.analysis.UnivariateRealFunction;
+import org.apache.commons.math.distribution.NormalDistributionImpl;
+import org.apache.commons.math.random.RandomDataImpl;
 import org.apache.commons.math.stat.StatUtils;
 
 import com.berkenviro.imageprocessing.SplineFunction;
@@ -182,7 +184,7 @@ public class TSDisplayer extends JFrame implements ActionListener {
 	}
 	
 	/**
-	 * 
+	 * Thin-plate spline
 	 */
 	private void fitSpline() {
 		try {
@@ -190,7 +192,7 @@ public class TSDisplayer extends JFrame implements ActionListener {
 			Spline dSpline = TSUtils.duchonSpline(series[0], series[1]);
 			double[] minMax = getXRange();
 			// smooth with an FFT
-			double[][] smooth1 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.1);
+			double[][] smooth1 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.85);
 			// smooth with Savitzky-Golay
 			double[][] smooth2 = TSUtils.sgSmooth(series, 5, 2);
             // for display
@@ -200,7 +202,7 @@ public class TSDisplayer extends JFrame implements ActionListener {
 			} else {
 	            graphSpline(dSpline, true);
 	            graphSeries(smooth1);
-	            graphSeries(smooth2);
+	            //graphSeries(smooth2);
 	            //graphSpline(pSpline, true);
 			}
             // derivatives
@@ -216,8 +218,8 @@ public class TSDisplayer extends JFrame implements ActionListener {
 		}
 	}
 	
-	/*
-	 * Fit a spline to the last series
+	/**
+	 * Polynomial spline.
 	 */
 	private void fitSpline2() {
 		try {
@@ -225,7 +227,7 @@ public class TSDisplayer extends JFrame implements ActionListener {
             // for display
 			double[] minMax = getXRange();
 			// smooth with an FFT
-			double[][] smooth1 = TSUtils.smoothFunction(polySpline, minMax[0], minMax[1], 0.1);
+			double[][] smooth1 = TSUtils.smoothFunction(polySpline, minMax[0], minMax[1], 0.85);
 			// smooth with Savitzky-Golay
 			double[][] smooth2 = TSUtils.sgSmooth(series, 5, 2);
 			if (scaledSeries != null) { // display only
@@ -380,15 +382,15 @@ public class TSDisplayer extends JFrame implements ActionListener {
 //		}
 //	}
 	
-	/*
-	 * Helper method to format a Double
-	 */
-	private String doubleString(double d) {
-		String dString = String.valueOf(d);
-		int dotIndex = dString.indexOf(".");
-		int maxIndex = (dotIndex+4 > dString.length()-1) ? dString.length()-1 : dotIndex+4;
-		return dString.substring(0, dotIndex+1)+dString.substring(dotIndex+1, maxIndex);
-	}
+//	/*
+//	 * Helper method to format a Double
+//	 */
+//	private String doubleString(double d) {
+//		String dString = String.valueOf(d);
+//		int dotIndex = dString.indexOf(".");
+//		int maxIndex = (dotIndex+4 > dString.length()-1) ? dString.length()-1 : dotIndex+4;
+//		return dString.substring(0, dotIndex+1)+dString.substring(dotIndex+1, maxIndex);
+//	}
 	
 	/*
 	 * Helper method to return the xRange
@@ -402,7 +404,21 @@ public class TSDisplayer extends JFrame implements ActionListener {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		final double[][] check = new double[2][200];
+		RandomDataImpl gauss = new RandomDataImpl();
+		int index = 0;
+		double inc = 2.0*Math.PI/100.0;
+		for (int t=0; t<200; t++) {
+			check[0][t] = t*inc;
+			double noise = 
+			check[1][t] = 2.0 + Math.cos(check[0][t]) + gauss.nextGaussian(0, 0.3);
+		}
+		
+  		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+          public void run() {	
+        	  new TSDisplayer(check);
+          }
+  		});
 		
 	}
 

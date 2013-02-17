@@ -45,7 +45,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.SortedSet;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 import javax.media.jai.JAI;
+import javax.media.jai.ParameterBlockJAI;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.ROIShape;
 import javax.media.jai.RasterFactory;
@@ -54,6 +60,8 @@ import javax.media.jai.TiledImage;
 import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
+import org.apache.commons.math.MathException;
+import org.apache.commons.math.distribution.NormalDistributionImpl;
 import org.apache.commons.math.linear.Array2DRowRealMatrix;
 import org.apache.commons.math.linear.ArrayRealVector;
 import org.apache.commons.math.linear.RealVector;
@@ -1010,7 +1018,126 @@ public class JAIUtils {
 		return tImage;
 	}
 	
+	/**
+	 * 
+	 * @param image
+	 * @return
+	 */
+	public static PlanarImage byteScale(PlanarImage image) {
+		ParameterBlock pbMaxMin = new ParameterBlock();
+	    pbMaxMin.addSource(image);
+	    RenderedOp extrem = JAI.create("Extrema", pbMaxMin);
+	    double[][] extrema = (double[][]) extrem.getProperty("Extrema");
+
+	    // Rescale the image with the parameters
+	    double[] scale = new double[image.getNumBands()];
+	    double[] offset = new double[image.getNumBands()];
+	    for (int b=0; b<image.getNumBands(); b++) {
+	    	scale[b] = 255.0 / (extrema[1][b] - extrema[0][b]);
+		    offset[b] = (255.0 * extrema[0][b]) / (extrema[0][b] - extrema[1][b]);
+	    }
+	    
+	    ParameterBlockJAI pbRescale = new ParameterBlockJAI("Rescale");
+	    pbRescale.addSource(image);
+	    pbRescale.setParameter("constants", scale);
+	    pbRescale.setParameter("offsets", offset);
+	    PlanarImage surrogateImage = (PlanarImage)JAI.create("Rescale", pbRescale, null);
+
+	    ParameterBlock pbConvert = new ParameterBlock();
+	    pbConvert.addSource(surrogateImage);
+	    pbConvert.add(DataBuffer.TYPE_BYTE);
+	    return JAI.create("format", pbConvert);
+	}
 	
+	/**
+	 * 
+	 * @param red
+	 * @param green
+	 * @param blue
+	 * @return
+	 */
+	public static PlanarImage makeRGB(PlanarImage red, PlanarImage green, PlanarImage blue) {
+		ParameterBlock pb = new ParameterBlock();
+	    pb.addSource(red);
+	    pb.addSource(green);
+	    pb.addSource(blue);
+	    return JAI.create("bandmerge", pb);
+	}
+	
+	/**
+     * Adjust to a Uniform distribution CDF.
+     * @return the stretched image.
+     */
+    public static PlanarImage linearStretch(PlanarImage source) {
+    	// From JAI programming guide
+    	int numBands = source.getNumBands();
+    	int binCount = 256;
+    	// Create an equalization CDF.
+    	float[][] CDFeq = new float[numBands][];
+    	for(int b = 0; b < numBands; b++) {
+    		CDFeq[b] = new float[binCount];
+    		for(int i = 0; i < binCount; i++) {
+    			CDFeq[b][i] = (float)(i+1)/(float)binCount;
+    		}
+    	}
+    	int[] bins = { 256 };
+        double[] low = { 0.0D };
+        double[] high = { 256.0D };
+
+        ParameterBlock pb = new ParameterBlock();
+        pb.addSource(source);
+        pb.add(null);
+        pb.add(1);
+        pb.add(1);
+        pb.add(bins);
+        pb.add(low);
+        pb.add(high);
+
+        RenderedOp fmt = JAI.create("histogram", pb, null);
+    	// Create a histogram-equalized image.
+    	return JAI.create("matchcdf", fmt, CDFeq);
+    }
+
+    
+    /**
+     * Adjust to a normal distribution CDF, mean=128, SD=64.
+     * @return the stretched image.
+     */
+    public static PlanarImage gaussianStretch(PlanarImage source) {
+    	int numBands = source.getNumBands();
+    	int binCount = 256;
+    	float[][] CDFnorm = new float[numBands][binCount];
+    	NormalDistributionImpl norm = new NormalDistributionImpl(128.0, 64.0);
+    	for(int b = 0; b < numBands; b++) {
+    		for(int i = 0; i < binCount-1; i++) {
+    			try {
+					CDFnorm[b][i] = (float)norm.cumulativeProbability(i);
+				} catch (MathException e) {
+					e.printStackTrace();
+				}
+    		}
+    		// the cumulative probability must equal one
+    		CDFnorm[b][binCount-1] = 1;
+    	}
+
+        int[] bins = { 256 };
+        double[] low = { 0.0D };
+        double[] high = { 256.0D };
+
+        ParameterBlock pb = new ParameterBlock();
+        pb.addSource(source);
+        pb.add(null);
+        pb.add(1);
+        pb.add(1);
+        pb.add(bins);
+        pb.add(low);
+        pb.add(high);
+
+        RenderedOp fmt = JAI.create("histogram", pb, null);
+        return JAI.create("matchcdf", fmt, CDFnorm);
+    }
+	
+    
 	/**
 	 * Normalize an image to zero-one.
 	 * @param input is the full pathname of the image input.
@@ -1186,6 +1313,26 @@ public class JAIUtils {
 		}
 	}
 	
+	/**
+	 * Write a JPEG at the highest quality.
+	 * @param image
+	 * @param filename
+	 */
+	public static void writeJPEG(PlanarImage image, String filename) {
+		IIOImage outputImage = new IIOImage(image, null, null);
+		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();        
+        try {
+			writer.setOutput(new FileImageOutputStream(new File(filename)));
+			ImageWriteParam writeParam = writer.getDefaultWriteParam();
+	        writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+	        writeParam.setCompressionQuality(1.0f); // float between 0 and 1, 1 for max quality.
+	        writer.write( null, outputImage, writeParam);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Test code and procesing log.
@@ -1232,8 +1379,37 @@ public class JAIUtils {
 //		}
 		
 		//String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
-		String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
-		describeGeoTiff(file);
+//		String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
+//		describeGeoTiff(file);
+		
+		// GEE lecture present:
+//		String b1 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/LE71230322012234EDC00/LE71230322012234EDC00.10.tif";
+//		String b2 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/LE71230322012234EDC00/LE71230322012234EDC00.20.tif";
+//		String b3 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/LE71230322012234EDC00/LE71230322012234EDC00.30.tif";
+//		String out = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/LE71230322012234EDC00/LE71230322012234EDC00_rgb.jpg";
+//		PlanarImage rgb = makeRGB(readImage(b3), readImage(b2), readImage(b1));
+//		PlanarImage stretched = gaussianStretch(rgb);
+//		writeJPEG(stretched, out);
+//		
+//		
+//		b1 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/979dcee377ee8278f834a9d0c6ac07bc/979dcee377ee8278f834a9d0c6ac07bc.blue.tif";
+//		b2 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/979dcee377ee8278f834a9d0c6ac07bc/979dcee377ee8278f834a9d0c6ac07bc.green.tif";
+//		b3 = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/979dcee377ee8278f834a9d0c6ac07bc/979dcee377ee8278f834a9d0c6ac07bc.red.tif";
+//		out = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/beijing_airport_pan_sharpened/979dcee377ee8278f834a9d0c6ac07bc/979dcee377ee8278f834a9d0c6ac07bc_rgb.jpg";
+//
+//		rgb = makeRGB(readImage(b3), readImage(b2), readImage(b1));
+//		ParameterBlockJAI pbRescale = new ParameterBlockJAI("Rescale");
+//	    pbRescale.addSource(rgb);
+//	    pbRescale.setParameter("constants", new double[] {1.4, 1.4, 1.1});
+//	    pbRescale.setParameter("offsets", new double[] {0,0,0});
+//	    PlanarImage rescaled = (PlanarImage)JAI.create("Rescale", pbRescale, null);
+//		ParameterBlockJAI format = new ParameterBlockJAI("Format");
+//		format.addSource(rescaled);
+//		format.setParameter("dataType", DataBuffer.TYPE_BYTE);
+//	    PlanarImage formatted = (PlanarImage)JAI.create("Format", format, null);
+//		stretched = gaussianStretch(formatted);
+//		writeJPEG(formatted, out);
+        
 		
 	}
 
