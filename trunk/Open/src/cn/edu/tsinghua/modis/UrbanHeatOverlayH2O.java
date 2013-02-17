@@ -69,7 +69,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 
 	
 	/**
-	 * Overriden for water check.
+	 * Overriden for water check.  Compute composite urban heat island.
 	 * @param outTable
 	 * @throws Exception
 	 */
@@ -245,7 +245,7 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 			System.out.println(Calendar.getInstance().getTime());
 		}
 		/*
-		 *  20121130 added the else to account for second polygon processing.
+		 *  20121130 added the else to account for second polygon processing, AQUA.
 		 *  Should have named this table after both lattice and polygons input files.
 		 */
 		else { // if it DOES exist, make a new filename
@@ -380,28 +380,145 @@ public class UrbanHeatOverlayH2O extends UrbanHeatOverlay {
 				
 			
 		// 20121129 post-review re-do.  Small polygons, AQUA
-		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
-		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
-		String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
-		String parentDir = "D:/MYD11A2/2010";  // AQUA
-		// Night time
-		//processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
-		// Day time
-		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+//		String latticeName = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2id_lattices.shp";
+//		String buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_5k_erased.shp";
+//		String waterName = "C:/Users/Nicholas/Documents/GlobalLandCover/modis/2009_igbp_wgs84.tif";
+//		String parentDir = "D:/MYD11A2/2010";  // AQUA
+//		// Night time
+//		//processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+//		// Day time
+//		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+//		
+//		// 20121129 post-review re-do.  BIG polygons, AQUA 
+//		buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_10k_erased.shp";
+//		// Night time
+//		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+//		// Day time
+//		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+//		
+//		// 20121130 BIG polygons, TERRA
+//		parentDir = "D:/MOD11A2/2010";  // TERRA
+//		// Night time
+//		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
+//		// Day time
+//		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
 		
-		// 20121129 post-review re-do.  BIG polygons, AQUA 
-		buffPolys = "C:/Users/Nicholas/Documents/urban/Landscan/derived_data/shapefiles/gpt2_polygons_geo_buffer_10k_erased.shp";
-		// Night time
-		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
-		// Day time
-		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
 		
-		// 20121130 BIG polygons, TERRA
-		parentDir = "D:/MOD11A2/2010";  // TERRA
-		// Night time
-		processDirs(parentDir, UrbanHeatOverlay.NIGHT, buffPolys, latticeName, waterName);
-		// Day time
-		processDirs(parentDir, UrbanHeatOverlay.DAY, buffPolys, latticeName, waterName);
+		
+		// 20121220
+		try {
+			// TERRA with big polygons
+			String parentDir = "D:/MOD11A2/2010";
+			// cooling degree day
+			// NIGHT
+			//String baseTableName = "gpt2id_latticesmean_temps_h2o.csv";  // Old name, small polygons
+			String baseTableName = "gpt2id_lattices_mean_temps_h2o.csv";  // New name, BIG polygons
+			
+			String outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_cdd_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_cdd_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_ccd_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			// DAY
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_mean_ccd_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count_ccd_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_ccd_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			
+			// not cooling degree day
+			// NIGHT
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_NIGHT_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			// DAY
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_mean_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MOD11A2/gpt2id_lattices_h2o_LST_DAY_count_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MOD11A2/gpt2id_lattices_LST_DAY_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			
+			/*//////////////////////////////////////////////////////////////////////////
+			 * AQUA
+			 */////////////////////////////////////////////////////////////////////////
+			parentDir = "D:/MYD11A2/2010";
+			baseTableName = "gpt2id_lattices_mean_temps_h2o.csv";  // small polygons
+			// cooling degree day
+			// NIGHT 
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_cdd.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_cdd.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_NIGHT_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			// DAY
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_mean_ccd.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_count_ccd.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_DAY_ccd.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			
+			// not cooling degree day
+			// NIGHT
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_count.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_NIGHT.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			// DAY
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_mean.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_count.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_DAY.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			
+			//////////////////////////////////////////////////////////////////////////
+			baseTableName = "gpt2id_lattices_mean_temps_h2o_big.csv";  // BIG polygons
+			// cooling degree day
+			// NIGHT 
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_cdd_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_cdd_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_NIGHT_ccd_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 293.15);
+			// DAY
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_mean_ccd_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_count_ccd_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_DAY_ccd_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 293.15);
+			
+			// not cooling degree day
+			// NIGHT
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_mean_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_NIGHT_count_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_NIGHT_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.NIGHT, baseTableName, 0);
+			// DAY
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_mean_big.csv";
+			averageUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_h2o_LST_DAY_count_big.csv";
+			countUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);
+			outTable = "D:/MYD11A2/gpt2id_lattices_LST_DAY_big.csv";
+			combineUHI(parentDir, outTable, UrbanHeatOverlay.DAY, baseTableName, 0);	
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 }

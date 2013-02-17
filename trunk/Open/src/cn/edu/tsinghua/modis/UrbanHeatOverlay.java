@@ -347,7 +347,7 @@ public class UrbanHeatOverlay {
 	
 	
 	/**
-	 * 
+	 * Compute max heat island and min heat sink.
 	 * @param parentDir
 	 * @param outTable
 	 * @param product
@@ -422,7 +422,7 @@ public class UrbanHeatOverlay {
 	
 	
 	/**
-	 * 
+	 * Compute cumulative heat island and sink.
 	 * @param parentDir
 	 * @param outTable
 	 * @param product
@@ -480,7 +480,7 @@ public class UrbanHeatOverlay {
 	}
 	
 	/**
-	 * 
+	 * Compute average heat differential.
 	 * @param parentDir
 	 * @param outTable
 	 * @throws Exception
