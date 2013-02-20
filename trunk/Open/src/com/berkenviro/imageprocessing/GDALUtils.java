@@ -87,6 +87,16 @@ public class GDALUtils {
 	 */
 	public static double[] getWavelengths(String fileName) {
 		Dataset poDataset = getDataset(fileName);
+		return getWavelengths(poDataset);
+	}
+	
+	/**
+	 * Lookup items (which might be wavelengths) in the GDAL metadata dictionary.
+	 * This was developed for a particular ENVI file format.  May or may not work with other datasets.
+	 * @param poDataset
+	 * @return the metadata values as a double[]
+	 */
+	public static double[] getWavelengths(Dataset poDataset) {
 		double[] wavelengths = new double[poDataset.getRasterCount()];
 		Hashtable dict = poDataset.GetMetadata_Dict("");
 		Enumeration keys = dict.keys();
@@ -227,6 +237,19 @@ public class GDALUtils {
 		double m10 = padfTransform[4];
 		double m11 = padfTransform[5];
 		return new AffineTransformation(m00, m01, m02, m10, m11, m12);
+	}
+	
+	/**
+	 * 
+	 * @param source
+	 * @param dest
+	 */
+	public static void transferGeo(Dataset source, PlanarImage dest) {
+		double[] padfTransform = source.GetGeoTransform();
+		dest.setProperty("ulX", new Double(padfTransform[0]));
+		dest.setProperty("ulY", new Double(padfTransform[3]));
+		dest.setProperty("deltaX", new Double(padfTransform[1]));
+		dest.setProperty("deltaY", new Double(padfTransform[5]));
 	}
 	
 	/**

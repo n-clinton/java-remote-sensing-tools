@@ -41,8 +41,7 @@ import ru.sscc.util.data.RealVectors;
  * Can be integrated with this wrapper.
  * @author Nicholas Clinton
  */
-public class DuchonSplineFunction extends SplineInterpolator implements
-		UnivariateRealFunction {
+public class DuchonSplineFunction implements UnivariateRealFunction {
 
 	private Spline spline;
 	

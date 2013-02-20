@@ -160,7 +160,8 @@ public class PERSIANNLoadr implements Loadr {
 		}
 		double[][] xy = TSUtils.getSeriesAsArray(series);
 		// fit a spline to interpolate
-		Spline spline = TSUtils.duchonSpline(xy[0], xy[1]);
+		//Spline spline = TSUtils.duchonSpline(xy[0], xy[1]);
+		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
 		return TSUtils.evaluateSpline(spline, x);
 	}
 	

@@ -10,6 +10,8 @@ import java.util.List;
 
 import javax.media.jai.PlanarImage;
 
+import org.apache.commons.math.FunctionEvaluationException;
+import org.apache.commons.math.analysis.UnivariateRealFunction;
 import org.apache.commons.math.linear.Array2DRowRealMatrix;
 import org.apache.commons.math.stat.StatUtils;
 import org.apache.commons.math.stat.descriptive.SummaryStatistics;
@@ -20,6 +22,7 @@ import org.opengis.feature.simple.SimpleFeature;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
+import com.berkenviro.imageprocessing.SplineFunction;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.util.AffineTransformation;
@@ -35,6 +38,7 @@ import ru.sscc.spline.polynomial.PSpline;
 /**
  * @author Nicholas Clinton
  * This class to combine and improve on the previous TrainingMakrs
+ * Legacy class.  20130218 changed to DuchonSplineFunction everywhere
  */
 public class TrainingMakr5 {
 
@@ -52,7 +56,7 @@ public class TrainingMakr5 {
 	 * Method to get the complete NDVI spline for 2001-2005.
 	 * Zero values will be censored.
 	 */
-	public static Spline getNDVISpline(Point pt) throws Exception {
+	public static DuchonSplineFunction getNDVISpline(Point pt) throws Exception {
 		
 		// initialize
 		double[] trainPtXY = {pt.getX(), pt.getY()};
@@ -81,9 +85,9 @@ public class TrainingMakr5 {
 		double[] yCens = censored[1];
 		
 		// fit a Spline to the censored values: xCens and yCens
-		Spline mySpline = TSUtils.duchonSpline(xCens, yCens);
-		
-		return mySpline;
+		//Spline mySpline = TSUtils.duchonSpline(xCens, yCens);
+		//return mySpline;
+		return new DuchonSplineFunction(new double[][] {xCens, yCens});
 	}
 	
 	
@@ -91,13 +95,18 @@ public class TrainingMakr5 {
 	 * Helper method to return arrays of x and y from the spline.
 	 * X is in units of decimal months.  500 values.
 	 */	
-	public static double[][] getXandY(Spline spline) {
+	public static double[][] getXandY(DuchonSplineFunction spline) {
 		double[][] xAndY = new double[2][500];
 		// return 500 values (100 per year) from this spline
 		for (int i=0; i<500; i++) { 
 			// compute the x for each index
 			xAndY[0][i] = 1+i*(59.0/500.0);
-			xAndY[1][i] = spline.value(xAndY[0][i]);
+			try {
+				xAndY[1][i] = spline.value(xAndY[0][i]);
+			} catch (FunctionEvaluationException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			if (xAndY[1][i] < 0) {
 				//System.err.println("Less than zero warning: ("+xAndY[0][i]+", "+xAndY[1][i]+")");
 			}
@@ -143,7 +152,7 @@ public class TrainingMakr5 {
 	/*
 	 * Method to get the complete Precip series for 2001-2005
 	 */
-	public static Spline getPrecipSpline(Point pt) throws Exception {
+	public static DuchonSplineFunction getPrecipSpline(Point pt) throws Exception {
 		// initialize
 		double[] trainPtXY = {pt.getX(), pt.getY()};
 		double[] rawY = new double[5*12];
@@ -166,9 +175,9 @@ public class TrainingMakr5 {
 		}
 		
 		// no need to censor the precip
-		Spline mySpline = TSUtils.duchonSpline(rawX, rawY);
-		
-		return mySpline;
+		//Spline mySpline = TSUtils.duchonSpline(rawX, rawY);
+		//return mySpline;
+		return new DuchonSplineFunction(new double[][] {rawX, rawY});
 	}
 	
 	/*
@@ -265,10 +274,10 @@ public class TrainingMakr5 {
 				precipWriter.write(abundance+"");
 				
 				// get the series, write
-				Spline ndviSpline = getNDVISpline(pt);
+				DuchonSplineFunction ndviSpline = getNDVISpline(pt);
 				// get the Y values
 				double[] ndvi = getXandY(ndviSpline)[1];
-				Spline precipSpline = getPrecipSpline(pt);
+				DuchonSplineFunction precipSpline = getPrecipSpline(pt);
 				double[] precip = getXandY(precipSpline)[1];
 				for (int k=0; k<500; k++) {
 					ndviWriter.write("\t"+ndvi[k]);
@@ -353,10 +362,10 @@ public class TrainingMakr5 {
 				writer.write(abundance+"");
 				
 				// get the series
-				Spline ndviSpline = getNDVISpline(pt);
+				DuchonSplineFunction ndviSpline = getNDVISpline(pt);
 				// get the Y values
 				double[] ndvi = getXandY(ndviSpline)[1];
-				Spline precipSpline = getPrecipSpline(pt);
+				DuchonSplineFunction precipSpline = getPrecipSpline(pt);
 				double[] precip = getXandY(precipSpline)[1];
 				// get the lagged cross correlations
 				double[] corrs = laggedCorr(100, precip, ndvi, springOnly);
@@ -439,10 +448,10 @@ public class TrainingMakr5 {
 				writer.write(abundance+"");
 				
 				// get the series
-				Spline ndviSpline = getNDVISpline(pt);
+				DuchonSplineFunction ndviSpline = getNDVISpline(pt);
 				// get the Y values
 				double[] ndvi = getXandY(ndviSpline)[1];
-				Spline precipSpline = getPrecipSpline(pt);
+				DuchonSplineFunction precipSpline = getPrecipSpline(pt);
 				double[] precip = getXandY(precipSpline)[1];
 				// get the effects at each lag
 				for (int k=0; k<lags; k++) {
@@ -529,8 +538,8 @@ public class TrainingMakr5 {
 				tabWriter.write(abundance+"\t");
 				
 				// get the Splines
-				Spline ndviSpline = getNDVISpline(pt);
-				Spline precipSpline = getPrecipSpline(pt);
+				DuchonSplineFunction ndviSpline = getNDVISpline(pt);
+				DuchonSplineFunction precipSpline = getPrecipSpline(pt);
 
 				/*
 				 * Compute average phenology values from these series:
@@ -542,9 +551,11 @@ public class TrainingMakr5 {
 				 */
 				double[][] ndviVals = getXandY(ndviSpline);
 				// make a derivative of the entire ndvi series
-				Spline pSpline = TSUtils.polynomialSpline(ndviVals[0], ndviVals[1], 1);
-	            Spline myDerivative = PSpline.derivative(pSpline);
-	            
+//				Spline pSpline = TSUtils.polynomialSpline(ndviVals[0], ndviVals[1], 1);
+//	            Spline myDerivative = PSpline.derivative(pSpline);
+	            SplineFunction pSpline = new SplineFunction(ndviVals);
+	            UnivariateRealFunction myDerivative = pSpline.derivative();
+				
 	            // initialize for averaging
 	            double firstMinX, firstMinXSum = 0;
 	            double firstMinY, firstMinYSum = 0;
@@ -762,8 +773,8 @@ public class TrainingMakr5 {
 				tabWriter.write(abundance+"\t");
 				
 				// get the Splines
-				Spline ndviSpline = getNDVISpline(pt);
-				Spline precipSpline = getPrecipSpline(pt);
+				DuchonSplineFunction ndviSpline = getNDVISpline(pt);
+				DuchonSplineFunction precipSpline = getPrecipSpline(pt);
 				
 				// get the data
 				double[][] ndviSeries = getXandY(ndviSpline);

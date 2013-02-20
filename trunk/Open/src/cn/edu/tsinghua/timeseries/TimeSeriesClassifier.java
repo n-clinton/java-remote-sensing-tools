@@ -17,6 +17,7 @@ import javax.media.jai.PlanarImage;
 import javax.media.jai.RasterFactory;
 import javax.media.jai.TiledImage;
 
+import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.opengis.feature.simple.SimpleFeature;
@@ -27,6 +28,7 @@ import ru.sscc.spline.polynomial.PSpline;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
+import com.berkenviro.imageprocessing.SplineFunction;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
@@ -307,13 +309,17 @@ public class TimeSeriesClassifier {
 		// get the Splines
 		//Spline ndviSpline = TrainingMakr5.getNDVISpline(pt);
 		//Spline precipSpline = TrainingMakr5.getPrecipSpline(pt);
-		Spline ndviSpline = loadr.getSpline(pt, 0, true);
-		Spline precipSpline = loadr.getSpline(pt, 1, false);
+//		Spline ndviSpline = loadr.getSpline(pt, 0, true);
+//		Spline precipSpline = loadr.getSpline(pt, 1, false);
+		DuchonSplineFunction ndviSpline = loadr.getSpline(pt, 0, true);
+		DuchonSplineFunction precipSpline = loadr.getSpline(pt, 1, false);
 
 		double[][] ndviVals = TrainingMakr5.getXandY(ndviSpline);
 		// make a derivative of the entire ndvi series
-		Spline pSpline = TSUtils.polynomialSpline(ndviVals[0], ndviVals[1], 1);
-        Spline myDerivative = PSpline.derivative(pSpline);
+//		Spline pSpline = TSUtils.polynomialSpline(ndviVals[0], ndviVals[1], 1);
+//      Spline myDerivative = PSpline.derivative(pSpline);
+		SplineFunction pSpline = new SplineFunction(ndviVals);
+		PolynomialSplineFunction myDerivative = (PolynomialSplineFunction)pSpline.derivative();
         
         // initialize for averaging
         double firstMinX, firstMinXSum = 0;
@@ -404,7 +410,7 @@ public class TimeSeriesClassifier {
 	 */
 	private static double[][] getNDVIseries(Point pt, ImageLoadr1 loadr) throws Exception {
 		//Spline ndviSpline = TrainingMakr5.getNDVISpline(pt);
-		Spline ndviSpline = loadr.getSpline(pt, 0, true);
+		DuchonSplineFunction ndviSpline = loadr.getSpline(pt, 0, true);
 		
 		return TrainingMakr5.getXandY(ndviSpline);
 	}
@@ -414,7 +420,7 @@ public class TimeSeriesClassifier {
 	 */
 	private double[][] getPRISMseries(Point pt, ImageLoadr1 loadr) throws Exception {
 		//Spline precipSpline = TrainingMakr5.getPrecipSpline(pt);
-		Spline precipSpline = loadr.getSpline(pt, 1, false);
+		DuchonSplineFunction precipSpline = loadr.getSpline(pt, 1, false);
 		
 		return TrainingMakr5.getXandY(precipSpline);
 	}
