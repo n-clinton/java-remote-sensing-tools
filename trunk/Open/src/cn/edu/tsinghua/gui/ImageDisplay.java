@@ -58,7 +58,10 @@ public class ImageDisplay extends JFrame implements MouseMotionListener, MouseLi
 	
 	/**
 	 * 
-	 * @param aJAIComponent
+	 * @param filename
+	 * @param b
+	 * @param g
+	 * @param r
 	 */
 	public ImageDisplay(String filename, int b, int g, int r) {
 		super("Image display. Click mouse to see spectrum.");
