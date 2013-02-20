@@ -17,6 +17,7 @@ import mr.go.sgfilter.SGFilter;
 
 import org.apache.commons.math.FunctionEvaluationException;
 import org.apache.commons.math.analysis.UnivariateRealFunction;
+import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math.complex.Complex;
 import org.apache.commons.math.stat.StatUtils;
 import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
@@ -28,7 +29,6 @@ import JSci.awt.DefaultGraph2DModel.DataSeries;
 import JSci.swing.JLineGraph;
 
 import cn.edu.tsinghua.gui.TSDisplayer;
-import cn.edu.tsinghua.gui.TimeSeriesViewer;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.ArrayFunction;
@@ -89,17 +89,13 @@ public class TSUtils {
 	 * @param p the proportion of frequency components to REMOVE.
 	 * @return
 	 */
-	public static double[][] smoothFunction(final Object spline, double min, double max, double p) {
+	public static double[][] smoothFunction(final UnivariateRealFunction spline, double min, double max, double p) {
 		double[] smooth = null;
 		int n = 128;
 		FastFourierTransformer fft = new FastFourierTransformer();
 		try {
 			// transform
-			Complex[] transform = fft.transform(new UnivariateRealFunction() {
-				public double value(double x) throws FunctionEvaluationException {
-					return TSUtils.value(spline, x);
-				}
-			}, min, max, n);
+			Complex[] transform = fft.transform(spline, min, max, n);
 			// symmetric series, keep the zero-frequencies on the ends
 			int keep = (int)(n*(1.0-p))/2;
 			System.out.println(keep);
@@ -107,9 +103,6 @@ public class TSUtils {
 				if (c>keep-1 && c<n-keep) {
 					// blast the high frequency components
 					transform[c] = Complex.ZERO;
-				}
-				else {
-					//transform[c] = transform[c].add(Complex.ONE);
 				}
 			}
 			// invert
@@ -233,10 +226,10 @@ public class TSUtils {
 	 * @param x
 	 * @return
 	 */
-	public static double[] evaluateSpline(Object spline, double[] x) throws Exception {
+	public static double[] evaluateSpline(UnivariateRealFunction spline, double[] x) throws Exception {
 		double[] y = new double[x.length];
         for (int j=0; j<x.length; j++) {
-        	y[j] = value(spline, x[j]);
+        	y[j] = spline.value(x[j]);
         	if (spline instanceof Spline) {
         		y[j] = ((Spline)spline).value(x[j]);
     		}
@@ -248,18 +241,19 @@ public class TSUtils {
 	 * 
 	 * @param spline
 	 * @param xRange
-	 * @return an array of 100 equally spaced points
+	 * @param n
+	 * @return
 	 * @throws Exception
 	 */
-	public static double[][] splineValues(Object spline, double[] xRange) throws Exception {
-		// generate 100 points in the provided range
-		double[][] splineVals = new double[2][100];
-        double step = (xRange[1] - xRange[0])/100.0;
+	public static double[][] splineValues(UnivariateRealFunction spline, double[] xRange, int n) throws Exception {
+		// generate 1000 points in the provided range
+		double[][] splineVals = new double[2][n];
+        double step = (xRange[1] - xRange[0])/n;
         // starting point
         double x = xRange[0];
-        for (int j=0; j<100; j++) {
+        for (int j=0; j<n; j++) {
         	splineVals[0][j] = x;
-        	splineVals[1][j] = value(spline, x);
+        	splineVals[1][j] = spline.value(x);
         	System.out.print(splineVals[1][j]+",");
         	x += step;
         }
@@ -268,27 +262,18 @@ public class TSUtils {
 	}
 	
 	/**
-	 * The spline can be a SplineFunction (Commons Math) or a JSpline.
+	 * 
 	 * @param spline
-	 * @param x
-	 * @return
+	 * @param xRange
+	 * @return an array of 100 equally spaced points
 	 * @throws Exception
 	 */
-	public static double value(Object spline, double x) throws FunctionEvaluationException {
-		if (spline instanceof Spline) {
-    		return ((Spline)spline).value(x);
-		}
-    	else if (spline instanceof SplineFunction) {
-    		return ((SplineFunction)spline).value(x);
-    	}
-    	else if (spline instanceof ArrayFunction) {
-    		return ((ArrayFunction)spline).value(x);
-    	}
-    	else {
-    		throw new FunctionEvaluationException(x);
-    	}
+	public static double[][] splineValues(UnivariateRealFunction spline, double[] xRange) throws Exception {
+		return splineValues(spline, xRange, 100);
 	}
-
+	
+	
+	
 	/**
 	 * Uses the bisection method to find roots.  Input values should
 	 * bracket a root, or else an endpoint will be returned.
@@ -296,14 +281,14 @@ public class TSUtils {
 	 * @param xRange
 	 * @return
 	 */
-	public static Double root(Object spline, double[] xRange) throws Exception {
+	public static Double root(UnivariateRealFunction spline, double[] xRange) throws Exception {
 		double mid;
 		double x1 = xRange[0];
 		double x2 = xRange[1];	
 		while (Math.abs(x2-x1) > 0.000000001) {
 			mid = (x1 + x2)/2.0;
 			
-			if ( value(spline, x1)*value(spline, mid) < 0 ) {
+			if ( spline.value(x1)*spline.value(mid) < 0 ) {
 				x2 = mid;
 			} else { 
 				x1 = mid;
@@ -321,7 +306,7 @@ public class TSUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static List<Extremum> getExtrema(Object deriv, double[] bounds) throws Exception {
+	public static List<Extremum> getExtrema(UnivariateRealFunction deriv, double[] bounds) throws Exception {
 		
 		List<Extremum> extrema = new LinkedList<Extremum>();
 		Extremum extremum = null;
@@ -364,7 +349,7 @@ public class TSUtils {
 	 * @param bounds
 	 * @return
 	 */
-	public static double[] evaluateExtrema(List<Extremum> extrema, Object spline, double[] bounds) throws Exception {
+	public static double[] evaluateExtrema(List<Extremum> extrema, UnivariateRealFunction spline, double[] bounds) throws Exception {
 		Extremum[] eArray = new Extremum[extrema.size()];
 		Extremum e;
 		// iterate over the List, write into the Array
@@ -394,7 +379,7 @@ public class TSUtils {
 		if (eArray.length == 0) {  // error condition
 			System.err.println("Error: no extrema!");
 		}
-		else if (eArray.length == 1) {  // one extrema
+		else if (eArray.length == 1) {  // one extremum
 			// compute the range from the endpts 
 			if (eArray[0].getType() == Extremum.EXTREMUM_TYPE_MAX) {
 				firstMinX = bounds[0];
@@ -415,8 +400,8 @@ public class TSUtils {
 			}
 			// it does this: /\_/  check the ends, return the larger
 			else {
-				if ( (value(spline, eArray[0].getX()) - value(spline, bounds[0])) > 
-					 (value(spline, bounds[1])) - value(spline, eArray[1].getX()) ) {
+				if ( (spline.value(eArray[0].getX()) - spline.value(bounds[0])) > 
+					 (spline.value(bounds[1])) - spline.value(eArray[1].getX()) ) {
 					firstMinX = bounds[0];
 					firstMaxX = eArray[0].getX();
 				}
@@ -442,8 +427,8 @@ public class TSUtils {
 					x2 = eArray[i].getX();
 				}
 				// compute the range
-				double y1 = (value(spline, x1) < 0) ? 0 : value(spline, x1);
-				double y2 = (value(spline, x2) < 0) ? 0 : value(spline, x2);
+				double y1 = (spline.value(x1) < 0) ? 0 : spline.value(x1);
+				double y2 = (spline.value(x2) < 0) ? 0 : spline.value(x2);
 				range = y2 - y1;
 				// debugging
 				if (range < 0) { // error condition
@@ -468,16 +453,16 @@ public class TSUtils {
 		// if x != initialization value, -9999
 		if (firstMinX >= 0 ) {
 			// if the spline value is below 0.0, set to 0.0
-			firstMinY = (value(spline, firstMinX) < 0.0) ? 0.0 : value(spline, firstMinX);		 
+			firstMinY = (spline.value(firstMinX) < 0.0) ? 0.0 : spline.value(firstMinX);		 
 		}
 		if (firstMaxX >= 0) {
-			firstMaxY = (value(spline, firstMaxX) < 0.0) ? 0.0 : value(spline, firstMaxX);
+			firstMaxY = (spline.value(firstMaxX) < 0.0) ? 0.0 : spline.value(firstMaxX);
 		}
 		if (secondMinX >= 0) {
-			secondMinY = (value(spline, secondMinX) < 0.0) ? 0.0 : value(spline, secondMinX);
+			secondMinY = (spline.value(secondMinX) < 0.0) ? 0.0 : spline.value(secondMinX);
 		}
 		if (secondMaxX >= 0) {
-			secondMaxY = (value(spline, secondMaxX) < 0.0) ? 0.0 : value(spline, secondMaxX);
+			secondMaxY = (spline.value(secondMaxX) < 0.0) ? 0.0 : spline.value(secondMaxX);
 		}
 		
 		return new double[] {firstMinX, firstMinY, firstMaxX, firstMaxY, secondMinX, secondMinY, secondMaxX, secondMaxY};	
@@ -486,21 +471,27 @@ public class TSUtils {
 	
 	/**
 	 * Implement according to White et al. 1997.
-	 * @param series
+	 * @param series, assumed to be already smooth
 	 * @param bounds
 	 * @return the t value of the first time the series exceeds the VI ratio.
 	 * @throws Exception
 	 */
 	public static double greenUpWhite(double[][] series, double[] bounds) throws Exception  {
+		
+		SplineFunction pSpline = new SplineFunction(series);
+		PolynomialSplineFunction deriv = (PolynomialSplineFunction)pSpline.derivative();
 		double[][] ratioVals = ndviRatio(series, bounds);
-		// scan the series values for the first time ratio>0.5
-		for (int i=0; i<ratioVals[0].length; i++) {
-			if (ratioVals[1][i] > 0.5) {
-				return ratioVals[0][i];
+		SplineFunction ratio = new SplineFunction(ratioVals);
+		double t = StatUtils.min(ratioVals[0]);
+		while (true) { //scan
+			//System.out.println("t="+t+" mean= "+mean.value(t)+"smoothed="+smoothed.value(t)+" deriv="+deriv.value(t));
+			double tplus = t + (bounds[1]-bounds[0])/1000;
+			if (ratio.value(t) < 0.5 && ratio.value(tplus) > 0.5 && deriv.value(t) > 0) {
+				break;
 			}
+			t = tplus;
 		}
-		// error condition:
-		return -9999;
+		return t;
 	}
 	
 
@@ -527,76 +518,39 @@ public class TSUtils {
 	
 	/**
 	 * Implement according to Reed et al. 1994.  Moving window of 42 (?? legacy).
-	 * @param series
+	 * @param series, assumed to be not smooth, so the original values can be used in the running mean
 	 * @param bounds
 	 * @param width
 	 * @return
 	 * @throws Exception
 	 */
 	public static double greenUpReed(double[][] series, double[] bounds, int width) throws Exception {
-		
-		// the second derivative is used to beginning of the curve
-		Spline pSpline = TSUtils.polynomialSpline(series[0], series[1], 1);
-        Spline deriv = PSpline.derivative(pSpline);
+
+		SplineFunction pSpline = new SplineFunction(series);
+		double[][] smooth = smoothFunction(pSpline, bounds[0], bounds[1], 0.85);
+		SplineFunction smoothed = new SplineFunction(smooth);
+		PolynomialSplineFunction deriv = (PolynomialSplineFunction)smoothed.derivative();
 		
         // get the running mean and start checking it.
 		double[][] meanVals = runningMean(series, width);
-		// modify Reed's definition slightly as follows:
-        double xStart = 0;
-		if (deriv.value(series[0][1]) < 0) { // decreasing, scan from next minimum
-			List extrema = getExtrema(deriv, bounds);
-			Extremum e;
-			for (int i=0; i<extrema.size(); i++) {
-				// if this is a minima, start here
-				e = (Extremum)extrema.get(i);
-				if (e.getType() == Extremum.EXTREMUM_TYPE_MIN) {
-					xStart = e.getX();
-					break;
-				}
+		SplineFunction mean = new SplineFunction(meanVals);
+		double t = StatUtils.min(smooth[0]);
+		// go to where the smoothed data is increasing and crosses the running mean
+		while (true) { //scan
+			//System.out.println("t="+t+" mean= "+mean.value(t)+"smoothed="+smoothed.value(t)+" deriv="+deriv.value(t));
+			double tplus = t + (bounds[1]-bounds[0])/1000;
+			if (smoothed.value(t) < mean.value(t) && smoothed.value(tplus) > mean.value(tplus) && deriv.value(t) > 0) {
+				break;
 			}
+			t = tplus;
 		}
-		// increasing, but already above the mean, scan from next minimum
-		else if (deriv.value(series[0][1]) > 0 && series[1][0] > meanVals[1][0]) {
-			List extrema = getExtrema(deriv, bounds);
-			Extremum e;
-			for (int i=0; i<extrema.size(); i++) {
-				// if this is a minima, start here
-				e = (Extremum)extrema.get(i);
-				if (e.getType() == Extremum.EXTREMUM_TYPE_MIN) {
-					xStart = e.getX();
-					break;
-				}
-			}
-		}
-		else { // increasing, scan from here
-			xStart = series[0][1];
-		}
-		// simply scan the whole thing, checking the xStart
-		double greenUp = -9999;
-		for (int i=0; i<series[0].length; i++) {
-			// if not checking yet, keep going
-			if (series[0][i] < xStart) { continue; }
-			// if the mean is greater than the series, keep going
-			if (series[1][i] < meanVals[1][i]) { 
-				continue;
-			// otherwise, it's in the last interval, return the midpoint
-			} else {
-				if (i != 0) {
-					greenUp = (series[0][i] + series[0][i-1])/2.0;
-					break;
-				}
-				else {
-					greenUp = series[0][i];
-				}
-			}	
-		}
-		return greenUp;
+		return t;
 	}
 	
 
 	/**
 	 * Return an array of the running average, truncated at the ends
-	 * @param series
+	 * @param series, assumed to be not smooth, so the original values can be used in the running mean
 	 * @param width of the mean window in array-units
 	 * @return 
 	 * @throws Exception
@@ -618,14 +572,12 @@ public class TSUtils {
 			// figure out the range over which to average
 			if (i-halfWidth < 0) { // start
 				start = 0;
-			}
-			else {
+			} else {
 				start = i-halfWidth;
 			}
 			if (i+halfWidth > series[1].length-1) { // end
 				end = series[1].length-1;
-			}
-			else {
+			} else {
 				end = i+halfWidth;
 			}
 			
@@ -655,7 +607,7 @@ public class TSUtils {
 			List<double[]>pixelValues = loadr.getSeries(GISUtils.makePoint(-83.1438, 9.594));
 			final double[][] series = TSUtils.getSeriesAsArray(pixelValues);
 			// splines on the original data, un-scaled
-			final Spline dSpline = TSUtils.duchonSpline(series[0], series[1]);
+			final DuchonSplineFunction dSpline = new DuchonSplineFunction(series);
 			double[] minMax = {StatUtils.min(series[0]), StatUtils.max(series[0])};
 			final double[][] smooth1 = TSUtils.sgSmooth(series, 5, 2);
 			final double[][] smooth2 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.7);
@@ -663,16 +615,15 @@ public class TSUtils {
 
 			SwingUtilities.invokeLater(new Runnable() {
 	            public void run() {
-	            	TSDisplayer disp = new TSDisplayer(series);
-	            	disp.graphSeries();
-	            	disp.graphSpline(dSpline, true);
+	            	TSDisplayer disp = new TSDisplayer();
+	            	disp.graphSeries(series);
+	            	disp.addSpline(dSpline);
 	            	disp.graphSeries(smooth1);
 	            	//disp.graphSeries(smooth2);
 	            	disp.graphSeries(smooth3);
 
 	            }
 	        });
-	        
 	        
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -68,7 +68,7 @@ public class ImageLoadr1 {
 	 * series at the specified point.  If  censor==true, then zero 
 	 * values will be removed prior to building the spline.
 	 */
-	public Spline getSpline(Point pt, int nSeries, boolean censor) throws Exception {
+	public DuchonSplineFunction getSpline(Point pt, int nSeries, boolean censor) throws Exception {
 		
 		// initialize
 		double[] raw = new double[timePoints];
@@ -91,9 +91,9 @@ public class ImageLoadr1 {
 		}
 
 		// fit a Spline to the censored values: xCens and yCens
-		Spline mySpline = TSUtils.duchonSpline(x, y);
-		
-		return mySpline;
+		//Spline mySpline = TSUtils.duchonSpline(x, y);
+		//return mySpline;
+		return new DuchonSplineFunction(new double[][] {x,y});
 	}
 	
 	/*

@@ -58,16 +58,19 @@ public class SplineFunction extends SplineInterpolator implements
 	}
 
 	/**
+	 * Must be cast to PolynomialSplineFunction for complete functionality.
+	 */
+	@Override
+	public UnivariateRealFunction derivative() {
+		return spline.polynomialSplineDerivative();
+	}
+	
+	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
 	}
-
-	@Override
-	public UnivariateRealFunction derivative() {
-		return spline.derivative();
-	}
-
+	
 }

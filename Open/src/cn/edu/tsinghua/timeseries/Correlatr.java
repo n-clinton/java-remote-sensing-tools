@@ -217,7 +217,7 @@ public class Correlatr {
 	}
 	
 	/**
-	 * New-school, asynchronous. Untested 20121130.
+	 * New-school, asynchronous.
 	 * @param base
 	 * @param reference
 	 * @param lags
@@ -231,7 +231,6 @@ public class Correlatr {
 		PixelEnumeration enumerator = new PixelEnumeration(queue1, ref);
 		new Thread(enumerator).start();
 		// compute thread
-		
 		ExecutorCompletionService<Pixel> ecs = new ExecutorCompletionService<Pixel>(
 				Executors.newFixedThreadPool(nThreads));
 		PixelCompute computer = new PixelCompute(queue1, ecs);
@@ -622,7 +621,7 @@ public class Correlatr {
 //			e.printStackTrace();
 //		}
 
-		
+		// TODO: Update to most recent from 7th floor...
 	}
 
 }
