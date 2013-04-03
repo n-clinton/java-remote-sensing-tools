@@ -6,6 +6,7 @@ package cn.edu.tsinghua.timeseries;
 import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -101,7 +102,7 @@ public class Correlatr {
 	 * @param covariate
 	 * @return
 	 */
-	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate, int[] lags) {
+	public double[] maxCorrelation1(List<double[]> response, List<double[]> covariate, int[] lags) {
 		VectorialCovariance cov = new VectorialCovariance(2, false);
 		RealMatrix vc = null; // the variance/covariance matrix
 		double[] correlations = new double[lags.length];
@@ -122,6 +123,62 @@ public class Correlatr {
 				try {
 					//System.out.println(t+","+r+","+c);
 					cov.increment(new double[] {rSpline.value(t), cSpline.value(t-lags[l])});
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			vc = cov.getResult();
+			// normalize by SD
+			correlations[l] = vc.getEntry(0, 1)/Math.sqrt(vc.getEntry(0, 0)*vc.getEntry(1, 1));
+			//System.out.println(correlations[l]);
+		}
+		int max = weka.core.Utils.maxIndex(correlations); // might be negative
+		return new double[] {correlations[max], lags[max]};
+	}
+	
+	/**
+	 * This version is meant for daily PERSIANN data, for which it makes no sense to fit a spline.
+	 * @param response
+	 * @param covariate
+	 * @return
+	 */
+	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate, int[] lags) {
+		// 
+		double[] covariates = new double[covariate.size()];
+		Arrays.fill(covariates, -9999.0);
+		for (int i=0; i<covariates.length; i++) {
+			double[] tc = covariate.get(i);
+			covariates[(int)tc[0]] = tc[1];
+		}
+		//
+		
+		VectorialCovariance cov = new VectorialCovariance(2, false);
+		RealMatrix vc = null; // the variance/covariance matrix
+		double[] correlations = new double[lags.length];
+		double t0 = response.get(0)[0]; // minumum t
+		double tn = response.get(response.size()-1)[0]; // max t
+		// fit a spline to the EVI response
+		double[][] xy = TSUtils.getSeriesAsArray(response);
+		Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
+
+		for (int l=0; l<lags.length; l++) {
+			cov.clear();
+			// compute covariance
+			for (double t=t0; t<=tn; t++) { // daily step
+				if (t-lags[l]<0 || t-lags[l]>covariate.get(covariate.size()-1)[0]) {
+					continue; // don't go out of bounds
+				}
+				try {
+					double r = rSpline.value(t);
+					if (r < 0) { // want only EVI greater than zero
+						continue;
+					}
+					double c = covariates[(int)t];
+					if (c < 0) { // skip no data value: -9999.0
+						continue;
+					}
+					//System.out.println(t+","+r+","+c);
+					cov.increment(new double[] {r, c});
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -252,6 +309,7 @@ public class Correlatr {
 		List<double[]> evi, persiann;
 		int x, y;
 		double[] correlation;
+		
 		public Pixel(Future<List<double[]>> eviF, Future<List<double[]>> persiannF, int x, int y) throws Exception {
 			this.x = x;
 			this.y = y;
@@ -329,11 +387,14 @@ public class Correlatr {
 			// center
 			double ulx = -179.9815962788889; 
 			double uly = 69.99592926598972;
+			// dimensions of the EVI images
+			int width = 43032;
+			int height = 15539;
 			
-			for (int x=888; x<15358; x++) { // North America
-				for (int y=700; y<12372; y++) {
-//			for (int x=888; x<2000; x++) {
-//				for (int y=700; y<2000; y++) {
+			for (int x=0; x<width; x++) {
+				for (int y=0; y<height; y++) {
+//			for (int x=888; x<15358; x++) { // North America
+//				for (int y=700; y<12372; y++) {
 					double _x = ulx+x*delta;
 					double _y = uly-y*delta;
 					//System.out.println(x+","+y);
@@ -447,7 +508,7 @@ public class Correlatr {
 			this.base = base;
 			// initialize outputs
 			corr = RasterFactory.createBandedRaster(
-	    			DataBuffer.TYPE_BYTE,
+	    			DataBuffer.TYPE_FLOAT,
 	    			width,
 	    			height,
 	    			1, // bands
@@ -478,13 +539,6 @@ public class Correlatr {
 			} catch (ExecutionException e) {
 				e.printStackTrace();
 			}
-			JAIUtils.writeTiff(corr, base+"_corr.tif", DataBuffer.TYPE_BYTE);
-			corr = null;
-			System.gc();
-			JAIUtils.writeTiff(days, base+"_days.tif", DataBuffer.TYPE_BYTE);
-			days = null;
-			System.gc();
-			JAIUtils.writeTiff(eviN, base+"_eviN.tif", DataBuffer.TYPE_BYTE);
 		}
 		
 		/**
@@ -493,28 +547,40 @@ public class Correlatr {
 		 * @throws ExecutionException
 		 */
 		public void write() throws InterruptedException, ExecutionException {
+			int interval = 1000000; // frequency of write
+			int counter = 0;
 			while (true) {
 				//System.out.println("queue: "+queue.size());
 				Pixel finishedPix = ecs.take().get();
 				if (finishedPix.x == -1 && finishedPix.y == -1) { // DUMMY
 					break;
 				}
-				writeCorr((finishedPix.correlation[0]*100), finishedPix);
+				writeCorr((finishedPix.correlation[0]), finishedPix);
 				writeDays(finishedPix.correlation[1], finishedPix);
 				writeN(finishedPix.evi.size(), finishedPix);
 				System.out.println(finishedPix.x+","+finishedPix.y+","+
 				(finishedPix.correlation[0])+","+
 					finishedPix.correlation[1]+","+
-						finishedPix.evi.size());	
+						finishedPix.evi.size());
+				// periodically write to disk
+				counter++;
+				if (counter > interval) {
+					diskWrite();
+					counter = 0;
+				}
 			}
+			diskWrite();
 		}
 		
-		/*
-		 * Synchronized writing methods:
-		 */
 		/**
-		 * @param val is correlation*100
+		 * 
 		 */
+		private void diskWrite() {
+			JAIUtils.writeTiff(corr, base+"_corr.tif", DataBuffer.TYPE_FLOAT);
+			JAIUtils.writeTiff(days, base+"_days.tif", DataBuffer.TYPE_BYTE);
+			JAIUtils.writeTiff(eviN, base+"_eviN.tif", DataBuffer.TYPE_BYTE);
+		}
+		
 		public synchronized void writeCorr(double val, Pixel pix) {
 			corr.setSample(pix.x, pix.y, 0, val);
 		}
@@ -621,7 +687,7 @@ public class Correlatr {
 //			e.printStackTrace();
 //		}
 
-		// TODO: Update to most recent from 7th floor...
+
 	}
 
 }

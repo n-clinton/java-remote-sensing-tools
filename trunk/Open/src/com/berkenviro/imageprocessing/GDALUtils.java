@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
+import javax.media.jai.JAI;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.RasterFactory;
 import javax.media.jai.TiledImage;
@@ -59,6 +60,8 @@ import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
 import org.gdal.gdalconst.gdalconst;
 import org.gdal.gdalconst.gdalconstConstants;
+import org.gdal.osr.SpatialReference;
+import org.gdal.osr.osr;
 
 import com.berkenviro.gis.GISUtils;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -426,7 +429,28 @@ public class GDALUtils {
 		return new BufferedImage(cModel, raster, false, null);
 	}
 	
-	
+	/**
+	 * 
+	 * @param from
+	 * @param to
+	 */
+	public static void transferGeo(String fromName, String toName) {
+		Dataset dataset = getDataset(fromName);
+		double[] geo = dataset.GetGeoTransform();
+		System.out.println("Using geo transform: ");
+		for (int i=0; i<geo.length; i++) {
+			System.out.print(geo[i]+", ");
+		}
+		String proj = dataset.GetProjectionRef();
+		System.out.println("Using projection: ");
+		System.out.println(proj);
+		File f = new File(toName);
+		Dataset data = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_Update);
+		data.SetGeoTransform(geo);
+		data.SetProjection(proj);
+		data.FlushCache();
+		data.delete();
+	}
 	
 	/**
 	 * Test code and processing log.
@@ -484,9 +508,16 @@ public class GDALUtils {
 		//d.delete();
 
 		// 20130202
-		String filename = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/Delta_Hymap_12.img";
-		Dataset poDataset = getDataset(filename);
-		BufferedImage buff = getBufferedImage(poDataset, 1);
+//		String filename = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/Delta_Hymap_12.img";
+//		Dataset poDataset = getDataset(filename);
+//		BufferedImage buff = getBufferedImage(poDataset, 1);
+		
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		for (int b=0; b<4; b++) {
+//			String outfile = filename.replace(".tif", "_b"+b+".tif");
+//			transferGeo(filename, outfile);
+//		}
+		
 	}
 
 }
