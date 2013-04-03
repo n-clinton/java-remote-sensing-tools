@@ -24,7 +24,10 @@
  */
 package com.berkenviro.imageprocessing;
 
+import java.awt.Dimension;
 import java.awt.Point;
+import java.awt.image.BandedSampleModel;
+import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.RenderedImage;
@@ -47,9 +50,12 @@ import java.util.SortedSet;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.stream.ImageInputStream;
 import javax.media.jai.JAI;
 import javax.media.jai.ParameterBlockJAI;
 import javax.media.jai.PlanarImage;
@@ -68,6 +74,7 @@ import org.apache.commons.math.linear.RealVector;
 
 import com.berkenviro.gis.GISUtils;
 import com.sun.media.imageio.plugins.tiff.GeoTIFFTagSet;
+import com.sun.media.imageio.stream.RawImageInputStream;
 import com.sun.media.jai.codec.FileSeekableStream;
 import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageDecoder;
@@ -1334,6 +1341,29 @@ public class JAIUtils {
 		}
 	}
 
+	/**
+	 * 
+	 * @param filename
+	 * @param dataType
+	 * @param w
+	 * @param h
+	 * @param bands
+	 * @param scanlineStride
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	public static PlanarImage readRaw(String filename, int dataType, int w, int h, int bands, int scanlineStride) throws FileNotFoundException, IOException {
+		SampleModel model = new BandedSampleModel(dataType, w, h, scanlineStride, new int[] {0}, new int[] {0});
+		ImageInputStream source = new FileImageInputStream(new File(filename));
+		ImageInputStream stream = new RawImageInputStream(source, model, new long[] {0}, new Dimension[] {new Dimension(w, h)});
+		ImageReader reader = ImageIO.getImageReaders(stream).next();
+		reader.setInput(stream);
+		BufferedImage bimage = reader.read(0);
+		return PlanarImage.wrapRenderedImage(bimage);
+	}
+	
+	
 	/**
 	 * Test code and procesing log.
 	 * @param args

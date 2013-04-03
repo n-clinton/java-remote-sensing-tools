@@ -3,8 +3,19 @@
  */
 package com.berkenviro.imageprocessing;
 
+import java.util.Enumeration;
+
+import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
+import weka.classifiers.meta.FilteredClassifier;
+import weka.classifiers.trees.RandomForest;
 import weka.clusterers.SimpleKMeans;
+import weka.core.Attribute;
+import weka.core.Instance;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.NumericTransform;
+import weka.filters.unsupervised.attribute.Remove;
 
 /**
  * Processing log
@@ -1710,7 +1721,143 @@ public class WekaUtilsProcessing extends WekaUtils {
 //			e.printStackTrace();
 //		}
 		
-
+		
+		// 20130321 global landcover meta-prediction
+//		String filename = "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc.csv";
+//		Instances input = loadCSV(filename);
+//		System.out.println(input.toSummaryString());
+		try {
+//			int[] toRemove = {0,11,12,13,14};
+//			Instances removed = removeAttributes(input, toRemove); 
+//			System.out.println(removed.toSummaryString());
+//			String output = "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed.arff";
+//			writeArff(removed, output);
+			
+			// nominalize with GUI
+			// manually edit header to have complete list of classes
+			// manually add codes 19,29,39,49,99,83,120 which are what??
+//			filename = "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized.arff";
+//			Instances instances = loadArff(filename);
+//			System.out.println(instances.toSummaryString());
+//			instances.setClassIndex(2);
+//			
+//			Instances[] split = subset(70, instances);
+//			System.out.println(split[0].toSummaryString());
+//			System.out.println(split[1].toSummaryString());
+//			writeArff(split[0], "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_70.arff");
+//			writeArff(split[1], "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_30.arff");
+//
+//			Attribute[] predictors = {split[0].attribute("FROMGLCJ48"),
+//					split[0].attribute("FROMGLCMLC"),
+//					split[0].attribute("FROMGLCRF"),
+//					split[0].attribute("FROMGLCSVM"),
+//					split[0].attribute("FROMGLCseg"),
+//					split[0].attribute("FROMGLCagg"),
+//					split[0].attribute("FROMGLCaggv2")};
+//			
+//			double[] costs = new double[predictors.length];
+//			int i=0;
+//			for (Attribute a : predictors) {
+//				System.out.println(a);
+//				AttributeClassifier classy = new AttributeClassifier(a);
+//				Evaluation evaluation = new Evaluation(split[0]);
+//				evaluation.evaluateModel(classy, split[0]);
+//				//System.out.println(evaluation.toSummaryString());
+//				costs[i] = evaluation.errorRate();
+//				//System.out.println(costs[i]);
+//				i++;
+//			}
+//			Instances meta = makeTraining(split[0], predictors, costs);
+//			writeArff(meta, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_70_meta.arff");
+			
+			// now there is a meta-training
+			// remove the true response, train a classifer
+//			Instances instances70 = loadArff("/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_70_meta.arff");
+//			System.out.println(instances70.toSummaryString());
+//			// get rid of the true (interpreted) response
+//			instances70.deleteAttributeAt(2);
+//			System.out.println(instances70.toSummaryString());
+//			instances70.setClassIndex(instances70.numAttributes()-1);
+//			Attribute classAtt = instances70.classAttribute(); // "response"
+//			
+//			RandomForest rf = new RandomForest();
+//			rf.setNumTrees(50);
+//			rf.buildClassifier(instances70);
+//			
+//			// trained.  Now, predict on the test
+//			Instances unlabeled = loadArff("/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_30.arff");
+//			unlabeled.insertAttributeAt(classAtt, unlabeled.numAttributes());
+//			unlabeled.setClassIndex(unlabeled.numAttributes()-1);
+//			System.out.println("Class: "+unlabeled.classAttribute());
+//			System.out.println(unlabeled.toSummaryString());
+//			
+//			Instances test = new Instances(unlabeled);
+//			System.out.println(test.toSummaryString());
+//			
+//			Remove rm = new Remove();
+//			rm.setAttributeIndicesArray(new int[] {2}); // "interpreted"
+//			rm.setInputFormat(test);
+//			rm.setInvertSelection(true);
+//			FilteredClassifier fc = new FilteredClassifier();
+//			fc.setClassifier(rf);
+//			fc.setFilter(rm);
+//			
+//			for (int i = 0; i < unlabeled.numInstances(); i++) {
+//				double clsLabel = fc.classifyInstance(unlabeled.instance(i));
+//				test.instance(i).setClassValue(clsLabel);
+//			}
+//
+//			writeArff(test, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_removed_nominalized_30_meta.arff");
+			// name change
+			Instances test = loadArff("/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_30_meta.arff");
+//			Attribute[] predictors = {test.attribute("FROMGLCJ48"),
+//					test.attribute("FROMGLCMLC"),
+//					test.attribute("FROMGLCRF"),
+//					test.attribute("FROMGLCSVM"),
+//					test.attribute("FROMGLCseg"),
+//					test.attribute("FROMGLCagg"),
+//					test.attribute("FROMGLCaggv2")};
+//			System.out.println(test.toSummaryString());
+//			test.setClassIndex(2);
+//			
+//			double[] costs = new double[predictors.length];
+//			int i=0;
+//			for (Attribute a : predictors) {
+//				System.out.println(a);
+//				AttributeClassifier classy = new AttributeClassifier(a);
+//				Evaluation evaluation = new Evaluation(test);
+//				evaluation.evaluateModel(classy, test);
+//				//System.out.println(evaluation.toSummaryString());
+//				costs[i] = evaluation.errorRate();
+//				System.out.println(costs[i]);
+//				i++;
+//			}
+//			Attribute a = test.attribute("response");
+//			System.out.println(a);
+//			MetaAttributeClassifier classy = new MetaAttributeClassifier(a);
+//			Evaluation evaluation = new Evaluation(test);
+//			evaluation.evaluateModel(classy, test);
+//			System.out.println(evaluation.toSummaryString());
+//			double cost = evaluation.errorRate();
+//			System.out.println(cost);
+			
+			Instances labeled = new Instances(test);
+			Attribute interp = test.attribute(2).copy("meta_pred");
+			labeled.insertAttributeAt(interp, labeled.numAttributes());
+			labeled.setClassIndex(labeled.numAttributes()-1);
+			
+			Attribute a = test.attribute("response");
+			MetaAttributeClassifier classy = new MetaAttributeClassifier(a);
+			classy.buildClassifier(test);
+			for (int i = 0; i < test.numInstances(); i++) {
+				double clsLabel = classy.classifyInstance(test.instance(i));
+				labeled.instance(i).setClassValue(clsLabel);
+			}
+			writeArff(labeled, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_30_meta_labeled.arff");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		
 	}
 
