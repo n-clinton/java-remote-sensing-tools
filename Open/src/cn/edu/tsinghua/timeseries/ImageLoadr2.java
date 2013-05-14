@@ -29,8 +29,10 @@ import com.vividsolutions.jts.geom.Point;
 public class ImageLoadr2 implements Loadr {
 
 	private ArrayList<DatedQCImage> imageList;
-	private double[] x;
+	private double[] t;
 	private Calendar date0;
+	private Dataset[] images;
+	private Dataset[] qcImages;
 	
 	/**
 	 * 
@@ -39,8 +41,8 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public ImageLoadr2(String[] directories) throws Exception {
 		System.out.println("Initializing image loader...");
-		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "2");
-		gdal.SetCacheMax(64);
+		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "50");
+		gdal.SetCacheMax(1024);
 		imageList = new ArrayList<DatedQCImage>();
 		
 		for (int d=0; d<directories.length; d++) {
@@ -86,11 +88,15 @@ public class ImageLoadr2 implements Loadr {
 		// reference to the first image, unless otherwise specified
 		date0 = imageList.get(0).cal;
 		
-		// set the X vector
-		x = new double[imageList.size()];
+		images = new Dataset[imageList.size()];
+		qcImages = new Dataset[imageList.size()];
+		// set the time vector
+		t = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
-			x[i] = diffDays(dImage);
+			t[i] = diffDays(dImage);
+			images[i] = GDALUtils.getDataset(dImage.imageName);
+			qcImages[i] = GDALUtils.getDataset(dImage.qcImageName);
 		}
 	}
 	
@@ -102,10 +108,10 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public void setDateZero(Calendar cal) {
 		date0 = cal;
-		// rebuild X
+		// rebuild t
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
-			x[i] = diffDays(dImage);
+			t[i] = diffDays(dImage);
 		}
 	}
 	
@@ -189,31 +195,71 @@ public class ImageLoadr2 implements Loadr {
 	public synchronized List<double[]> getSeries(Point pt) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
-		
+		//---------------------------------------------------
+//		for (int i=0; i<imageList.size(); i++) {
+//			DatedQCImage dImage = imageList.get(i);
+//			Dataset image = GDALUtils.getDataset(dImage.imageName);
+//			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
+//			try {
+//				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
+//				if (!BitChecker.mod13ok(qc)) {
+//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+//					continue;
+//				}
+//				// else, write the time offset and the image data
+//				double data = GDALUtils.imageValue(image, pt, 1);
+//				out.add(new double[] {t[i], data});
+//			} catch (Exception e1) {
+//				e1.printStackTrace();
+//			} finally {
+//				image.delete();
+//				qcImage.delete();
+//				image = null;
+//				qcImage = null;
+//				//System.gc();
+//			}
+//		}
+		//---------------------------------------------------
 		for (int i=0; i<imageList.size(); i++) {
-			DatedQCImage dImage = imageList.get(i);
-			Dataset image = GDALUtils.getDataset(dImage.imageName);
-			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
 			try {
-				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
+				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
 				if (!BitChecker.mod13ok(qc)) {
 					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
 					continue;
 				}
 				// else, write the time offset and the image data
-				double t = diffDays(dImage);
-				double data = GDALUtils.imageValue(image, pt, 1);
-				out.add(new double[] {t, data});
+				double data = GDALUtils.imageValue(images[i], pt, 1);
+				out.add(new double[] {t[i], data});
 			} catch (Exception e1) {
 				e1.printStackTrace();
-			} finally {
-				image.delete();
-				qcImage.delete();
-				image = null;
-				qcImage = null;
-				//System.gc();
-			}
+			} 
 		}
+		//---------------------------------------------------
+		return out;
+	}
+	
+	/**
+	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
+	 * @param pt
+	 * @return
+	 */
+	public synchronized List<double[]> getSeries(double x, double y) {		
+		LinkedList<double[]> out = new LinkedList<double[]>();
+		for (int i=0; i<imageList.size(); i++) {
+			try {
+				int qc = (int)GDALUtils.imageValue(qcImages[i], x, y, 1);
+				if (!BitChecker.mod13ok(qc)) {
+					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+					continue;
+				}
+				// else, write the time offset and the image data
+				double data = GDALUtils.imageValue(images[i], x, y, 1);
+				out.add(new double[] {t[i], data});
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			} 
+		}
+		//---------------------------------------------------
 		return out;
 	}
 	
@@ -222,9 +268,22 @@ public class ImageLoadr2 implements Loadr {
 	 * @return
 	 */
 	public double[] getX() {
-		return x;
+		return t;
 	}
 
+	/**
+	 * 
+	 */
+	public void close() {
+		for (int i=0; i<imageList.size(); i++) {
+			images[i].delete();
+			images[i] = null;
+			qcImages[i].delete();
+			qcImages[i] = null;
+		}
+		System.gc();
+	}
+	
 	/**
 	 * Fit a thin plate spline to the series and interpolate missing values.
 	 * This will fail if first and/or last values are missing, i.e. there is no extrapolation.
@@ -244,17 +303,17 @@ public class ImageLoadr2 implements Loadr {
 		else if (series.size() < 4) {  // not enough points to do an interpolation, 4 is arbitrary
 			throw new Exception("Not enough data!  n="+series.size());
 		}
-		else if (series.get(0)[0] > x[0]) { // do not extrapolate in the beginning
+		else if (series.get(0)[0] > t[0]) { // do not extrapolate in the beginning
 			throw new Exception("Start of series out of range: "+series.get(0)[0]);
 		}
-		else if (series.get(series.size()-1)[0] < x[x.length-1]) { // do not extrapolate at the end
+		else if (series.get(series.size()-1)[0] < t[t.length-1]) { // do not extrapolate at the end
 			throw new Exception("End of series out of range: "+series.get(series.size()-1)[0]);
 		}
 		double[][] xy = TSUtils.getSeriesAsArray(series);
 		// fit a spline to interpolate
 		//Spline spline = TSUtils.duchonSpline(xy[0], xy[1]);
 		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
-		return TSUtils.evaluateSpline(spline, x);
+		return TSUtils.evaluateSpline(spline, t);
 	}
 	
 	/**
@@ -272,7 +331,7 @@ public class ImageLoadr2 implements Loadr {
 			for (double[] datapoint : series) {
 				System.out.println(datapoint[0]+","+datapoint[1]);
 			}
-			
+			loadr.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

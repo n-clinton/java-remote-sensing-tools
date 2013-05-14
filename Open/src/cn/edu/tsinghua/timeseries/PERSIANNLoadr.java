@@ -22,7 +22,7 @@ import com.vividsolutions.jts.geom.Point;
 public class PERSIANNLoadr implements Loadr {
 
 	private ArrayList<PERSIANNFile> imageList;
-	private double[] x;
+	private double[] t;
 	private Calendar date0;
 	
 	/**
@@ -55,10 +55,10 @@ public class PERSIANNLoadr implements Loadr {
 		date0 = imageList.get(0).cal;
 		
 		// set the X vector
-		x = new double[imageList.size()];
+		t = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			PERSIANNFile pf = imageList.get(i);
-			x[i] = diffDays(pf);
+			t[i] = diffDays(pf);
 		}
 	}
 	
@@ -72,7 +72,7 @@ public class PERSIANNLoadr implements Loadr {
 		// rebuild X
 		for (int i=0; i<imageList.size(); i++) {
 			PERSIANNFile pf = imageList.get(i);
-			x[i] = diffDays(pf);
+			t[i] = diffDays(pf);
 		}
 	}
 	
@@ -102,27 +102,44 @@ public class PERSIANNLoadr implements Loadr {
 	 * @return
 	 */
 	public synchronized List<double[]> getSeries(Point pt) {		
+		return getSeries(pt.getX(), pt.getY());
+	}
+	
+	
+	/**
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
 		for (int i=0; i<imageList.size(); i++) {
 			PERSIANNFile pf = imageList.get(i);
 			try {
-				float val = pf.imageValue(pt);
+				float val = pf.imageValue(x, y);
 				if (val == -9999.f) { continue; }
-				// else, write the time offset and the image data
-				double t = diffDays(pf);
-				out.add(new double[] {t, val});
+				out.add(new double[] {t[i], val});
 			} catch (Exception e1) {
 				e1.printStackTrace();
-			} finally {
-//				try {
-//					pf.close();
-//				} catch (IOException e) {
-//					e.printStackTrace();
-//				}
 			}
 		}
 		return out;
+	}
+	
+	/**
+	 * 
+	 */
+	public void close() {
+		for (int i=0; i<imageList.size(); i++) {
+			try {
+				imageList.remove(i).close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		imageList = null;
+		System.gc();
 	}
 	
 	/**
@@ -130,7 +147,7 @@ public class PERSIANNLoadr implements Loadr {
 	 * @return
 	 */
 	public double[] getX() {
-		return x;
+		return t;
 	}
 
 	/**
@@ -152,17 +169,17 @@ public class PERSIANNLoadr implements Loadr {
 		else if (series.size() < 4) {  // not enough points to do an interpolation, 4 is arbitrary
 			throw new Exception("Not enough data!  n="+series.size());
 		}
-		else if (series.get(0)[0] > x[0]) { // do not extrapolate in the beginning
+		else if (series.get(0)[0] > t[0]) { // do not extrapolate in the beginning
 			throw new Exception("Start of series out of range: "+series.get(0)[0]);
 		}
-		else if (series.get(series.size()-1)[0] < x[x.length-1]) { // do not extrapolate at the end
+		else if (series.get(series.size()-1)[0] < t[t.length-1]) { // do not extrapolate at the end
 			throw new Exception("End of series out of range: "+series.get(series.size()-1)[0]);
 		}
 		double[][] xy = TSUtils.getSeriesAsArray(series);
 		// fit a spline to interpolate
 		//Spline spline = TSUtils.duchonSpline(xy[0], xy[1]);
 		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
-		return TSUtils.evaluateSpline(spline, x);
+		return TSUtils.evaluateSpline(spline, t);
 	}
 	
 	/**
