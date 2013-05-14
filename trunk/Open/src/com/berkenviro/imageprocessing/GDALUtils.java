@@ -64,6 +64,7 @@ import org.gdal.osr.SpatialReference;
 import org.gdal.osr.osr;
 
 import com.berkenviro.gis.GISUtils;
+import com.berkenviro.imageprocessing.Utils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.util.AffineTransformation;
@@ -188,7 +189,7 @@ public class GDALUtils {
 						line = line.replace("}", "");
 						record = false;
 					}
-					String[] toks = Utils.tokenize(line);
+					String[] toks = com.berkenviro.imageprocessing.Utils.tokenize(line);
 					for (String s : toks) {
 						data.add(s.trim());
 					}
@@ -266,7 +267,7 @@ public class GDALUtils {
 	 */
 	public static int[] getPixelXY(double[] ImageProjXY, Dataset data) throws Exception {
 		AffineTransformation at = raster2proj(data);
-		AffineTransformation inv = GISUtils.proj2raster(at);
+		AffineTransformation inv = com.berkenviro.gis.GISUtils.proj2raster(at);
 		Coordinate pix = new Coordinate();
 		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
 		if ((int)pix.x < 0 || (int)pix.x >= data.getRasterXSize() 
@@ -306,8 +307,20 @@ public class GDALUtils {
 	 * @return
 	 */
 	public static double imageValue(Dataset data, Point pt, int b) throws Exception {
-		double[] xy = {pt.getX(), pt.getY()};
-		int[] pixelXY = getPixelXY(xy, data);
+		return imageValue(data, pt.getX(), pt.getY(), b);
+	}
+	
+	/**
+	 * 
+	 * @param data
+	 * @param x is georeferenced
+	 * @param y is georeferenced
+	 * @param b is one-indexed
+	 * @return
+	 * @throws Exception
+	 */
+	public static double imageValue(Dataset data, double x, double y, int b) throws Exception {
+		int[] pixelXY = getPixelXY(new double[] {x, y}, data);
 		return pixelValue(data, pixelXY[0], pixelXY[1], b);
 	}
 

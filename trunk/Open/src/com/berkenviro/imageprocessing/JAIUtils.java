@@ -39,6 +39,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -102,105 +103,66 @@ public class JAIUtils {
 		System.setProperty("com.sun.media.jai.disableMediaLib", "true");
 	}
 	
+	
 	/**
-	 * Write an image as a float Tiff.
+	 * Write a PlanarImage (or TiledImage) to a tiff.
+	 * @param image
+	 * @param outFile
+	 */
+	public static void writeImage(PlanarImage image, String outFile) {
+		System.out.println("Writing image file: "+outFile);
+		JAI.create("filestore", image, outFile, "TIFF");
+	}
+	
+	/**
 	 * 
-	 * @param data is a WritableRaster containing the data to write
-	 * @param outFile is the absolute path of the output filename
-	 */
-	public static void writeFloatTiff(WritableRaster data, String outFile) {
-		writeTiff(data, outFile, DataBuffer.TYPE_FLOAT);
-	}
-	
-	
-	/**
-	 * Write an image with the specified data buffer type.  
-	 * @param data is a WritableRaster containing the data to write
-	 * @param outFile outFile is the absolute path of the output filename
-	 * @param bufferType is the DataBuffer type
-	 */
-	public static void writeTiff(WritableRaster data, String outFile, int bufferType) {
-		System.out.println("writing image file: "+outFile);
-		int width = data.getWidth();
-		int height = data.getHeight();
-		int bands = data.getNumBands();
-		
-		SampleModel sModel = RasterFactory.createBandedSampleModel(
-	    								bufferType,
-	    								width,
-	    								height,
-	    								bands);
-	   
-		// create a compatible ColorModel
-		ColorModel cModel = PlanarImage.createColorModel(sModel);
-	    
-		//System.out.println("Sample model: ");
-		//System.out.println(sModel.toString());
-		//System.out.println("Color model: ");
-		//System.out.println(cModel.toString());
-		
-		// Create TiledImages using the float SampleModel.
-		TiledImage tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
-		// Set the data of the tiled images to be the rasters.
-		tImage.setData(data);
-		JAI.create("filestore",tImage,outFile,"TIFF");
-	}
-	
-	/**
-	 * Write an image with the specified data buffer type.  
-	 * @param data is a WritableRaster containing the data to write
-	 * @param outFile outFile is the absolute path of the output filename
-	 * @param bufferType is the DataBuffer type
+	 * @param data
+	 * @param outFile
 	 */
 	public static void writeTiff(WritableRaster data, String outFile) {
-		writeTiff(data, outFile, data.getDataBuffer().getDataType());
-	}
-	
-	/**
-	 * Not working Geotiff writer.  Probably should be replaced by a GDAL method. 
-	 * @param width
-	 * @param height
-	 * @param outFile
-	 * @param geoFields
-	 * @param data
-	 */
-	public static void writeFloatGeoTiff(int width, int height, String outFile, TIFFField[] geoFields, WritableRaster data) {
-		
-		BufferedOutputStream buff = null;
+		//writeTiff(data, outFile, data.getDataBuffer().getDataType());
+		System.out.println("writing image file: "+outFile);
 		try {
-			OutputStream out = new SeekableOutputStream(new RandomAccessFile(new File(outFile), "rw"));
-			buff = new BufferedOutputStream(out);
+			File file = new File(outFile);
+			FileOutputStream stream = new FileOutputStream(file);
+			BufferedOutputStream buffered = new BufferedOutputStream(stream);
+			TIFFEncodeParam param = new TIFFEncodeParam();
+			param.setCompression(TIFFEncodeParam.COMPRESSION_NONE);
+			// geo fields?
+			//param.setExtraFields(extraFields);
+			
+			ColorModel cm = PlanarImage.createColorModel(data.getSampleModel());
+			ImageEncoder enc = ImageCodec.createImageEncoder("TIFF", buffered, param);
+			enc.encode(data, cm);
+			buffered.close();
+			
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		}
-		
-		// Create the ParameterBlock.
-		TIFFEncodeParam param = new TIFFEncodeParam();
-		//param.setWriteTiled(true);
-		param.setExtraFields(geoFields);
-		//param.setCompression(param.COMPRESSION_NONE);
-
-		// float sample model
-		SampleModel sModel = RasterFactory.createBandedSampleModel(
-											DataBuffer.TYPE_FLOAT,
-											width,
-											height,
-											1);
-
-		// create a compatible ColorModel
-		ColorModel cModel = PlanarImage.createColorModel(sModel);
-		
-		// Create the TIFF image encoder.
-		ImageEncoder encoder = ImageCodec.createImageEncoder("TIFF", buff, param);
-		try {
-			encoder.encode(data, cModel);
-			buff.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	
+	/**
+	 * Write a JPEG at the highest quality.
+	 * @param image
+	 * @param filename
+	 */
+	public static void writeJPEG(PlanarImage image, String filename) {
+		IIOImage outputImage = new IIOImage(image, null, null);
+		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();        
+        try {
+			writer.setOutput(new FileImageOutputStream(new File(filename)));
+			ImageWriteParam writeParam = writer.getDefaultWriteParam();
+	        writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+	        writeParam.setCompressionQuality(1.0f); // float between 0 and 1, 1 for max quality.
+	        writer.write( null, outputImage, writeParam);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	/**
 	 * Create an image of the specified normalized index.  The index is of the form
@@ -219,12 +181,14 @@ public class JAIUtils {
 	    	// make the output image
 	    	int width = image.getWidth();
 			int height = image.getHeight();
-			WritableRaster indexRas = RasterFactory.createBandedRaster(
+			// create a float (32 bit) sample model
+			SampleModel sModel = RasterFactory.createBandedSampleModel(
 	    											DataBuffer.TYPE_FLOAT,
 	    											width,
 	    											height,
-	    											1,
-	    											new Point(0,0));
+	    											1);
+			ColorModel cModel = PlanarImage.createColorModel(sModel);
+			tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
 			
 			// iterate over the inputs, set the output raster value
 			for (int y=0; y<height; y++) {  	// each line
@@ -233,32 +197,10 @@ public class JAIUtils {
 					double pos = iterator.getSampleDouble(x,y,posBand);
 					double neg = iterator.getSampleDouble(x,y,negBand);
 					double index = (pos - neg)/(pos + neg);
-					indexRas.setSample(x,y,0,(float) index);
+					tImage.setSample(x,y,0,(float) index);
 					
 				}
 			}
-			
-			// free up some memory
-			image = null;
-			iterator = null;
-			System.gc();
-			
-			// write
-			// create a float (32 bit) sample model
-			SampleModel sModel = RasterFactory.createBandedSampleModel(
-	    											DataBuffer.TYPE_FLOAT,
-	    											width,
-	    											height,
-	    											1);
-	    
-			// create a compatible ColorModel
-			ColorModel cModel = PlanarImage.createColorModel(sModel);
-	    
-			// Create a TiledImage using the float SampleModel.
-			tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
-			// Set the data of the tiled image to be the raster.
-			tImage.setData(indexRas);
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -590,15 +532,8 @@ public class JAIUtils {
 	 * @return the pixel value
 	 */
 	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage) throws Exception {
-		if (pImage.getProperty("isReferenced").getClass() != Boolean.class ||
-			(Boolean)pImage.getProperty("isReferenced").equals(false) ) {
-				register(pImage); 
-		}
-		double[] xy = {pt.getX(), pt.getY()};
-		int[] pixelXY = getPixelXY(xy, pImage);
-		RandomIter iterator = null;
-		iterator = RandomIterFactory.create(pImage, null);
-		return iterator.getSampleDouble(pixelXY[0],pixelXY[1],0);
+		RandomIter iterator = RandomIterFactory.create(pImage, null);
+		return imageValue(pt, pImage, iterator);
 	}
 
 	/**
@@ -612,8 +547,24 @@ public class JAIUtils {
 	 * @return the pixel value
 	 */
 	public static double imageValue(com.vividsolutions.jts.geom.Point pt, PlanarImage pImage, RandomIter iterator) throws Exception {
-		double[] xy = {pt.getX(), pt.getY()};
-		int[] pixelXY = getPixelXY(xy, pImage);
+		return imageValue(pt.getX(), pt.getY(), pImage, iterator);
+	}
+	
+	/**
+	 * 
+	 * @param x is georeferenced
+	 * @param y is georeferenced
+	 * @param pImage
+	 * @param iterator
+	 * @return
+	 * @throws Exception
+	 */
+	public static double imageValue(double x, double y, PlanarImage pImage, RandomIter iterator) throws Exception {
+		if (pImage.getProperty("isReferenced").getClass() != Boolean.class ||
+				(Boolean)pImage.getProperty("isReferenced").equals(false) ) {
+					register(pImage); 
+			}
+		int[] pixelXY = getPixelXY(new double[] {x, y}, pImage);
 		return iterator.getSampleDouble(pixelXY[0],pixelXY[1],0);
 	}
 	
@@ -936,13 +887,15 @@ public class JAIUtils {
 	 * @return a PlanarImage of illumination
 	 */
 	public static PlanarImage illumination(double sun_z, double sunaz, double heading, int height, int width) {
-		// make the output raster
-		WritableRaster illOut = RasterFactory.createBandedRaster(
-    											DataBuffer.TYPE_FLOAT,
-    											width,
-    											height,
-    											1,
-    											new Point(0,0));
+		// output
+		SampleModel sModel = RasterFactory.createBandedSampleModel(
+				DataBuffer.TYPE_FLOAT,
+				width,
+				height,
+				1);
+		ColorModel cModel = PlanarImage.createColorModel(sModel);
+		TiledImage tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
+		
 		// iterate over the input, set the output raster value
 		for (int y=0; y<height; y++) {  	// each line
 			for (int x=0; x<width; x++){	// each pixel
@@ -1000,28 +953,9 @@ public class JAIUtils {
 				double rd = 0.5;
 				double dif = 28.0*rd*(1.0-rs)/23*Math.PI*(1-Math.pow((1-n.dotProduct(k1)/2), 5))*
 				(1-Math.pow((1-n.dotProduct(k2)/2), 5));
-				illOut.setSample(x, y, 0, spec+dif);
+				tImage.setSample(x, y, 0, spec+dif);
 			}
 		}		
-		SampleModel sModel = RasterFactory.createBandedSampleModel(
-				DataBuffer.TYPE_FLOAT,
-				width,
-				height,
-				1);
-
-		// create a compatible ColorModel
-		ColorModel cModel = PlanarImage.createColorModel(sModel);
-		
-		System.out.println("Sample model: ");
-		System.out.println(sModel.toString());
-		System.out.println("Color model: ");
-		System.out.println(cModel.toString());
-		
-		// Create TiledImages using the float SampleModel.
-		TiledImage tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
-		// Set the data of the tiled images to be the rasters.
-		tImage.setData(illOut);
-		
 		return tImage;
 	}
 	
@@ -1186,7 +1120,7 @@ public class JAIUtils {
 			}
 			String outFileName = input.replace(".tif", "_norm.tif");
 			System.out.println("Creating file "+outFileName);
-			JAIUtils.writeFloatTiff(outIm, outFileName);
+			JAIUtils.writeTiff(outIm, outFileName);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}	
@@ -1320,26 +1254,6 @@ public class JAIUtils {
 		}
 	}
 	
-	/**
-	 * Write a JPEG at the highest quality.
-	 * @param image
-	 * @param filename
-	 */
-	public static void writeJPEG(PlanarImage image, String filename) {
-		IIOImage outputImage = new IIOImage(image, null, null);
-		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();        
-        try {
-			writer.setOutput(new FileImageOutputStream(new File(filename)));
-			ImageWriteParam writeParam = writer.getDefaultWriteParam();
-	        writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-	        writeParam.setCompressionQuality(1.0f); // float between 0 and 1, 1 for max quality.
-	        writer.write( null, outputImage, writeParam);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * 

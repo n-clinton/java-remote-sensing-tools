@@ -1359,7 +1359,7 @@ public class MODTRANprocessor {
 			// write
 			String tFileName = image.replace(".tif", "_rad.tif");
 			System.out.println("Creating file "+tFileName);
-			JAIUtils.writeFloatTiff(rOut, tFileName);
+			JAIUtils.writeTiff(rOut, tFileName);
 			PlanarImage outImage = JAIUtils.readImage(tFileName);
 			System.out.println();
         	System.out.println("Temp Image:");

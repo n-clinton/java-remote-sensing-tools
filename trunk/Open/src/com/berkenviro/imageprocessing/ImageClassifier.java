@@ -236,25 +236,8 @@ public class ImageClassifier {
 		System.gc();
 		
 		//		 write
-		String pImageRfileName = (String)pImageR.getProperty("fileName");
-		if (com.berkenviro.imageprocessing.JAIUtils.isGeoTiff(pImageRfileName)) {
-			System.out.println("Writing GeoTiff: "+outFileName);
-			
-			JAIUtils.writeFloatGeoTiff(width, 
-									   height, 
-									   outFileName, 
-									   JAIUtils.getGeoTiffFields(pImageRfileName),
-									   classifiedOut);
-		}
-		else {
-			System.out.println("Writing Tiff: "+outFileName);
-			JAIUtils.writeFloatTiff(classifiedOut, outFileName);
-		}
-		
-		classifiedOut = null;
-		System.gc();
-
-		
+		System.out.println("Writing Tiff: "+outFileName);
+		JAIUtils.writeTiff(classifiedOut, outFileName);
 	}
 	
 	/**
