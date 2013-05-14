@@ -469,16 +469,15 @@ public class WekaUtils {
 		double[] errArray = new double[predictors.length];
 		String best;
 		Instance i;
-		double pCent;
+		double label;
 		Enumeration<Instance> instEnum = outInstances.enumerateInstances();
 		while (instEnum.hasMoreElements()) {
 			i = instEnum.nextElement();
 			// class value should have been set in Main
-			pCent = i.classValue();
+			label = i.classValue();
 			
-			double min = Double.MAX_VALUE;
 			for (int p=0; p<predictors.length; p++) {
-				errArray[p] = Math.abs(pCent - i.value(outInstances.attribute(predictors[p].name())));
+				errArray[p] = Math.abs(label - i.value(outInstances.attribute(predictors[p].name())));
 			}
 			
 			int good = weka.core.Utils.minIndex(errArray);

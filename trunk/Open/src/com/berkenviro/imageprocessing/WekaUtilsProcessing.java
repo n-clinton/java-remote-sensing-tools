@@ -4,10 +4,16 @@
 package com.berkenviro.imageprocessing;
 
 import java.util.Enumeration;
+import java.util.Random;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.LibSVM;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.meta.FilteredClassifier;
+import weka.classifiers.rules.OneR;
+import weka.classifiers.trees.J48;
 import weka.classifiers.trees.RandomForest;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Attribute;
@@ -1726,7 +1732,7 @@ public class WekaUtilsProcessing extends WekaUtils {
 //		String filename = "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc.csv";
 //		Instances input = loadCSV(filename);
 //		System.out.println(input.toSummaryString());
-		try {
+
 //			int[] toRemove = {0,11,12,13,14};
 //			Instances removed = removeAttributes(input, toRemove); 
 //			System.out.println(removed.toSummaryString());
@@ -1809,7 +1815,7 @@ public class WekaUtilsProcessing extends WekaUtils {
 //
 //			writeArff(test, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_removed_nominalized_30_meta.arff");
 			// name change
-			Instances test = loadArff("/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_30_meta.arff");
+//			Instances test = loadArff("/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized_30_meta.arff");
 //			Attribute[] predictors = {test.attribute("FROMGLCJ48"),
 //					test.attribute("FROMGLCMLC"),
 //					test.attribute("FROMGLCRF"),
@@ -1841,22 +1847,211 @@ public class WekaUtilsProcessing extends WekaUtils {
 //			double cost = evaluation.errorRate();
 //			System.out.println(cost);
 			
-			Instances labeled = new Instances(test);
-			Attribute interp = test.attribute(2).copy("meta_pred");
-			labeled.insertAttributeAt(interp, labeled.numAttributes());
-			labeled.setClassIndex(labeled.numAttributes()-1);
+//			Instances labeled = new Instances(test);
+//			Attribute interp = test.attribute(2).copy("meta_pred");
+//			labeled.insertAttributeAt(interp, labeled.numAttributes());
+//			labeled.setClassIndex(labeled.numAttributes()-1);
+//			
+//			Attribute a = test.attribute("response");
+//			MetaAttributeClassifier classy = new MetaAttributeClassifier(a);
+//			classy.buildClassifier(test);
+//			for (int i = 0; i < test.numInstances(); i++) {
+//				double clsLabel = classy.classifyInstance(test.instance(i));
+//				labeled.instance(i).setClassValue(clsLabel);
+//			}
+//			writeArff(labeled, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_30_meta_labeled.arff");
 			
-			Attribute a = test.attribute("response");
-			MetaAttributeClassifier classy = new MetaAttributeClassifier(a);
-			classy.buildClassifier(test);
-			for (int i = 0; i < test.numInstances(); i++) {
-				double clsLabel = classy.classifyInstance(test.instance(i));
-				labeled.instance(i).setClassValue(clsLabel);
+			
+			// 20130422 ---------------------------
+			//String filename = "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_removed_nominalized.arff";
+			// 20130423
+			//String filename = "/Users/nclinton/Documents/data/AllMethodAcc_Detailed_nominalized.arff";
+			//String filename = "/Users/nclinton/Documents/data/AllMethodAcc_Simplified_nominalized.arff";
+			// 20130426
+			//String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Detailed_nominalized.arff";
+			String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized.arff";
+			Instances instances = loadArff(filename);
+			System.out.println(instances.toSummaryString());
+			instances.setClassIndex(2);
+			
+			// 20130503
+//			RandomForest rf50 = new RandomForest();
+//			rf50.setNumTrees(50);
+//			try {
+//				Evaluation evaluation = new Evaluation(instances);
+//				evaluation.crossValidateModel(rf50,
+//                        instances,
+//                        10,
+//                        new Random());
+//				//evaluation.evaluateModel(svm, instances);
+//				System.out.println(evaluation.toSummaryString());
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+			
+			// the oracle ----------------------
+//			Attribute[] predictors = {
+//				instances.attribute("J48"),
+//				instances.attribute("MLC"),
+//				instances.attribute("RF"),
+//				instances.attribute("SVM"),
+//				instances.attribute("Seg"),
+//				instances.attribute("Agg"),
+//			};
+//			
+//			double[] costs = new double[predictors.length];
+//			int i=0;
+//			for (Attribute a : predictors) {
+//				//System.out.println(a);
+//				AttributeClassifier classy = new AttributeClassifier(a);
+//				Evaluation evaluation = new Evaluation(instances);
+//				evaluation.evaluateModel(classy, instances);
+//				System.out.println(evaluation.toSummaryString());
+//				costs[i] = evaluation.errorRate();
+//				//System.out.println("\t"+costs[i]);
+//				i++;
+//			}
+//			Instances meta = makeTraining(instances, predictors, costs);
+//			//writeArff(meta, "/Users/nclinton/Documents/data/AllMethodAcc_Simplified_nominalized_meta.arff");
+//			meta.setClassIndex(2);
+//			MetaAttributeClassifier classy = new MetaAttributeClassifier(meta.attribute("response"));
+//			Evaluation evaluation = new Evaluation(meta);
+//			evaluation.evaluateModel(classy, meta);
+//			System.out.println(evaluation.toSummaryString());
+			
+			// the majority -----------------
+//			String[] voters = {
+//				"J48",
+//				"MLC",
+//				"RF",
+//				"SVM",
+//				"Seg",
+//				"Agg",
+//			};
+//
+//			MajorityClassifier classy = new MajorityClassifier(voters, costs);
+//			classy.buildClassifier(instances);
+//			Evaluation evaluation = new Evaluation(instances);
+//			evaluation.evaluateModel(classy, instances);
+//			System.out.println(evaluation.toSummaryString());
+			
+			// debug
+//			for (int j=0; j<instances.numInstances(); j++) {
+//				System.out.println(instances.instance(j));
+//				double pred = classy.classifyInstance(instances.instance(j));
+//				System.out.println("\t\t majority prediction: "+pred);
+//			}
+			
+			
+			// 20130423 index meta prediction cross validation
+			// Classifiers.  All defaults.
+//			Classifier[] cls = new Classifier[8];
+//			OneR oneR = new OneR();
+//			cls[0] = oneR;
+			RandomForest rf10 = new RandomForest();
+			rf10.setNumTrees(10);
+//			cls[1] = rf10;
+//			RandomForest rf50 = new RandomForest();
+//			rf50.setNumTrees(50);
+//			cls[2] = rf50;
+//			IBk ib1 = new IBk();
+//			ib1.setKNN(1);
+//			cls[3] = ib1;
+//			IBk ib5 = new IBk();
+//			ib5.setKNN(5);
+//			cls[4] = ib5;
+//			IBk ib10 = new IBk();
+//			ib10.setKNN(10);
+//			cls[5] = ib10;
+//			NaiveBayes nb = new NaiveBayes();
+//			cls[6] = nb;
+//			J48 j48 = new J48();
+//			cls[7] = j48;
+			
+			LibSVM svm = new LibSVM();
+			Classifier[] cls = {rf10, svm};
+
+			for (Classifier cl : cls) {
+				try {
+					System.out.println(cl);
+					// partition
+					Random rand = new Random(1);   // create seeded number generator
+					int folds = 10;
+					Instances randData = new Instances(instances);   // create copy of original data
+					randData.randomize(rand);         // randomize data with number generator
+					randData.stratify(folds);
+
+					double accuracy = 0.0;
+					for (int n = 0; n < folds; n++) {
+						Instances train = randData.trainCV(folds, n, rand);
+						Instances test = randData.testCV(folds, n);
+						// make meta training **************************************************
+						train.setClassIndex(2); // "interpreted"
+						Attribute[] predictors = {
+								train.attribute("J48"),
+								train.attribute("MLC"),
+								train.attribute("RF"),
+								train.attribute("SVM"),
+								train.attribute("Seg"),
+								train.attribute("Agg"),
+						};
+						double[] costs = new double[predictors.length];
+						int a=0;
+						for (Attribute att : predictors) {
+							AttributeClassifier classy = new AttributeClassifier(att);
+							Evaluation evaluation = new Evaluation(train);
+							evaluation.evaluateModel(classy, train);
+							costs[a] = evaluation.errorRate();
+							a++;
+						}
+						Instances metatrain = makeTraining(train, predictors, costs);
+						// remove the old class index, the true response
+						metatrain.deleteAttributeAt(2); // "interpreted"
+						// set the new class index to the level1 response
+						metatrain.setClassIndex(metatrain.numAttributes()-1);
+						Attribute classAtt = metatrain.classAttribute(); // "response"
+						cl.buildClassifier(metatrain);
+						// this classifier is now trained to predict an attribute name
+
+						// meta-prediction in the level1 space ***************************************
+						// give the test a level1 response
+						test.insertAttributeAt(classAtt, test.numAttributes()); 
+						test.setClassIndex(test.numAttributes()-1);
+						// copy the test
+						Instances metatest = new Instances(test);
+
+						// remove the level0 response prior to classification
+						Remove rm = new Remove();
+						rm.setAttributeIndicesArray(new int[] {2}); // "interpreted"
+						rm.setInputFormat(metatest);
+						rm.setInvertSelection(true);
+						FilteredClassifier fc = new FilteredClassifier();
+						fc.setClassifier(cl);
+						fc.setFilter(rm);
+						// predict the level1 response
+						for (int i = 0; i < test.numInstances(); i++) {
+							double clsLabel = fc.classifyInstance(test.instance(i));
+							metatest.instance(i).setClassValue(clsLabel);
+							//System.out.println(metatest.instance(i));
+						}
+						// the metatest instances now have predicted best level0 labels
+
+						// prediction in the level0 space *****************************************
+						metatest.setClassIndex(2); // "interpreted"
+						Attribute level1response = test.attribute("response");
+						MetaAttributeClassifier classy = new MetaAttributeClassifier(level1response);
+						Evaluation evaluation = new Evaluation(metatest);
+						evaluation.evaluateModel(classy, metatest);
+						//System.out.println(evaluation.toSummaryString("=== fold-" + n + " Cross-validation ===", false));
+						accuracy+=evaluation.pctCorrect();
+					} // end folds
+					
+					System.out.println("\t accuracy: "+(accuracy/(double)folds));
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-			writeArff(labeled, "/Users/nclinton/Documents/data/WorkingPaperMetaPredictionAllMethodAcc_30_meta_labeled.arff");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		
 		
 	}
