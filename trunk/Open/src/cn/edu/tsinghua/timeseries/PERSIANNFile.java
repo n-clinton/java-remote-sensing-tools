@@ -131,9 +131,18 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 	 * @return
 	 */
 	public float imageValue(Point pt) throws Exception {
-		//System.out.println(pt);
-		double[] xy = {pt.getX(), pt.getY()};
-		int[] pixelXY = getPixelXY(xy);
+		return imageValue(pt.getX(), pt.getY());
+	}
+	
+	/**
+	 * 
+	 * @param x
+	 * @param y
+	 * @return
+	 * @throws Exception
+	 */
+	public float imageValue(double x, double y) throws Exception {
+		int[] pixelXY = getPixelXY(new double[] {x, y});
 		//System.out.println("("+pixelXY[0]+","+pixelXY[1]+")");
 		return readPixel(pixelXY[0], pixelXY[1]);
 	}

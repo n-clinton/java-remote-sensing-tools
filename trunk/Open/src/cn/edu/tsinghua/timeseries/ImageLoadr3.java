@@ -115,6 +115,20 @@ public class ImageLoadr3 implements Loadr {
 	}
 	
 	/**
+	 * 
+	 */
+	public void close() {
+		for (int t=0; t<imageList.size(); t++) {
+			images[t][0] = null;
+			images[t][1] = null;
+			iters[t][0] = null;
+			iters[t][1] = null;
+		}
+		System.gc();
+	}
+	
+	
+	/**
 	 * Optionally set the zero reference for the time series, i.e. the reference time compared
 	 * to which the t-coordinate of the images will be computed.
 	 * @param cal
@@ -206,20 +220,29 @@ public class ImageLoadr3 implements Loadr {
 	 * @return
 	 */
 	public synchronized List<double[]> getSeries(Point pt) {		
+		return getSeries(pt.getX(), pt.getY());
+	}
+	
+	/**
+	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
+	 * @param pt
+	 * @return
+	 */
+	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
 
 			try {
-				int qc = (int)JAIUtils.imageValue(pt, images[i][1], iters[i][1]);
+				int qc = (int)JAIUtils.imageValue(x, y, images[i][1], iters[i][1]);
 				if (!BitChecker.mod13ok(qc)) {
 					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
 					continue;
 				}
 				// else, write the time offset and the image data
 				double t = diffDays(dImage);
-				double data = JAIUtils.imageValue(pt, images[i][1], iters[i][1]);
+				double data = JAIUtils.imageValue(x, y, images[i][1], iters[i][1]);
 				out.add(new double[] {t, data});
 			} catch (Exception e1) {
 				e1.printStackTrace();

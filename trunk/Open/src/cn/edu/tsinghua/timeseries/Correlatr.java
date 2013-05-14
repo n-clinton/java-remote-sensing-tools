@@ -5,19 +5,20 @@ package cn.edu.tsinghua.timeseries;
 
 import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 import javax.media.jai.PlanarImage;
 import javax.media.jai.RasterFactory;
@@ -27,12 +28,11 @@ import javax.media.jai.iterator.RandomIterFactory;
 import org.apache.commons.math.linear.RealMatrix;
 import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 
+import ru.sscc.spline.Spline;
+
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Point;
-
-import ru.sscc.spline.Spline;
 
 /**
  * @author Nicholas
@@ -43,6 +43,10 @@ public class Correlatr {
 	Loadr eviLoadr;
 	Loadr persiannLoadr;
 	int[] lags;
+	BlockingQueue<Pixel> pixels; // reusable objects
+	BlockingQueue<Pixel> queue; // read, but not processed
+	ExecutorCompletionService<Pixel> ecs; // processing
+	PlanarImage ref;
 	
 	/**
 	 * 
@@ -59,12 +63,20 @@ public class Correlatr {
 		if (ymd != null) {
 			System.out.println("Setting zero-reference to: "+cal.getTime());
 			eviLoadr.setDateZero(cal);
-			eviLoadr.setDateZero(cal);
+			persiannLoadr.setDateZero(cal);
 		}
 	}
 	
 	/**
-	 * t-values should be relative to the same date.
+	 * 
+	 */
+	public void close() {
+		eviLoadr.close();
+		persiannLoadr.close();
+	}
+	
+	/**
+	 * t-values should be relative to the same date.  Use interpolating splines.
 	 * @param response
 	 * @param covariate
 	 * @param lag
@@ -97,7 +109,7 @@ public class Correlatr {
 	}
 	
 	/**
-	 * 
+	 * Use interpolating splines.
 	 * @param response
 	 * @param covariate
 	 * @return
@@ -121,7 +133,6 @@ public class Correlatr {
 					continue; // don't go out of bounds
 				}
 				try {
-					//System.out.println(t+","+r+","+c);
 					cov.increment(new double[] {rSpline.value(t), cSpline.value(t-lags[l])});
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -144,16 +155,13 @@ public class Correlatr {
 	 */
 	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate, int[] lags) {
 		// 
-		double[] covariates = new double[covariate.size()];
-		Arrays.fill(covariates, -9999.0);
-		for (int i=0; i<covariates.length; i++) {
-			double[] tc = covariate.get(i);
-			covariates[(int)tc[0]] = tc[1];
+		TreeMap<Integer, Double> map = new TreeMap<Integer, Double>();
+		for (double[] tc : covariate) {
+			map.put((int)tc[0], tc[1]);
 		}
 		//
 		
 		VectorialCovariance cov = new VectorialCovariance(2, false);
-		RealMatrix vc = null; // the variance/covariance matrix
 		double[] correlations = new double[lags.length];
 		double t0 = response.get(0)[0]; // minumum t
 		double tn = response.get(response.size()-1)[0]; // max t
@@ -173,22 +181,35 @@ public class Correlatr {
 					if (r < 0) { // want only EVI greater than zero
 						continue;
 					}
-					double c = covariates[(int)t];
-					if (c < 0) { // skip no data value: -9999.0
+					Double cDouble = map.get((int)t-lags[l]);
+					if (cDouble == null) { // t was a no data point
 						continue;
 					}
 					//System.out.println(t+","+r+","+c);
-					cov.increment(new double[] {r, c});
+					cov.increment(new double[] {r, cDouble.doubleValue()});
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
-			vc = cov.getResult();
+			// not enough data
+			if (cov.getN() < 5) {
+				return new double[] {0, 0};
+			}
+			// the variance/covariance matrix
+			RealMatrix vc = cov.getResult();
+			// if either variable is constant...
+			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
+				return new double[] {0, 0};
+			}
 			// normalize by SD
 			correlations[l] = vc.getEntry(0, 1)/Math.sqrt(vc.getEntry(0, 0)*vc.getEntry(1, 1));
 			//System.out.println(correlations[l]);
 		}
 		int max = weka.core.Utils.maxIndex(correlations); // might be negative
+		if (correlations[max] < 0) {
+			int min = weka.core.Utils.minIndex(correlations);
+			return new double[] {correlations[min], lags[min]};
+		}
 		return new double[] {correlations[max], lags[max]};
 	}
 	
@@ -268,9 +289,9 @@ public class Correlatr {
 				System.out.println(x+","+y+","+(correlation[0])+","+correlation[1]+","+evi.size());	
 			}
 		}
-		JAIUtils.writeTiff(corr, base+"_corr.tif", DataBuffer.TYPE_BYTE);
-		JAIUtils.writeTiff(days, base+"_days.tif", DataBuffer.TYPE_BYTE);
-		JAIUtils.writeTiff(eviN, base+"_eviN.tif", DataBuffer.TYPE_BYTE);
+		JAIUtils.writeTiff(corr, base+"_corr.tif");
+		JAIUtils.writeTiff(days, base+"_days.tif");
+		JAIUtils.writeTiff(eviN, base+"_eviN.tif");
 	}
 	
 	/**
@@ -281,19 +302,24 @@ public class Correlatr {
 	 */
 	public void writeImagesParallel(String base, String reference, int[] lags, int nThreads) {
 		this.lags = lags;
-		int qSize = 100;
-		BlockingQueue<Pixel> queue1 = new ArrayBlockingQueue<Pixel>(qSize);
-		PlanarImage ref = JAIUtils.readImage(reference);
+		
+		// object pool of pixels
+		pixels = new ArrayBlockingQueue<Pixel>(3*nThreads);
+		for (int p=0; p<3*nThreads; p++) {
+			pixels.add(new Pixel(false));
+		}
+		queue = new ArrayBlockingQueue<Pixel>(nThreads);
+		ecs = new ExecutorCompletionService<Pixel>(
+				Executors.newFixedThreadPool(nThreads));
+		ref = JAIUtils.readImage(reference);
 		// read thread
-		PixelEnumeration enumerator = new PixelEnumeration(queue1, ref);
+		PixelEnumeration enumerator = new PixelEnumeration();
 		new Thread(enumerator).start();
 		// compute thread
-		ExecutorCompletionService<Pixel> ecs = new ExecutorCompletionService<Pixel>(
-				Executors.newFixedThreadPool(nThreads));
-		PixelCompute computer = new PixelCompute(queue1, ecs);
+		PixelCompute computer = new PixelCompute();
 		new Thread(computer).start();
 		// write thread
-		PixelWrite write = new PixelWrite(ecs, base, ref.getWidth(), ref.getHeight());
+		PixelWrite write = new PixelWrite(base);
 		new Thread(write).start();
 	}
 	
@@ -306,18 +332,44 @@ public class Correlatr {
 	 *
 	 */
 	class Pixel implements Callable<Pixel> {
+		
 		List<double[]> evi, persiann;
 		int x, y;
 		double[] correlation;
+		boolean dummy;
 		
-		public Pixel(Future<List<double[]>> eviF, Future<List<double[]>> persiannF, int x, int y) throws Exception {
+//		public Pixel(Future<List<double[]>> eviF, Future<List<double[]>> persiannF, int x, int y) throws Exception {
+//			this.x = x;
+//			this.y = y;
+//			if (eviF != null && persiannF != null) {  // could happen if DUMMY
+//				persiann = persiannF.get();
+//				evi = eviF.get();
+//				//System.out.println("Initialized "+this);
+//			}
+//		}
+		
+		public Pixel() {
+			dummy = true;
+		}
+		
+		public Pixel(boolean dummy) {
+			this.dummy = dummy;
+		}
+		
+		public void set(List<double[]> evi, List<double[]> persiann, int x, int y) {
+			this.evi = evi;
+			this.persiann = persiann;
 			this.x = x;
 			this.y = y;
-			if (eviF != null && persiannF != null) {  // could happen if DUMMY
-				evi = eviF.get();
-				persiann = persiannF.get();
-				//System.out.println("Initialized "+this);
-			}
+			dummy = false;
+		}
+		
+		public void clear() {
+			evi = null;
+			persiann = null;
+			correlation = null;
+			x = -1;
+			y = -1;
 		}
 		
 		@Override
@@ -328,7 +380,7 @@ public class Correlatr {
 			}
 			// not enough data
 			if (evi.size() < 5 || persiann.size() < 5) { 
-				correlation = new double[] {0, -1}; 
+				correlation = new double[] {0, 0}; 
 			}
 			// do the computation
 			else {
@@ -339,10 +391,37 @@ public class Correlatr {
 		}
 		@Override
 		public String toString() {
-			return "("+x+","+y+")";
-		}
+			return "("+x+","+y+"): "+Arrays.toString(correlation)+", n="+evi.size();
+		}	
 	}
 	
+	/**
+	 * 
+	 * @author Nicholas
+	 *
+	 */
+	class ReadRunner implements Runnable {
+
+		double x;
+		double y;
+		Loadr loadr;
+		List<double []> list;
+		
+		public ReadRunner(double x, double y, Loadr loadr) {
+			this.x = x;
+			this.y = y;
+			this.loadr = loadr;
+		}
+		
+		public ReadRunner() {
+			// wait for instance variables to be set
+		}
+		
+		@Override
+		public void run() {
+			list = loadr.getSeries(x, y);
+		}
+	}
 	
 	/**
 	 * A Thread that does the reading.  Loadr read methods are synchronized.
@@ -351,7 +430,6 @@ public class Correlatr {
 	 */
 	class PixelEnumeration implements Runnable {
 		ExecutorService service;
-		BlockingQueue<Pixel> queue;
 		RandomIter iter;
 		
 		/**
@@ -359,8 +437,7 @@ public class Correlatr {
 		 * @param queue
 		 * @param reference
 		 */
-		public PixelEnumeration(BlockingQueue<Pixel> queue, PlanarImage ref) {
-			this.queue = queue;
+		public PixelEnumeration() {
 			service = Executors.newFixedThreadPool(2);
 			iter = RandomIterFactory.create(ref, null);
 		}
@@ -369,7 +446,8 @@ public class Correlatr {
 		public void run() {
 			try {
 				ennumerate();
-				queue.put(new Pixel(null, null, -1, -1)); // DUMMY
+				//queue.put(new Pixel(null, null, -1, -1)); // DUMMY
+				queue.put(new Pixel()); // DUMMY
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (Exception e) {
@@ -387,14 +465,20 @@ public class Correlatr {
 			// center
 			double ulx = -179.9815962788889; 
 			double uly = 69.99592926598972;
-			// dimensions of the EVI images
-			int width = 43032;
-			int height = 15539;
+			// dimensions of the reference land mask
+			int width = ref.getWidth();
+			int height = ref.getHeight();
+			
+			ReadRunner eviReader = new ReadRunner();
+			ReadRunner persiannReader = new ReadRunner();
+			Future eviF, persiannF;
 			
 			for (int x=0; x<width; x++) {
 				for (int y=0; y<height; y++) {
 //			for (int x=888; x<15358; x++) { // North America
 //				for (int y=700; y<12372; y++) {
+//			for (int x=6500; x<13000; x++) { // US
+//				for (int y=2500; y<5500; y++) {
 					double _x = ulx+x*delta;
 					double _y = uly-y*delta;
 					//System.out.println(x+","+y);
@@ -409,21 +493,42 @@ public class Correlatr {
 						continue; // not land
 					}
 
-					final Point eviPt = GISUtils.makePoint(_x, _y);
-					Future<List<double[]>> eviF = service.submit(new Callable<List<double[]>>() {
-						@Override
-						public List<double[]> call() throws Exception {
-							return eviLoadr.getSeries(eviPt);
-						}
-					});
-					final Point persiannPt = GISUtils.makePoint((_x < 0 ? _x+360.0 : _x), _y);
-					Future<List<double[]>> persiannF = service.submit(new Callable<List<double[]>>() {
-						@Override
-						public List<double[]> call() throws Exception {
-							return persiannLoadr.getSeries(persiannPt);
-						}
-					});
-					queue.put(new Pixel(eviF, persiannF, x, y));
+//					final Point eviPt = GISUtils.makePoint(_x, _y);
+//					Future<List<double[]>> eviF = service.submit(new Callable<List<double[]>>() {
+//						@Override
+//						public List<double[]> call() throws Exception {
+//							return eviLoadr.getSeries(eviPt);
+//						}
+//					});
+//					final Point persiannPt = GISUtils.makePoint((_x < 0 ? _x+360.0 : _x), _y);
+//					Future<List<double[]>> persiannF = service.submit(new Callable<List<double[]>>() {
+//						@Override
+//						public List<double[]> call() throws Exception {
+//							return persiannLoadr.getSeries(persiannPt);
+//						}
+//					});
+					
+					eviReader.x = _x;
+					eviReader.y = _y;
+					eviReader.loadr = eviLoadr;
+					persiannReader.x = (_x < 0 ? _x+360.0 : _x);
+					persiannReader.y = _y;
+					persiannReader.loadr = persiannLoadr;
+					// This should run serially if the data are stored on one disk
+					// don't want futures hanging around?
+					//eviF = service.submit(eviReader);
+					//persiannF = service.submit(persiannReader);
+					//while (!(eviF.isDone() && persiannF.isDone())) {
+					//	Thread.currentThread().sleep(0, 1); // wait for a nanosecond
+					//}
+					service.submit(eviReader).get();
+					service.submit(persiannReader).get();
+
+					// re-use these pixels
+					Pixel p = pixels.take();
+					p.set(eviReader.list, persiannReader.list, x, y);
+					//System.out.println("read "+p);
+					queue.put(p);
 				}
 			}
 			// shut 'er down
@@ -431,54 +536,45 @@ public class Correlatr {
 		}
 	}
 	
-	
 	/**
 	 * A Thread that initiates the correlation calculation.
 	 * @author Nicholas
 	 *
 	 */
 	class PixelCompute implements Runnable {
-		BlockingQueue<Pixel> queue1;
-		ExecutorCompletionService<Pixel> ecs;
 		
-		/**
-		 * 
-		 * @param queue
-		 * @param reference
-		 */
-		public PixelCompute(BlockingQueue<Pixel> queue1, 
-				ExecutorCompletionService<Pixel> ecs) {
-			this.queue1 = queue1;
-			this.ecs = ecs; 
-		}
-		
-		/**
-		 * 
-		 * @throws InterruptedException
-		 * @throws Exception
-		 */
-		public void compute() throws InterruptedException, ExecutionException {
-			while (true) {
-				// take off the first queue, read, but unprocessed
-				Pixel pix = queue1.take();
-				if (pix.x == -1 && pix.y == -1) { // DUMMY
-					break; // done, don't move the dummy over
-				}
-				ecs.submit(pix);
-			}
-		}
+		public PixelCompute() {}
 		
 		@Override
 		public void run() {
 			try {
 				compute();
-				ecs.submit(new Pixel(null, null, -1, -1)); // DUMMY
+				ecs.submit(new Pixel()); // DUMMY
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (ExecutionException e) {
 				e.printStackTrace();
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+		}
+		
+		/**
+		 * Simply move the pixels from the read queue to the completion service.
+		 * @throws InterruptedException
+		 * @throws Exception
+		 */
+		public void compute() throws InterruptedException, ExecutionException {
+			Pixel pix;
+			while (true) {
+				// take off the first queue, read, but unprocessed
+				pix = queue.take();
+				//System.out.println("\t queue size: "+queue.size());
+
+				if (pix.dummy) { // DUMMY
+					break; // done, don't move the dummy over
+				}
+				ecs.submit(pix);
 			}
 		}
 	} // end compute class
@@ -491,24 +587,20 @@ public class Correlatr {
 	 */
 	class PixelWrite implements Runnable {
 		
-		ExecutorCompletionService<Pixel> ecs;
 		WritableRaster corr, days, eviN;
 		String base;
 		
 		/**
 		 * 
-		 * @param queue
-		 * @param base
-		 * @param lags
-		 * @param width
-		 * @param height
+		 * @param base is the base name of the output images
 		 */
-		public PixelWrite (ExecutorCompletionService<Pixel> ecs, String base, int width, int height) {
-			this.ecs = ecs;
+		public PixelWrite (String base) {
 			this.base = base;
 			// initialize outputs
+			int width = ref.getWidth();
+			int height = ref.getHeight();
 			corr = RasterFactory.createBandedRaster(
-	    			DataBuffer.TYPE_FLOAT,
+	    			DataBuffer.TYPE_INT,
 	    			width,
 	    			height,
 	    			1, // bands
@@ -547,27 +639,43 @@ public class Correlatr {
 		 * @throws ExecutionException
 		 */
 		public void write() throws InterruptedException, ExecutionException {
-			int interval = 1000000; // frequency of write
+			int interval = 100000; // frequency of write
 			int counter = 0;
+			long now = System.currentTimeMillis();
 			while (true) {
 				//System.out.println("queue: "+queue.size());
+				//Future<Pixel> futurePix = ecs.take();
 				Pixel finishedPix = ecs.take().get();
-				if (finishedPix.x == -1 && finishedPix.y == -1) { // DUMMY
+				//if (finishedPix.x == -1 && finishedPix.y == -1) { // DUMMY
+				if (finishedPix.dummy) { // DUMMY
 					break;
 				}
-				writeCorr((finishedPix.correlation[0]), finishedPix);
-				writeDays(finishedPix.correlation[1], finishedPix);
+				writeCorr((finishedPix.correlation[0]*100), finishedPix);
+				writeDays((byte)finishedPix.correlation[1], finishedPix);
 				writeN(finishedPix.evi.size(), finishedPix);
-				System.out.println(finishedPix.x+","+finishedPix.y+","+
-				(finishedPix.correlation[0])+","+
-					finishedPix.correlation[1]+","+
-						finishedPix.evi.size());
+				//System.out.println(finishedPix);
 				// periodically write to disk
 				counter++;
 				if (counter > interval) {
+					System.out.println(Calendar.getInstance().getTime());
+					System.out.println("\t Free memory: "+Runtime.getRuntime().freeMemory());
+					System.out.println("\t Max memory: "+Runtime.getRuntime().maxMemory());
+					System.out.println("\t Last pixel written: "+finishedPix);
+					System.out.println("\t Time per pixel: "+((System.currentTimeMillis() - now)/interval));
+
+					System.runFinalization();
+					System.gc();
+					System.gc();
+					System.gc();
 					diskWrite();
+
 					counter = 0;
+					now = System.currentTimeMillis();
+
 				}
+				// re-use the finished pixel
+				finishedPix.clear();
+				pixels.add(finishedPix);
 			}
 			diskWrite();
 		}
@@ -576,9 +684,9 @@ public class Correlatr {
 		 * 
 		 */
 		private void diskWrite() {
-			JAIUtils.writeTiff(corr, base+"_corr.tif", DataBuffer.TYPE_FLOAT);
-			JAIUtils.writeTiff(days, base+"_days.tif", DataBuffer.TYPE_BYTE);
-			JAIUtils.writeTiff(eviN, base+"_eviN.tif", DataBuffer.TYPE_BYTE);
+			JAIUtils.writeTiff(corr, base+"_corr.tif");
+			JAIUtils.writeTiff(days, base+"_days.tif");
+			JAIUtils.writeTiff(eviN, base+"_eviN.tif");
 		}
 		
 		public synchronized void writeCorr(double val, Pixel pix) {
@@ -686,7 +794,26 @@ public class Correlatr {
 //		} catch (Exception e) {
 //			e.printStackTrace();
 //		}
-
+		
+		// from server:
+		Correlatr corr = null;
+		try {
+			 corr = new Correlatr(
+				new String[] {"/home/nclinton/MOD13A2/2010/", 
+					      "/home/nclinton/MOD13A2/2011/"}, 
+				new String[] {"/home/nclinton/PERSIANN/2010/",
+					      "/home/nclinton/PERSIANN/2011/"
+				},
+				new int[] {2010, 0, 1}
+			);
+			String reference = "/home/nclinton/land_mask.tif";
+			String base = "/mnt/usb1/evi_persiann";
+			int[] lags = {0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120};
+			//int[] lags = {0,5,10,15,20,25,30,35,40,45,50,55,60};
+			corr.writeImagesParallel(base, reference, lags, 100);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 	}
 
