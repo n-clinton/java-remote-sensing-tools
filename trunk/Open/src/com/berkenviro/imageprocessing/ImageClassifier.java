@@ -41,6 +41,7 @@ import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
 import weka.classifiers.Classifier;
+import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -145,18 +146,13 @@ public class ImageClassifier {
 		System.out.println("width= "+width);
 		System.out.println("height= "+height);
 	
-		// these two WritableRasters will contain the output data
-		Point origin = new Point(0,0);
-		int numBands = 1;
 		WritableRaster classifiedOut = RasterFactory.createBandedRaster(
     											DataBuffer.TYPE_FLOAT,
     											width,
     											height,
-    											numBands,
-    											origin);
+    											1,
+    											new Point(0,0));
     
-		// initialize:
-		
 		// this is just a dummy dataset to identify the Instance(s)
 		Instances imagePixels = new Instances(training, 1);
 		// this is the data slice corresponding to one line
@@ -277,8 +273,6 @@ public class ImageClassifier {
     											height,
     											numBands,
     											origin);
-    
-		// initialize:
 		
 		// this is just a dummy dataset to identify the Instance(s)
 		Instances imagePixels = new Instances(training, 1);
@@ -350,7 +344,6 @@ public class ImageClassifier {
 							classifiedOut.setSample(x,y,0,(int)classIndex);
 						}
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					
@@ -364,30 +357,11 @@ public class ImageClassifier {
 		iterator = null;
 		System.gc();
 		
-		
-		// create a double sample model
-		SampleModel sModel = RasterFactory.createBandedSampleModel(
-    											DataBuffer.TYPE_INT,
-    											width,
-    											height,
-    											numBands);
-    
-		// create a compatible ColorModel
-		ColorModel cModel = PlanarImage.createColorModel(sModel);
-    
-		System.out.println(sModel.toString());
-		System.out.println(cModel.toString());
-    
-		// Create TiledImages using the float SampleModel.
-		TiledImage tImageClassified = new TiledImage(0,0,width,height,0,0,sModel,cModel);
-		// Set the data of the tiled images to be the rasters.
-		tImageClassified.setData(classifiedOut);
-		JAI.create("filestore",tImageClassified,outFileName,"TIFF");
-		
-		tImageClassified = null;
-		classifiedOut = null;
-		System.gc();
+		//		 write
+		System.out.println("Writing Tiff: "+outFileName);
+		JAIUtils.writeTiff(classifiedOut, outFileName);
 	} 
+	
 	
 	/**
 	 * Display class index values.
@@ -615,6 +589,7 @@ public class ImageClassifier {
 			classVals(training);
 			*/
 			
+
 		}
 		catch(Exception e){
 			e.printStackTrace();

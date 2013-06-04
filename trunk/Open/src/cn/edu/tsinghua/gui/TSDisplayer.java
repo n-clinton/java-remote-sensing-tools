@@ -16,10 +16,13 @@ import java.text.NumberFormat;
 import java.util.List;
 
 import javax.media.jai.PlanarImage;
+import javax.swing.GroupLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 import org.apache.commons.math.analysis.UnivariateRealFunction;
 import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
@@ -62,6 +65,12 @@ public class TSDisplayer extends JFrame implements ActionListener {
     private Button meanButton = new Button("Mean");
     private Button ratioButton = new Button("Ratio");
     private JCheckBox polyBox = new JCheckBox("Polynomial Spline");
+    private JTextField widthField = new JTextField();
+    private JLabel widthLabel = new JLabel("SG width (int)");
+    private JTextField degreeField = new JTextField();
+    private JLabel degreeLabel = new JLabel("SG degree (int)");
+    private JTextField smoothField = new JTextField();
+    private JLabel smoothLabel = new JLabel("FFT remove [0,1]");
     private int numSeries;
     private double[][] series;
     private UnivariateRealFunction spline;
@@ -98,22 +107,42 @@ public class TSDisplayer extends JFrame implements ActionListener {
 
         // buttons
         Panel buttonPanel = new Panel();
-        buttonPanel.add(splineButton);
+        Panel topPanel = new Panel();
+        Panel bottomPanel = new Panel();
+
+
+        topPanel.add(splineButton);
         splineButton.addActionListener(this);
-        buttonPanel.add(smoothButton);
-        smoothButton.addActionListener(this);
-        buttonPanel.add(resetButton);
+        topPanel.add(resetButton);
         resetButton.addActionListener(this);
-        buttonPanel.add(calcButton);
+        topPanel.add(calcButton);
         calcButton.addActionListener(this);
-        buttonPanel.add(meanButton);
+        topPanel.add(meanButton);
         meanButton.addActionListener(this);
-        buttonPanel.add(ratioButton);
+        topPanel.add(ratioButton);
         ratioButton.addActionListener(this);
+        
+        bottomPanel.add(smoothButton);
+        smoothButton.addActionListener(this);
+        bottomPanel.add(widthLabel);
+        widthField.setColumns(2);
+        widthField.setText("3");
+        bottomPanel.add(widthField);
+        bottomPanel.add(degreeLabel);
+        degreeField.setColumns(2);
+        degreeField.setText("2");
+        bottomPanel.add(degreeField);
+        bottomPanel.add(smoothLabel);
+        smoothField.setColumns(4);
+        smoothField.setText("0.85");
+        bottomPanel.add(smoothField);
         polyBox = new JCheckBox("Polynomial Spline"); 
         polyBox.setSelected(false);
-        buttonPanel.add(polyBox);
-        add(buttonPanel,"North");
+        bottomPanel.add(polyBox);
+        
+        buttonPanel.setLayout(new BorderLayout());
+        buttonPanel.add(topPanel, BorderLayout.NORTH);
+        buttonPanel.add(bottomPanel, BorderLayout.SOUTH);
         
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(buttonPanel, BorderLayout.NORTH);
@@ -245,7 +274,9 @@ public class TSDisplayer extends JFrame implements ActionListener {
 		try {
 			double[] minMax = getXRange();
 			// smooth with an FFT
-			smooth = TSUtils.smoothFunction(spline, minMax[0], minMax[1], 0.85);
+			//smooth = TSUtils.smoothFunction(spline, minMax[0], minMax[1], 0.85);
+			smooth = TSUtils.smoothFunction(spline, minMax[0], minMax[1], 
+					Double.parseDouble(smoothField.getText()));
 			addSeries(smooth);
 			// first derivative 
 			SplineFunction smoothed = new SplineFunction(smooth);
@@ -257,7 +288,10 @@ public class TSDisplayer extends JFrame implements ActionListener {
             //addSpline(secDerivative, derivRange);
 			// smooth with Savitzky-Golay, just for comparison
 			double[][] interpolated = TSUtils.splineValues(spline, minMax, 500);
-			double[][] smooth2 = TSUtils.sgSmooth(interpolated, 5, 1);
+			//double[][] smooth2 = TSUtils.sgSmooth(interpolated, 5, 1);
+			double[][] smooth2 = TSUtils.sgSmooth(interpolated, 
+					Integer.parseInt(widthField.getText()), 
+					Integer.parseInt(degreeField.getText()));
 			addSeries(smooth2);
 		} catch (Exception e) {
 			e.printStackTrace();
