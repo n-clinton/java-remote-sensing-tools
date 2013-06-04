@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
@@ -60,6 +61,7 @@ import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
 import org.gdal.gdalconst.gdalconst;
 import org.gdal.gdalconst.gdalconstConstants;
+import org.gdal.osr.CoordinateTransformation;
 import org.gdal.osr.SpatialReference;
 import org.gdal.osr.osr;
 
@@ -465,6 +467,52 @@ public class GDALUtils {
 		data.delete();
 	}
 	
+	
+	/**
+	 * NOTE: OSX throws:
+	 * "ERROR 6: Unable to load PROJ.4 library (libproj.dylib), 
+	 * creation of OGRCoordinateTransformation failed."
+	 * 
+	 * @param referenceName
+	 */
+	public static void writeLatLongImages(String referenceName) {
+		Dataset ref = GDALUtils.getDataset(referenceName);
+		SpatialReference src = new SpatialReference();
+		src.ImportFromWkt(ref.GetProjectionRef());
+		SpatialReference dst = new SpatialReference();
+		dst.SetWellKnownGeogCS("WGS84");
+		CoordinateTransformation ct = new CoordinateTransformation(src, dst);
+		WritableRaster xOut = RasterFactory.createBandedRaster(
+				DataBuffer.TYPE_FLOAT,
+				ref.getRasterXSize(),
+				ref.getRasterYSize(),
+				1,
+				new java.awt.Point(0,0));
+		WritableRaster yOut = RasterFactory.createBandedRaster(
+				DataBuffer.TYPE_FLOAT,
+				ref.getRasterXSize(),
+				ref.getRasterYSize(),
+				1,
+				new java.awt.Point(0,0));
+		
+		for (int y=0; y<ref.getRasterYSize(); y++) {
+			for (int x=0; x<ref.getRasterXSize(); x++) {
+				try {
+					double[] projXY = GDALUtils.getProjectedXY(new int[] {x, y}, ref);
+					System.out.println(Arrays.toString(projXY));
+					projXY = ct.TransformPoint(projXY[0], projXY[1]);
+					System.out.println(Arrays.toString(projXY));
+					xOut.setSample(x, y, 0, projXY[0]);
+					yOut.setSample(x, y, 0, projXY[1]);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		JAIUtils.writeTiff(xOut, referenceName.replace(".tif", "_long.tif"));
+		JAIUtils.writeTiff(yOut, referenceName.replace(".tif", "_lat.tif"));
+	}
+	
 	/**
 	 * Test code and processing log.
 	 * @param args
@@ -531,6 +579,21 @@ public class GDALUtils {
 //			transferGeo(filename, outfile);
 //		}
 		
+		// 20130522
+		//String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+		//String filename = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/test4_GEE/m37122h2sw_subset_10_05_05_rmf2.tiff";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/test4_GEE/m37122h2sw_subset_10_05_05_rmf20130522.tiff";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/test4_GEE/m37122h2sw_subset_10_05_05_rmf2_1.tiff";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset_10_05_05_rmf20130522.tiff";
+		//String outfile = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_x.tif";
+		//transferGeo(filename, outfile);
+		//outfile = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_y.tif";
+		//transferGeo(filename, outfile);
+	
+		// 20130529
+		String img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+		writeLatLongImages(img);
 	}
 
 }

@@ -47,6 +47,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.SortedSet;
 
 import javax.imageio.IIOImage;
@@ -72,6 +73,9 @@ import org.apache.commons.math.distribution.NormalDistributionImpl;
 import org.apache.commons.math.linear.Array2DRowRealMatrix;
 import org.apache.commons.math.linear.ArrayRealVector;
 import org.apache.commons.math.linear.RealVector;
+import org.gdal.gdal.Dataset;
+import org.gdal.osr.CoordinateTransformation;
+import org.gdal.osr.SpatialReference;
 
 import com.berkenviro.gis.GISUtils;
 import com.sun.media.imageio.plugins.tiff.GeoTIFFTagSet;
@@ -1278,8 +1282,9 @@ public class JAIUtils {
 	}
 	
 	
+	
 	/**
-	 * Test code and procesing log.
+	 * Test code and processing log.
 	 * @param args
 	 */
 	public static void main(String[] args) {
@@ -1353,7 +1358,7 @@ public class JAIUtils {
 //	    PlanarImage formatted = (PlanarImage)JAI.create("Format", format, null);
 //		stretched = gaussianStretch(formatted);
 //		writeJPEG(formatted, out);
-        
+
 		
 	}
 

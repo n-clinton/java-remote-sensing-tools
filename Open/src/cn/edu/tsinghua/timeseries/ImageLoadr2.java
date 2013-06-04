@@ -95,8 +95,9 @@ public class ImageLoadr2 implements Loadr {
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
 			t[i] = diffDays(dImage);
-			images[i] = GDALUtils.getDataset(dImage.imageName);
-			qcImages[i] = GDALUtils.getDataset(dImage.qcImageName);
+			// low memory environment setting
+//			images[i] = GDALUtils.getDataset(dImage.imageName);
+//			qcImages[i] = GDALUtils.getDataset(dImage.qcImageName);
 		}
 	}
 	
@@ -196,44 +197,44 @@ public class ImageLoadr2 implements Loadr {
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
 		//---------------------------------------------------
-//		for (int i=0; i<imageList.size(); i++) {
-//			DatedQCImage dImage = imageList.get(i);
-//			Dataset image = GDALUtils.getDataset(dImage.imageName);
-//			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
-//			try {
-//				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
-//				if (!BitChecker.mod13ok(qc)) {
-//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-//					continue;
-//				}
-//				// else, write the time offset and the image data
-//				double data = GDALUtils.imageValue(image, pt, 1);
-//				out.add(new double[] {t[i], data});
-//			} catch (Exception e1) {
-//				e1.printStackTrace();
-//			} finally {
-//				image.delete();
-//				qcImage.delete();
-//				image = null;
-//				qcImage = null;
-//				//System.gc();
-//			}
-//		}
-		//---------------------------------------------------
 		for (int i=0; i<imageList.size(); i++) {
+			DatedQCImage dImage = imageList.get(i);
+			Dataset image = GDALUtils.getDataset(dImage.imageName);
+			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
 			try {
-				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
+				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
 				if (!BitChecker.mod13ok(qc)) {
 					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
 					continue;
 				}
 				// else, write the time offset and the image data
-				double data = GDALUtils.imageValue(images[i], pt, 1);
+				double data = GDALUtils.imageValue(image, pt, 1);
 				out.add(new double[] {t[i], data});
 			} catch (Exception e1) {
 				e1.printStackTrace();
-			} 
+			} finally {
+				image.delete();
+				qcImage.delete();
+				image = null;
+				qcImage = null;
+				//System.gc();
+			}
 		}
+		//---------------------------------------------------
+//		for (int i=0; i<imageList.size(); i++) {
+//			try {
+//				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
+//				if (!BitChecker.mod13ok(qc)) {
+//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+//					continue;
+//				}
+//				// else, write the time offset and the image data
+//				double data = GDALUtils.imageValue(images[i], pt, 1);
+//				out.add(new double[] {t[i], data});
+//			} catch (Exception e1) {
+//				e1.printStackTrace();
+//			} 
+//		}
 		//---------------------------------------------------
 		return out;
 	}
