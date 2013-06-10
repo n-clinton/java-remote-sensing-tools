@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2011  Nicholas Clinton
+ *  Copyright (C) 2013  Nicholas Clinton
  *	All rights reserved.  
  *
  *	Redistribution and use in source and binary forms, with or without modification, 
@@ -34,11 +34,18 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.media.jai.RasterFactory;
 
 import org.gdal.gdal.Dataset;
+
+import com.berkenviro.imageprocessing.ImageClassifier2.Pixel;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.trees.J48;
@@ -47,14 +54,6 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 /**
- * 
- * Classifies a stack of images using Weka classifiers and predictors.
- * NO PROJECTION CHECKING.  THE USER MUST INSURE THAT THE IMAGES
- * ALL HAVE THE SAME PROJECTION.  If the Instances submitted to the constructor
- * were made by ArffMakr(), then the Hashtables submitted to ArffMakr() and 
- * ImageClassifier() should be identical with regard to the imagery and the attributes.
- * See the main method for a processing log and examples.
- * 
  * 
  * @author Nicholas Clinton
  */
@@ -68,10 +67,11 @@ public class ImageClassifier2 {
 	Attribute reference;
 	boolean readyToClassify;
 	boolean meta;
-	
-	BlockingQueue<Pixel> pixels; // reusable objects
+
 	BlockingQueue<Pixel> queue; // read, but not processed
+	ThreadPoolExecutor service;
 	ExecutorCompletionService<Pixel> ecs; // processing
+	
 	
 	/**
 	 * 
@@ -101,7 +101,11 @@ public class ImageClassifier2 {
 			// get the image file names, test for existence
 			String imageFileName = imageFileNames.get(a);
 			try {
+				//System.out.println("Trying to load "+imageFileName);
 				images.put(a, GDALUtils.getDataset(imageFileName));
+				System.out.println("For Attribute: " + a.toString()+",");
+				System.out.println("Loaded:"+images.get(a).GetDescription());
+				
 			}
 			catch (Exception e) {
 				e.printStackTrace();
@@ -145,6 +149,9 @@ public class ImageClassifier2 {
 		for (int y=0; y<height; y++) { // each line
 			System.out.println("processing line: "+y);
 			for (int x=0; x<width; x++){	// each pixel
+//		for (int y=3000; y<4000; y++) { // each line
+//			System.out.println("processing line: "+y);
+//			for (int x=3000; x<4000; x++){	// each pixel
 				int[] xy = {x, y};
 				double[] projXY = null;
 				try {
@@ -157,21 +164,23 @@ public class ImageClassifier2 {
 				instance.classIsMissing();
 				for (int a=0; a<training.numAttributes(); a++) {
 					try {
-						int pixelValue = (int)GDALUtils.imageValue(
+						double pixelValue = GDALUtils.imageValue(
 								images.get(training.attribute(a)), projXY[0], projXY[1], 1
 								);
 						//System.out.println(pixelValue);	
 						if (training.attribute(a).isNumeric()) {
 							instance.setValue(training.attribute(a), pixelValue);
 						} else {
-							instance.setValue(training.attribute(a), String.valueOf(pixelValue));
+							instance.setValue(training.attribute(a), String.valueOf((int)pixelValue));
 						}
 					} catch (Exception e) {
 						instance.setMissing(training.attribute(a));
 						//e.printStackTrace();
 					}
 				}
-
+				
+				//System.out.println(instance);
+				
 				// classification, so int (rather than a numeric response, this is an index)
 				int classIndex = -1;
 				try {
@@ -180,12 +189,18 @@ public class ImageClassifier2 {
 					String prediction = "-1.0";
 					if (meta) {
 						String predictedAtt = imagePixels.classAttribute().value(classIndex);
+						//System.out.println("\t "+predictedAtt);
 						Attribute a = imagePixels.attribute(predictedAtt);
-						prediction = instance.attribute(a.index()).value(classIndex);
+						//prediction = instance.attribute(a.index()).value(classIndex);
+						double index = instance.value(a);
+						//System.out.println("\t\t index: "+index);
+						prediction = a.value((int)index);
+						//System.out.println("\t\t\t prediction: "+prediction);
 					} else {
 						prediction = imagePixels.classAttribute().value(classIndex);
+						//System.out.println("\t prediction: "+prediction);
 					}
-					//System.out.println("\t prediction: "+prediction);
+					
 					classifiedOut.setSample(x,y,0, Byte.parseByte(prediction));
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -195,7 +210,6 @@ public class ImageClassifier2 {
 			}
 		}
 		//		 write
-		System.out.println("Writing Tiff: "+outFileName);
 		JAIUtils.writeTiff(classifiedOut, outFileName);
 	} 
 	
@@ -206,7 +220,7 @@ public class ImageClassifier2 {
 	 * @param reference
 	 * @param lags
 	 */
-	public void classifyParallel(Attribute reference, Instances training, String outFileName, boolean meta, int nThreads) {
+	public void classifyParallel(Attribute reference, String outFileName, boolean meta, int nThreads) {
 		if (!readyToClassify) {
 			System.err.println("Not ready to classify!  System will exit.");
 			System.exit(-1);
@@ -214,25 +228,39 @@ public class ImageClassifier2 {
 		this.meta = meta;
 		this.reference = reference;
 		queue = new ArrayBlockingQueue<Pixel>(nThreads);
-		ecs = new ExecutorCompletionService<Pixel>(
-				Executors.newFixedThreadPool(nThreads));
+
+		//service = (ThreadPoolExecutor)Executors.newFixedThreadPool(nThreads);  // memory leak!!
+		//System.out.println(service);
+		service = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(nThreads), new ThreadPoolExecutor.DiscardPolicy());
+		ecs = new ExecutorCompletionService<Pixel>(service);
 
 		// read thread
 		PixelEnumeration enumerator = new PixelEnumeration();
-		new Thread(enumerator).start();
+		Thread enumThread = new Thread(enumerator);
+		enumThread.start();
 		// compute thread
 		PixelCompute computer = new PixelCompute();
-		new Thread(computer).start();
+		Thread compThread = new Thread(computer);
+		compThread.start();
 		// write thread
 		PixelWrite write = new PixelWrite(outFileName);
-		new Thread(write).start();
+		Thread writeThread = new Thread(write);
+		writeThread.start();
+		while (true) {
+			if (!enumThread.isAlive() && !compThread.isAlive() && !writeThread.isAlive()) {
+				System.exit(0);
+			}
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	
 	/**
-	 * A Pixel object that holds time series.  
-	 * As soon as it is instantiated, it starts the read operations in other threads.
-	 * When called, it computes the correlation between the series.
+	 * 
 	 * @author Nicholas
 	 *
 	 */
@@ -244,6 +272,8 @@ public class ImageClassifier2 {
 		boolean dummy;
 		
 		public Pixel(int x, int y, Instance instance) {
+			this.x = x;
+			this.y = y;
 			this.instance = instance;
 			dummy = false;
 		}
@@ -254,6 +284,7 @@ public class ImageClassifier2 {
 		
 		@Override
 		public Pixel call() {
+			if (dummy) { return this; }
 			// classification, so int (rather than a numeric response, this is an index)
 			int classIndex = -1;
 			try {
@@ -270,7 +301,7 @@ public class ImageClassifier2 {
 				//System.out.println("\t prediction: "+prediction);
 				result = Byte.parseByte(prediction);
 			} catch (Exception e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 				result = -1;
 			}
 			return this;
@@ -284,23 +315,17 @@ public class ImageClassifier2 {
 	
 	
 	/**
-	 * A Thread that does the reading.  Loadr read methods are synchronized.
+	 * 
 	 * @author Nicholas
 	 *
 	 */
 	class PixelEnumeration implements Runnable {
 		
-		/**
-		 * 
-		 * @param queue
-		 * @param reference
-		 */
-		public PixelEnumeration() {}
-		
 		@Override
 		public void run() {
 			try {
 				ennumerate();
+				System.out.println("Inserting dummy to queue...");
 				queue.put(new Pixel()); // DUMMY
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -325,14 +350,15 @@ public class ImageClassifier2 {
 			// this is just a dummy dataset to identify the Instance(s)
 			Instances imagePixels = new Instances(training, 1);
 
+			double[] projXY = null;
 			for (int y=0; y<height; y++) { // each line
 				System.out.println("processing line: "+y);
 				for (int x=0; x<width; x++){	// each pixel
-					
-					int[] xy = {x, y};
-					double[] projXY = null;
+//			for (int y=3500; y<3600; y++) { // each line
+//				System.out.println("processing line: "+y);
+//				for (int x=3500; x<3600; x++){	// each pixel
 					try {
-						projXY = GDALUtils.getProjectedXY(xy, ref);
+						projXY = GDALUtils.getProjectedXY(new int[] {x, y}, ref);
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
@@ -341,14 +367,15 @@ public class ImageClassifier2 {
 					instance.classIsMissing();
 					for (int a=0; a<training.numAttributes(); a++) {
 						try {
-							int pixelValue = (int)GDALUtils.imageValue(
+							// Exception on class attribute
+							double pixelValue = GDALUtils.imageValue(
 									images.get(training.attribute(a)), projXY[0], projXY[1], 1
 									);
 							//System.out.println(pixelValue);	
 							if (training.attribute(a).isNumeric()) {
 								instance.setValue(training.attribute(a), pixelValue);
 							} else {
-								instance.setValue(training.attribute(a), String.valueOf(pixelValue));
+								instance.setValue(training.attribute(a), String.valueOf((int)pixelValue));
 							}
 						} catch (Exception e) {
 							instance.setMissing(training.attribute(a));
@@ -363,19 +390,19 @@ public class ImageClassifier2 {
 	}
 	
 	/**
-	 * A Thread that initiates the correlation calculation.
+	 * 
 	 * @author Nicholas
 	 *
 	 */
 	class PixelCompute implements Runnable {
 		
-		public PixelCompute() {}
-		
 		@Override
 		public void run() {
 			try {
 				compute();
+				System.out.println("Submitting dummy to completion service...");
 				ecs.submit(new Pixel()); // DUMMY
+				service.shutdown();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (ExecutionException e) {
@@ -397,7 +424,8 @@ public class ImageClassifier2 {
 				pix = queue.take();
 				//System.out.println("\t queue size: "+queue.size());
 
-				if (pix.dummy) { // DUMMY
+				if (pix.dummy) {
+					System.out.println("Found read dummy...");
 					break; // done, don't move the dummy over
 				}
 				ecs.submit(pix);
@@ -407,7 +435,7 @@ public class ImageClassifier2 {
 	
 	
 	/**
-	 * A Thread that runs the writing operation.  Operations on the databuffers are synchronized.
+	 * 
 	 * @author Nicholas
 	 *
 	 */
@@ -451,38 +479,18 @@ public class ImageClassifier2 {
 		 * @throws ExecutionException
 		 */
 		public void write() throws InterruptedException, ExecutionException {
-			int interval = 100000; // frequency of write
-			int counter = 0;
-			long now = System.currentTimeMillis();
+
 			while (true) {
 				//System.out.println("queue: "+queue.size());
-				//Future<Pixel> futurePix = ecs.take();
+
 				Pixel finishedPix = ecs.take().get();
-				//if (finishedPix.x == -1 && finishedPix.y == -1) { // DUMMY
+				
 				if (finishedPix.dummy) { // DUMMY
+					System.out.println("Found compute dummy...");
 					break;
 				}
 				classifiedOut.setSample(finishedPix.x, finishedPix.y, 0, finishedPix.result);
 				//System.out.println(finishedPix);
-				// periodically write to disk
-				counter++;
-				if (counter > interval) {
-					System.out.println(Calendar.getInstance().getTime());
-					System.out.println("\t Free memory: "+Runtime.getRuntime().freeMemory());
-					System.out.println("\t Max memory: "+Runtime.getRuntime().maxMemory());
-					System.out.println("\t Last pixel written: "+finishedPix);
-					System.out.println("\t Time per pixel: "+((System.currentTimeMillis() - now)/interval));
-
-					System.runFinalization();
-					System.gc();
-					System.gc();
-					System.gc();
-					diskWrite();
-
-					counter = 0;
-					now = System.currentTimeMillis();
-
-				}
 			}
 			diskWrite();
 		}
@@ -505,54 +513,352 @@ public class ImageClassifier2 {
 
 		try {
 			
-			// 20130519
+			// 20130519, 20130610
 			// training data:
-			String tFileName = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Detailed_nominalized.arff";
+			//String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+			String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
 			Instances training = WekaUtils.loadArff(tFileName);
 
 			// set the response
-			Attribute response = training.attribute("class");
-			training.setClassIndex(2);
+			//training.setClassIndex(2);
+			training.setClassIndex(8);
 			System.out.println("The class attribute is...");
 			System.out.println(training.classAttribute().name());
 
-			System.out.println("Using these instances...");
+//			System.out.println("Using these instances...");
 			System.out.println(training.toSummaryString());
 
-			Hashtable h1 = new Hashtable();
+			Hashtable<Attribute, String> h1 = new Hashtable<Attribute, String>();
 			// define mappings between attributes and imagery
 			Attribute b1 = training.attribute("J48");
-			String img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+			String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
 			h1.put(b1, img);
 			Attribute b2 = training.attribute("MLC");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-MLC.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-MLC.tif";
 			h1.put(b2, img);
 			Attribute b3 = training.attribute("RF");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-RF.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-RF.tif";
 			h1.put(b3, img);
 			Attribute b4 = training.attribute("SVM");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-SVM.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-SVM.tif";
 			h1.put(b4, img);
 			Attribute b5 = training.attribute("Seg");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-Seg.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-Seg.tif";
 			h1.put(b5, img);
 			Attribute b6 = training.attribute("Agg");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_Agg.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_Agg.tif";
 			h1.put(b6, img);
 			// x and y
 			Attribute b7 = training.attribute("Lon");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_x.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_long.tif";
 			h1.put(b7, img);
 			Attribute b8 = training.attribute("Lat");
-			img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_y.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_lat.tif";
 			h1.put(b8, img);
 
 			J48 j48 = new J48();
 
 			ImageClassifier2 ic = new ImageClassifier2(h1, j48, training);
-			String outFileName = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_meta.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, false);
+			//String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_sync.tif";
+			//ic.classify(training.attribute("J48"), training, outFileName, false);
+			//ic.classifyParallel(training.attribute("J48"), outFileName, false, 10);
+			
+			String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_label_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true);
+			GDALUtils.transferGeo(img, outFileName);
+			
+			
+			
+			// 20130610
+			// ****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+			training = WekaUtils.loadArff(tFileName);
 
+			// set the response
+			training.setClassIndex(2);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+//			System.out.println("Using these instances...");
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, false);
+			GDALUtils.transferGeo(img, outFileName);
+			
+			// LABEL****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+			training = WekaUtils.loadArff(tFileName);
+
+			// set the response
+			training.setClassIndex(8);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true);
+			GDALUtils.transferGeo(img, outFileName);
+			
+			
+			
+			// ****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+			training = WekaUtils.loadArff(tFileName);
+
+			// set the response
+			training.setClassIndex(2);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+			//						System.out.println("Using these instances...");
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, false);
+			GDALUtils.transferGeo(img, outFileName);
+			
+
+			// LABEL****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+			training = WekaUtils.loadArff(tFileName);
+
+			// set the response
+			training.setClassIndex(8);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true);
+			GDALUtils.transferGeo(img, outFileName);
+			
+
+			// ****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+			training = WekaUtils.loadArff(tFileName);
+
+			// set the response
+			training.setClassIndex(2);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+			//						System.out.println("Using these instances...");
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, false);
+			GDALUtils.transferGeo(img, outFileName);
+			
+
+			// LABEL****************************************************************************************************************
+			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+			training = WekaUtils.loadArff(tFileName);
+
+			// set the response
+			training.setClassIndex(8);
+			System.out.println("The class attribute is...");
+			System.out.println(training.classAttribute().name());
+
+			System.out.println(training.toSummaryString());
+
+			h1 = new Hashtable<Attribute, String>();
+			// define mappings between attributes and imagery
+			b1 = training.attribute("J48");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+			h1.put(b1, img);
+			b2 = training.attribute("MLC");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
+			h1.put(b2, img);
+			b3 = training.attribute("RF");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
+			h1.put(b3, img);
+			b4 = training.attribute("SVM");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
+			h1.put(b4, img);
+			b5 = training.attribute("Seg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
+			h1.put(b5, img);
+			b6 = training.attribute("Agg");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
+			h1.put(b6, img);
+			// x and y
+			b7 = training.attribute("Lon");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
+			h1.put(b7, img);
+			b8 = training.attribute("Lat");
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
+			h1.put(b8, img);
+
+			j48 = new J48();
+
+			ic = new ImageClassifier2(h1, j48, training);
+
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_label_sync.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true);
+			GDALUtils.transferGeo(img, outFileName);
+			
+						
+			
 		}
 		catch(Exception e){
 			e.printStackTrace();

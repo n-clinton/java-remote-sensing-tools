@@ -338,12 +338,12 @@ public class GDALUtils {
 		Band band = data.GetRasterBand(b);
 		int buf_type = band.getDataType();
 		int buf_size = gdal.GetDataTypeSize(buf_type) / 8;
-		//ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
-		ByteBuffer pixel = ByteBuffer.allocate(buf_size);
+		ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
+		//ByteBuffer pixel = ByteBuffer.allocate(buf_size);
 		pixel.order(ByteOrder.nativeOrder());
 		// offset by pixel-1 to start reading at pixel
-		//band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
-		band.ReadRaster(x, y, 1, 1, 1, 1, buf_type, pixel.array());
+		band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
+		//band.ReadRaster(x, y, 1, 1, 1, 1, buf_type, pixel.array());
 
 		if (buf_type == gdalconstConstants.GDT_Byte) {
 			return ((int)pixel.get()) & 0xff;
@@ -499,9 +499,9 @@ public class GDALUtils {
 			for (int x=0; x<ref.getRasterXSize(); x++) {
 				try {
 					double[] projXY = GDALUtils.getProjectedXY(new int[] {x, y}, ref);
-					System.out.println(Arrays.toString(projXY));
+					//System.out.println(Arrays.toString(projXY));
 					projXY = ct.TransformPoint(projXY[0], projXY[1]);
-					System.out.println(Arrays.toString(projXY));
+					//System.out.println(Arrays.toString(projXY));
 					xOut.setSample(x, y, 0, projXY[0]);
 					yOut.setSample(x, y, 0, projXY[1]);
 				} catch (Exception e) {
@@ -592,8 +592,33 @@ public class GDALUtils {
 		//transferGeo(filename, outfile);
 	
 		// 20130529
-		String img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
-		writeLatLongImages(img);
+		//String img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif"; // doesn't work on mac
+		//String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+		//writeLatLongImages(img);
+//		String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+		
+		
+		//String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_lat.tif";
+		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_long.tif";
+		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_sync.tif";
+		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_label_sync.tif";
+		//transferGeo(filename, outfile);
+		
+//		String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif");
+//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif");
+//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif");
 	}
 
 }
