@@ -2054,39 +2054,41 @@ public class WekaUtilsProcessing extends WekaUtils {
 //			}
 		
 		// 20130519
-//		try {
-//			String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized.arff";
-//			Instances instances = loadArff(filename);
-//			System.out.println(instances.toSummaryString());
-//			instances.setClassIndex(2); // "interpretation"
-//
-//			// the oracle ----------------------
-//			Attribute[] predictors = {
-//					instances.attribute("J48"),
-//					instances.attribute("MLC"),
-//					instances.attribute("RF"),
-//					instances.attribute("SVM"),
-//					instances.attribute("Seg"),
-//					instances.attribute("Agg"),
-//			};
-//
-//			double[] costs = new double[predictors.length];
-//			int i=0;
-//			for (Attribute a : predictors) {
-//				//System.out.println(a);
-//				AttributeClassifier classy = new AttributeClassifier(a);
-//				Evaluation evaluation = new Evaluation(instances);
-//				evaluation.evaluateModel(classy, instances);
-//				costs[i] = evaluation.errorRate();
-//				i++;
-//			}
-//			Instances meta = makeTraining(instances, predictors, costs);
-//			int[] toRemove = {2};
-//			Instances removed = removeAttributes(meta, toRemove); 
-//			writeArff(removed, "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized_meta.arff");
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
+		try {
+			//String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized.arff";
+			String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+			Instances instances = loadArff(filename);
+			System.out.println(instances.toSummaryString());
+			instances.setClassIndex(2); // "interpretation"
+
+			// the oracle ----------------------
+			Attribute[] predictors = {
+					instances.attribute("J48"),
+					instances.attribute("MLC"),
+					instances.attribute("RF"),
+					instances.attribute("SVM"),
+					instances.attribute("Seg"),
+					instances.attribute("Agg"),
+			};
+
+			double[] costs = new double[predictors.length];
+			int i=0;
+			for (Attribute a : predictors) {
+				//System.out.println(a);
+				AttributeClassifier classy = new AttributeClassifier(a);
+				Evaluation evaluation = new Evaluation(instances);
+				evaluation.evaluateModel(classy, instances);
+				costs[i] = evaluation.errorRate();
+				i++;
+			}
+			Instances meta = makeTraining(instances, predictors, costs);
+			int[] toRemove = {2};
+			Instances removed = removeAttributes(meta, toRemove); 
+			//writeArff(removed, "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized_meta.arff");
+			writeArff(removed, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 }
