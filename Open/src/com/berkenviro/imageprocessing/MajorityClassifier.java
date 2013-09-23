@@ -3,12 +3,14 @@
  */
 package com.berkenviro.imageprocessing;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -23,11 +25,12 @@ public class MajorityClassifier extends Classifier {
 	
 	/**
 	 * 
-	 * @param a is the attribute which predicts the label of the other attribute with the best prediction.
+	 * @param voters
+	 * @param costs
 	 */
-	public MajorityClassifier(String[] voters, double[] costs) {
+	public MajorityClassifier(String[] voters) {
 		this.voters = voters;
-		this.costs = costs;
+		costs = new double[voters.length];
 	}
 	
 	@Override
@@ -88,8 +91,12 @@ public class MajorityClassifier extends Classifier {
 			if (data.attribute(voters[a]) == null) {
 				throw new Exception ("No attribute: "+voters[a]);
 			}
+			AttributeClassifier classy = new AttributeClassifier(data.attribute(voters[a]));
+			Evaluation eval = new Evaluation(data);
+			eval.evaluateModel(classy, data);
+			costs[a] = eval.errorRate();
 		}
-		
+		//System.out.println("Estimated costs: " + Arrays.toString(costs));
 	}
 	
 	/**
