@@ -122,7 +122,7 @@ public class ImageClassifier2 {
 	 * @param outFileName
 	 * @param meta
 	 */
-	public void classify(Attribute reference, Instances training, String outFileName, boolean meta) {
+	public void classify(Attribute reference, Instances training, String outFileName, boolean meta, boolean model) {
 
 		if (!readyToClassify) {
 			System.err.println("Not ready to classify!  System will exit.");
@@ -187,7 +187,12 @@ public class ImageClassifier2 {
 					classIndex = (int) classifier.classifyInstance(instance);
 					//System.out.println(instance);
 					String prediction = "-1.0";
-					if (meta) {
+					if (model && meta) { // the only way to predict a model
+						// the index of the model predicted
+						prediction = String.valueOf(classIndex);
+						//System.out.println("\t prediction: "+prediction+": "+imagePixels.classAttribute().value(classIndex));
+					}
+					else if (meta && !model) { // can predict a model, but don't
 						String predictedAtt = imagePixels.classAttribute().value(classIndex);
 						//System.out.println("\t "+predictedAtt);
 						Attribute a = imagePixels.attribute(predictedAtt);
@@ -211,6 +216,10 @@ public class ImageClassifier2 {
 		}
 		//		 write
 		JAIUtils.writeTiff(classifiedOut, outFileName);
+		
+		if (meta && model) {
+			ImageClassifier.classVals(imagePixels);
+		}
 	} 
 	
 	
@@ -513,111 +522,496 @@ public class ImageClassifier2 {
 
 		try {
 			
-			// 20130519, 20130610
-			// training data:
-			//String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
-			String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+//			// 20130519, 20130610
+//			// training data:
+//			//String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//			String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+//			Instances training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			//training.setClassIndex(2);
+//			training.setClassIndex(8);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+////			System.out.println("Using these instances...");
+//			System.out.println(training.toSummaryString());
+//
+//			Hashtable<Attribute, String> h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			Attribute b1 = training.attribute("J48");
+//			String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+//			h1.put(b1, img);
+//			Attribute b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-MLC.tif";
+//			h1.put(b2, img);
+//			Attribute b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-RF.tif";
+//			h1.put(b3, img);
+//			Attribute b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-SVM.tif";
+//			h1.put(b4, img);
+//			Attribute b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-Seg.tif";
+//			h1.put(b5, img);
+//			Attribute b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			Attribute b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_long.tif";
+//			h1.put(b7, img);
+//			Attribute b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_lat.tif";
+//			h1.put(b8, img);
+//
+//			J48 j48 = new J48();
+//
+//			ImageClassifier2 ic = new ImageClassifier2(h1, j48, training);
+//			//String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_sync.tif";
+//			//ic.classify(training.attribute("J48"), training, outFileName, false);
+//			//ic.classifyParallel(training.attribute("J48"), outFileName, false, 10);
+//			
+//			String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_label_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, true);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//			
+//			
+//			// 20130610
+//			// ****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(2);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+////			System.out.println("Using these instances...");
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, false);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//			// LABEL****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(8);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, true);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//			
+//			
+//			// ****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(2);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			//						System.out.println("Using these instances...");
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, false);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//
+//			// LABEL****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(8);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, true);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//
+//			// ****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(2);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			//						System.out.println("Using these instances...");
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, false);
+//			GDALUtils.transferGeo(img, outFileName);
+//			
+//
+//			// LABEL****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(8);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_label_sync.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, true);
+//			GDALUtils.transferGeo(img, outFileName);
+			
+						
+//			// 20130614 SIMPLIFIED
+//			// ****************************************************************************************************************
+//			String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Simplified_nominalized.arff";
+//			Instances training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(2);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			//						System.out.println("Using these instances...");
+//			System.out.println(training.toSummaryString());
+//
+//			Hashtable h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			Attribute b1 = training.attribute("J48");
+//			String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48_simplified.tif";
+//			h1.put(b1, img);
+//			Attribute b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC_simplified.tif";
+//			h1.put(b2, img);
+//			Attribute b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF_simplified.tif";
+//			h1.put(b3, img);
+//			Attribute b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM_simplified.tif";
+//			h1.put(b4, img);
+//			Attribute b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg_simplified.tif";
+//			h1.put(b5, img);
+//			Attribute b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg_simplified.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			Attribute b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			Attribute b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			J48 j48 = new J48();
+//
+//			ImageClassifier2 ic = new ImageClassifier2(h1, j48, training);
+//			String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_sync_simplified.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, false);
+//			GDALUtils.transferGeo(img, outFileName);
+//
+//			// LABEL****************************************************************************************************************
+//			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Simplified_nominalized_meta.arff";
+//			training = WekaUtils.loadArff(tFileName);
+//
+//			// set the response
+//			training.setClassIndex(8);
+//			System.out.println("The class attribute is...");
+//			System.out.println(training.classAttribute().name());
+//
+//			System.out.println(training.toSummaryString());
+//
+//			h1 = new Hashtable<Attribute, String>();
+//			// define mappings between attributes and imagery
+//			b1 = training.attribute("J48");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48_simplified.tif";
+//			h1.put(b1, img);
+//			b2 = training.attribute("MLC");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC_simplified.tif";
+//			h1.put(b2, img);
+//			b3 = training.attribute("RF");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF_simplified.tif";
+//			h1.put(b3, img);
+//			b4 = training.attribute("SVM");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM_simplified.tif";
+//			h1.put(b4, img);
+//			b5 = training.attribute("Seg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg_simplified.tif";
+//			h1.put(b5, img);
+//			b6 = training.attribute("Agg");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg_simplified.tif";
+//			h1.put(b6, img);
+//			// x and y
+//			b7 = training.attribute("Lon");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
+//			h1.put(b7, img);
+//			b8 = training.attribute("Lat");
+//			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
+//			h1.put(b8, img);
+//
+//			j48 = new J48();
+//
+//			ic = new ImageClassifier2(h1, j48, training);
+//
+//			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_label_sync_simplified.tif";
+//			ic.classify(training.attribute("J48"), training, outFileName, true);
+//			GDALUtils.transferGeo(img, outFileName);
+			
+			
+			// 20130615 MODEL PREDICTIONS
+			// ****************************************************************************************************************
+			String tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Simplified_nominalized_meta.arff";
 			Instances training = WekaUtils.loadArff(tFileName);
 
 			// set the response
-			//training.setClassIndex(2);
 			training.setClassIndex(8);
 			System.out.println("The class attribute is...");
 			System.out.println(training.classAttribute().name());
 
-//			System.out.println("Using these instances...");
+			//						System.out.println("Using these instances...");
 			System.out.println(training.toSummaryString());
 
-			Hashtable<Attribute, String> h1 = new Hashtable<Attribute, String>();
+			Hashtable h1 = new Hashtable<Attribute, String>();
 			// define mappings between attributes and imagery
 			Attribute b1 = training.attribute("J48");
-			String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
+			String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48_simplified.tif";
 			h1.put(b1, img);
 			Attribute b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-MLC.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC_simplified.tif";
 			h1.put(b2, img);
 			Attribute b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-RF.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF_simplified.tif";
 			h1.put(b3, img);
 			Attribute b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-SVM.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM_simplified.tif";
 			h1.put(b4, img);
 			Attribute b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-Seg.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg_simplified.tif";
 			h1.put(b5, img);
 			Attribute b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_Agg.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg_simplified.tif";
 			h1.put(b6, img);
 			// x and y
 			Attribute b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_long.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
 			h1.put(b7, img);
 			Attribute b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_lat.tif";
+			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
 			h1.put(b8, img);
 
 			J48 j48 = new J48();
 
 			ImageClassifier2 ic = new ImageClassifier2(h1, j48, training);
-			//String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_sync.tif";
-			//ic.classify(training.attribute("J48"), training, outFileName, false);
-			//ic.classifyParallel(training.attribute("J48"), outFileName, false, 10);
-			
-			String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_label_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, true);
+			String outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_sync_simplified_meta_classifier.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true, true);
 			GDALUtils.transferGeo(img, outFileName);
 			
-			
-			
-			// 20130610
-			// ****************************************************************************************************************
-			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
-			training = WekaUtils.loadArff(tFileName);
-
-			// set the response
-			training.setClassIndex(2);
-			System.out.println("The class attribute is...");
-			System.out.println(training.classAttribute().name());
-
-//			System.out.println("Using these instances...");
-			System.out.println(training.toSummaryString());
-
-			h1 = new Hashtable<Attribute, String>();
-			// define mappings between attributes and imagery
-			b1 = training.attribute("J48");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
-			h1.put(b1, img);
-			b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_MLC.tif";
-			h1.put(b2, img);
-			b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_RF.tif";
-			h1.put(b3, img);
-			b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_SVM.tif";
-			h1.put(b4, img);
-			b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Seg.tif";
-			h1.put(b5, img);
-			b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE-Agg.tif";
-			h1.put(b6, img);
-			// x and y
-			b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif";
-			h1.put(b7, img);
-			b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif";
-			h1.put(b8, img);
-
-			j48 = new J48();
-
-			ic = new ImageClassifier2(h1, j48, training);
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, false);
-			GDALUtils.transferGeo(img, outFileName);
-			
-			// LABEL****************************************************************************************************************
+			// DETAILED MODEL---------------------------------------------
 			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
 			training = WekaUtils.loadArff(tFileName);
 
@@ -660,204 +1054,9 @@ public class ImageClassifier2 {
 
 			ic = new ImageClassifier2(h1, j48, training);
 
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, true);
+			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_meta_label_sync_detailed_classifier.tif";
+			ic.classify(training.attribute("J48"), training, outFileName, true, true);
 			GDALUtils.transferGeo(img, outFileName);
-			
-			
-			
-			// ****************************************************************************************************************
-			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
-			training = WekaUtils.loadArff(tFileName);
-
-			// set the response
-			training.setClassIndex(2);
-			System.out.println("The class attribute is...");
-			System.out.println(training.classAttribute().name());
-
-			//						System.out.println("Using these instances...");
-			System.out.println(training.toSummaryString());
-
-			h1 = new Hashtable<Attribute, String>();
-			// define mappings between attributes and imagery
-			b1 = training.attribute("J48");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
-			h1.put(b1, img);
-			b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
-			h1.put(b2, img);
-			b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
-			h1.put(b3, img);
-			b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
-			h1.put(b4, img);
-			b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
-			h1.put(b5, img);
-			b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
-			h1.put(b6, img);
-			// x and y
-			b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
-			h1.put(b7, img);
-			b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
-			h1.put(b8, img);
-
-			j48 = new J48();
-
-			ic = new ImageClassifier2(h1, j48, training);
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, false);
-			GDALUtils.transferGeo(img, outFileName);
-			
-
-			// LABEL****************************************************************************************************************
-			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
-			training = WekaUtils.loadArff(tFileName);
-
-			// set the response
-			training.setClassIndex(8);
-			System.out.println("The class attribute is...");
-			System.out.println(training.classAttribute().name());
-
-			System.out.println(training.toSummaryString());
-
-			h1 = new Hashtable<Attribute, String>();
-			// define mappings between attributes and imagery
-			b1 = training.attribute("J48");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
-			h1.put(b1, img);
-			b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_MLC.tif";
-			h1.put(b2, img);
-			b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_RF.tif";
-			h1.put(b3, img);
-			b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_SVM.tif";
-			h1.put(b4, img);
-			b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Seg.tif";
-			h1.put(b5, img);
-			b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE-Agg.tif";
-			h1.put(b6, img);
-			// x and y
-			b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif";
-			h1.put(b7, img);
-			b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif";
-			h1.put(b8, img);
-
-			j48 = new J48();
-
-			ic = new ImageClassifier2(h1, j48, training);
-
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_meta_label_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, true);
-			GDALUtils.transferGeo(img, outFileName);
-			
-
-			// ****************************************************************************************************************
-			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
-			training = WekaUtils.loadArff(tFileName);
-
-			// set the response
-			training.setClassIndex(2);
-			System.out.println("The class attribute is...");
-			System.out.println(training.classAttribute().name());
-
-			//						System.out.println("Using these instances...");
-			System.out.println(training.toSummaryString());
-
-			h1 = new Hashtable<Attribute, String>();
-			// define mappings between attributes and imagery
-			b1 = training.attribute("J48");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
-			h1.put(b1, img);
-			b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
-			h1.put(b2, img);
-			b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
-			h1.put(b3, img);
-			b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
-			h1.put(b4, img);
-			b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
-			h1.put(b5, img);
-			b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
-			h1.put(b6, img);
-			// x and y
-			b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
-			h1.put(b7, img);
-			b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
-			h1.put(b8, img);
-
-			j48 = new J48();
-
-			ic = new ImageClassifier2(h1, j48, training);
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, false);
-			GDALUtils.transferGeo(img, outFileName);
-			
-
-			// LABEL****************************************************************************************************************
-			tFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff";
-			training = WekaUtils.loadArff(tFileName);
-
-			// set the response
-			training.setClassIndex(8);
-			System.out.println("The class attribute is...");
-			System.out.println(training.classAttribute().name());
-
-			System.out.println(training.toSummaryString());
-
-			h1 = new Hashtable<Attribute, String>();
-			// define mappings between attributes and imagery
-			b1 = training.attribute("J48");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
-			h1.put(b1, img);
-			b2 = training.attribute("MLC");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_MLC.tif";
-			h1.put(b2, img);
-			b3 = training.attribute("RF");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_RF.tif";
-			h1.put(b3, img);
-			b4 = training.attribute("SVM");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_SVM.tif";
-			h1.put(b4, img);
-			b5 = training.attribute("Seg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Seg.tif";
-			h1.put(b5, img);
-			b6 = training.attribute("Agg");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE-Agg.tif";
-			h1.put(b6, img);
-			// x and y
-			b7 = training.attribute("Lon");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif";
-			h1.put(b7, img);
-			b8 = training.attribute("Lat");
-			img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif";
-			h1.put(b8, img);
-
-			j48 = new J48();
-
-			ic = new ImageClassifier2(h1, j48, training);
-
-			outFileName = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_meta_label_sync.tif";
-			ic.classify(training.attribute("J48"), training, outFileName, true);
-			GDALUtils.transferGeo(img, outFileName);
-			
-						
 			
 		}
 		catch(Exception e){

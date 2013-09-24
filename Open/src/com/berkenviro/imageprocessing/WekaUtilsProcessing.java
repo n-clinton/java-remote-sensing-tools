@@ -2054,41 +2054,144 @@ public class WekaUtilsProcessing extends WekaUtils {
 //			}
 		
 		// 20130519
-		try {
-			//String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized.arff";
-			String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//		try {
+//			//String filename = "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized.arff";
+//			String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized.arff";
+//			Instances instances = loadArff(filename);
+//			System.out.println(instances.toSummaryString());
+//			instances.setClassIndex(2); // "interpretation"
+//
+//			// the oracle ----------------------
+//			Attribute[] predictors = {
+//					instances.attribute("J48"),
+//					instances.attribute("MLC"),
+//					instances.attribute("RF"),
+//					instances.attribute("SVM"),
+//					instances.attribute("Seg"),
+//					instances.attribute("Agg"),
+//			};
+//
+//			double[] costs = new double[predictors.length];
+//			int i=0;
+//			for (Attribute a : predictors) {
+//				//System.out.println(a);
+//				AttributeClassifier classy = new AttributeClassifier(a);
+//				Evaluation evaluation = new Evaluation(instances);
+//				evaluation.evaluateModel(classy, instances);
+//				costs[i] = evaluation.errorRate();
+//				i++;
+//			}
+//			Instances meta = makeTraining(instances, predictors, costs);
+//			int[] toRemove = {2};
+//			Instances removed = removeAttributes(meta, toRemove); 
+//			//writeArff(removed, "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized_meta.arff");
+//			writeArff(removed, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+	//  20130904 post review attempt to enhance the majority filter a la Kuncheva, Smits
+			String filename = "/Users/nclinton/Documents/Global_metaprediction/test3/AllMethodAcc_Detailed_nominalized.arff";
+			//String filename = "/Users/nclinton/Documents/Global_metaprediction/test3/AllMethodAcc_Simplified_nominalized.arff";
 			Instances instances = loadArff(filename);
 			System.out.println(instances.toSummaryString());
-			instances.setClassIndex(2); // "interpretation"
-
-			// the oracle ----------------------
-			Attribute[] predictors = {
-					instances.attribute("J48"),
-					instances.attribute("MLC"),
-					instances.attribute("RF"),
-					instances.attribute("SVM"),
-					instances.attribute("Seg"),
-					instances.attribute("Agg"),
-			};
-
-			double[] costs = new double[predictors.length];
-			int i=0;
-			for (Attribute a : predictors) {
-				//System.out.println(a);
-				AttributeClassifier classy = new AttributeClassifier(a);
-				Evaluation evaluation = new Evaluation(instances);
-				evaluation.evaluateModel(classy, instances);
-				costs[i] = evaluation.errorRate();
-				i++;
+			System.out.println();
+			instances.setClassIndex(2);
+			
+			// this is a little sketchy; the following arrays need to be in exact correspondence:
+			String[] voters = {"J48","MLC","RF","SVM","Seg","Agg",};
+			Attribute[] predictors = new Attribute[voters.length];
+			for (int s=0; s<voters.length; s++) {
+				predictors[s] = instances.attribute(voters[s]);
 			}
-			Instances meta = makeTraining(instances, predictors, costs);
-			int[] toRemove = {2};
-			Instances removed = removeAttributes(meta, toRemove); 
-			//writeArff(removed, "/Users/nclinton/Documents/data/test3/AllMethodAcc_Simplified_nominalized_meta.arff");
-			writeArff(removed, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/AllMethodAcc_Detailed_nominalized_meta.arff");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+			
+			
+			/*
+			 * The following is all obsolete after the reconfiguration of the MajorityClassifier and the 
+			 * WeightedMahorityClassifier to be tested in a cross validation framework: i.e. estimate the 
+			 * confusion matrix from training data and predict on the rest.
+			 */
+			double[] costs = new double[predictors.length];
+			Evaluation[] evals = new Evaluation[predictors.length];
 
+			for (int c=0; c<predictors.length; c++) {
+				Attribute a = predictors[c];
+				//System.out.println(a.name());
+				AttributeClassifier classy = new AttributeClassifier(a);
+				Evaluation evaluation;
+				try {
+					evaluation = new Evaluation(instances);
+					evaluation.evaluateModel(classy, instances);
+					//System.out.println(evaluation.toSummaryString());
+//					double[][] cm = evaluation.confusionMatrix();
+//					for (int j=0; j<cm.length; j++) {
+//						System.out.print("\t index: "+j);
+//						System.out.print(", value: "+instances.classAttribute().value(j));
+//						System.out.println("\t\t true positives: "+evaluation.numTruePositives(j));
+//						System.out.print(", recall: "+evaluation.recall(j));
+//						System.out.println();
+//						System.out.println("\t\t precision: "+evaluation.precision(j));
+//						System.out.println("\t\t\t\t\t "+Arrays.toString(cm[j]));
+//						weka.core.Utils.normalize(cm[j]);
+//						System.out.println("\t\t\t\t\t "+Arrays.toString(cm[j]));
+//					}
+					costs[c] = evaluation.errorRate();
+					evals[c] = evaluation;
+//					System.out.println("\t"+evaluation.toSummaryString());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			//System.out.println("Estimated costs: " + Arrays.toString(costs));
+			
+			
+			// the majority -----------------
+
+			MajorityClassifier classy = new MajorityClassifier(voters);
+			WeightedMajorityClassifier belief = new WeightedMajorityClassifier(voters, true);
+			WeightedMajorityClassifier recall = new WeightedMajorityClassifier(voters, false);
+			try {
+				System.out.println("Plurality:");
+				//classy.buildClassifier(instances);
+				Evaluation evaluation = new Evaluation(instances);
+//				evaluation.evaluateModel(classy, instances);
+				evaluation.crossValidateModel(classy, instances, 10, new Random(0));
+				System.out.println(evaluation.toSummaryString());
+				
+				System.out.println("Belief:");
+				//belief.buildClassifier(instances);
+				evaluation = new Evaluation(instances);
+				//evaluation.evaluateModel(belief, instances);
+				evaluation.crossValidateModel(belief, instances, 10, new Random(0));
+				System.out.println(evaluation.toSummaryString());
+				
+				System.out.println("Recall:");
+				//recall.buildClassifier(instances);
+				evaluation = new Evaluation(instances);
+				//evaluation.evaluateModel(recall, instances);
+				evaluation.crossValidateModel(recall, instances, 10, new Random(0));
+				System.out.println(evaluation.toSummaryString());
+				
+				// DEBUG
+//				classy.buildClassifier(instances);
+//				belief.buildClassifier(instances);
+//				recall.buildClassifier(instances);
+//				for (int a=0; a<10; a++) {
+//					Instance inst = instances.instance(a);
+//					System.out.println(inst);
+//					System.out.println("\t True value: "+inst.classAttribute().value((int)inst.classValue()));
+//					System.out.println("\t\t Plurality: "+inst.classAttribute().value((int)classy.classifyInstance(inst)));
+//					System.out.println("\t\t Belief: "+inst.classAttribute().value((int)belief.classifyInstance(inst)));
+//					System.out.println("\t\t Recall: "+inst.classAttribute().value((int)recall.classifyInstance(inst)));
+//				}
+				
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		
+		
+		
+	}
+	
 }
