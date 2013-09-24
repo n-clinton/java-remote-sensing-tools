@@ -363,6 +363,44 @@ public class GDALUtils {
 	}
 	
 	/**
+	 * Read a line of data
+	 * @param data
+	 * @param x
+	 * @param y
+	 * @param b
+	 * @param length
+	 * @return
+	 */
+	public static double[] xPixelsValue(Dataset data, int x, int y, int b, int length) {
+		Band band = data.GetRasterBand(b);
+		int buf_type = band.getDataType();
+		int buf_size = length * gdal.GetDataTypeSize(buf_type) / 8;
+		//ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
+		ByteBuffer pixels = ByteBuffer.allocate(buf_size);
+		pixels.order(ByteOrder.nativeOrder());
+		// offset by pixel-1 to start reading at pixel
+		//band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
+		band.ReadRaster(x, y, length, 1, length, 1, buf_type, pixels.array());
+		 double[] ret = new double[length];
+		 for (int r=0; r<ret.length; r++) {
+			 if (buf_type == gdalconstConstants.GDT_Byte) {
+					ret[r] = ((int)pixels.get()) & 0xff;
+				} else if(buf_type == gdalconstConstants.GDT_Int16) {
+					ret[r] = pixels.getShort();
+				} else if(buf_type == gdalconstConstants.GDT_Int32) {
+					ret[r] = pixels.getInt();
+				} else if(buf_type == gdalconstConstants.GDT_Float32) {
+					ret[r] = pixels.getFloat();
+				} else if(buf_type == gdalconstConstants.GDT_Float64) {
+					ret[r] = pixels.getDouble();
+				} else if(buf_type == gdalconstConstants.GDT_UInt16) {
+					ret[r] = pixels.getChar(); // ?????????????
+				}
+		 }
+		return ret;
+	}
+	
+	/**
 	 * 
 	 * @param data
 	 * @param x
@@ -619,6 +657,27 @@ public class GDALUtils {
 //		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
 //		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif");
 //		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif");
+		
+		// 20130619
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/test5_GEE/m37122h2sw_subset_10_05_05_rmf20130625.tiff";
+		//String filename = "/Users/nclinton/Documents/MASTER_imagery/MASTERL1B_0800510_06_20080826_2154_2157_V02_b0.tif";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/MASTERL1B_0800510_06_20080826_2154_2157_V02_30_05_05_20130625.tiff";
+		//transferGeo(filename, outfile);
+		
+		// 20130916
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		Dataset data = getDataset(filename);
+//		for (int y=0; y<10; y++) {
+//			double[]xs = new double[10];
+//			for (int x=0; x<10; x++) {
+//				xs[x] = pixelValue(data,x,y,1);
+//			}
+//			System.out.println(Arrays.toString(xs));
+//			System.out.println(Arrays.toString(xPixelsValue(data,0,y,1,10)));
+//			System.out.println();
+//		}
+		
 	}
 
 }
