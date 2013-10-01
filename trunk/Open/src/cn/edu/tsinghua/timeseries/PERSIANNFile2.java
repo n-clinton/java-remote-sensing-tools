@@ -3,12 +3,15 @@
  */
 package cn.edu.tsinghua.timeseries;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Calendar;
 
 import org.gdal.gdal.Band;
@@ -48,23 +51,31 @@ import com.vividsolutions.jts.geom.util.AffineTransformation;
  *	last value is SE corner     
  *
  */
-public class PERSIANNFile extends RandomAccessFile implements Comparable {
+public class PERSIANNFile2 extends FileInputStream implements Comparable {
 
 	private AffineTransformation at, inv;
 	private int width, height;
 	private String filename;
 	Calendar cal;
 	
-	private long previous_offset = -1;
-	private float previous_value = 0;
 	public static long READ_TIMES = 0;
+	private int _offset_lower_bound = -1;
+	private int _offset_upper_bound = -1;
+	private static final int  BUFFER_SIZE =  10 * 1024 * 1024; // 20MB
+    private FileChannel _file_channel;
+    private ByteBuffer _byte_buffer;
+	
 	/**
 	 * 
 	 * @param name
 	 * @throws FileNotFoundException
 	 */
-	public PERSIANNFile(String name) throws FileNotFoundException {
-		super(name, "r");
+	public PERSIANNFile2(String name) throws FileNotFoundException {
+		super(new File(name));
+		
+		_file_channel = this.getChannel();
+		_byte_buffer = ByteBuffer.allocate(BUFFER_SIZE);
+		
 		filename = name; // complete file path
 		// parse the date from the filename
 		int dot = filename.lastIndexOf(".");
@@ -82,7 +93,7 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 	
 	@Override
 	public int compareTo(Object o) {
-		return this.cal.compareTo(((PERSIANNFile)o).cal);
+		return this.cal.compareTo(((PERSIANNFile2)o).cal);
 	}
 	
 	/**
@@ -117,59 +128,74 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 		return new int[] {(int)pix.x, (int)pix.y};
 	}
 	
+	
+	
 	/**
 	 * Read the pixel value at the specified location.
 	 * @param pixel
 	 * @param line
 	 * @return
 	 */
+	/**
+	 * @param pixel
+	 * @param line
+	 * @return
+	 * @throws Exception
+	 */
+	/**
+	 * @param pixel
+	 * @param line
+	 * @return
+	 * @throws Exception
+	 */
 	public float readPixel(int pixel, int line) throws Exception {
-		long offset = line*width*4 + pixel*4;
+		int offset = line*width*4 + pixel*4;
 //		System.out.println(offset);
-//		System.err.println(Thread.currentThread().getId());
-		this.seek(offset);
 		
-		READ_TIMES++;
+		if (!isInTheBufferRange(offset)) { // not in the range
+			// calculate the lower bound and upper bound of the buffer
+			_offset_upper_bound = calOffsetUpperBound(offset);
+			_offset_lower_bound = offset; // set _offset_lower_bound
+			
+			// read file into the buffer
+			long n_read = _file_channel.read(_byte_buffer, offset);
+			if (n_read == -1) {
+				System.err.println("Read Error! Nothing in the file!");
+				System.exit(-1);
+			}
+			READ_TIMES++;
+		}
 		
-		long start = System.nanoTime();
-		float ret = this.readFloat(); // it is critical slow
-		long stop = System.nanoTime();
-		double elapse = (stop - start);
-//		System.err.println("offset: " + offset + ", elapse: " + elapse);
+		// read int from the buffer and convert it to float
+		float ret_value = readFloat(offset);
 		
-//		System.out.println(ret);
-		return ret;
+//		System.out.println("a: " + ret_value);
+		return ret_value;
 	}
 	
-	public float pseudoReadPixel(int pixel, int line) throws Exception {
-	    // improvement on the method
-	    // 1. save the previous offset the previous read value
-	    // 2. for the new run, test whether current offset equals to previous
-	    // offset, if so, return the previous read value. Otherwise, seek
-	    // and read new value
-
-	    long current_offset = line * width * 4 + pixel * 4;
-	    // System.err.println("current_offset: " + current_offset);
-	    if (current_offset != previous_offset) {
-//	      this.seek(current_offset);
-	    	
-	    	this.seek(8316456);
-	      
-	      long start = System.nanoTime();
-	      
-	      previous_value = this.readFloat();
-	      
-	      
-	      long stop = System.nanoTime();
-	      System.err.println(" time: " + (stop - start));
-	      previous_offset = current_offset;
-	      READ_TIMES++;
-	    }
-
-	    return previous_value;
-
+	
+	private float readFloat(int offset) {
+		int index = offset - _offset_lower_bound;
+		int raw_int = _byte_buffer.getInt(index);
+		float ret_val = Float.intBitsToFloat(raw_int);
+		
+		return ret_val;
 	}
 	
+	private float readFloatDirect(int offset) {
+		int index = offset - _offset_lower_bound;
+		float ret_val = _byte_buffer.getFloat(index);
+		return ret_val;
+	}
+
+	private int calOffsetUpperBound(int offset) {
+		return offset + BUFFER_SIZE;
+	}
+
+	private boolean isInTheBufferRange(long offset) {
+		return (offset <= _offset_upper_bound);
+	}
+
 	/**
 	 * 
 	 * @param pt
@@ -245,9 +271,9 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 	 */
 	public static void main(String[] args) {
 		// test
-		PERSIANNFile pf = null;
+		PERSIANNFile2 pf = null;
 		try {
-			pf = new PERSIANNFile("C:/Users/Public/Documents/PERSIANN/8km_daily/2010/rgccs1d10001.bin");
+			pf = new PERSIANNFile2("C:/Users/Public/Documents/PERSIANN/8km_daily/2010/rgccs1d10001.bin");
 //			for (int i=1000; i<9000; i++) {
 //				for (int j=1000; j<3000; j++) {
 //					System.out.println("("+i+","+j+") : "+pf.readPixel(i,j));
