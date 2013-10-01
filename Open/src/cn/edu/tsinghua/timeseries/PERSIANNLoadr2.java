@@ -19,9 +19,9 @@ import com.vividsolutions.jts.geom.Point;
  * @author Nicholas
  *
  */
-public class PERSIANNLoadr implements Loadr {
+public class PERSIANNLoadr2 implements Loadr {
 
-	private ArrayList<PERSIANNFile> imageList;
+	private ArrayList<PERSIANNFile2> imageList;
 	private double[] t;
 	private Calendar date0;
 	
@@ -29,9 +29,9 @@ public class PERSIANNLoadr implements Loadr {
 	 * 
 	 * @param directories
 	 */
-	public PERSIANNLoadr(String[] directories) throws Exception {
+	public PERSIANNLoadr2(String[] directories) throws Exception {
 		System.out.println("Initializing PERSIANNFile loader...");
-		imageList = new ArrayList<PERSIANNFile>();
+		imageList = new ArrayList<PERSIANNFile2>();
 		
 		for (int d=0; d<directories.length; d++) {
 			File dir = new File(directories[d]);
@@ -45,7 +45,7 @@ public class PERSIANNLoadr implements Loadr {
 				// if it's not a PERSIANN File, skip
 				if (!f.getName().endsWith(".bin")) { continue; }
 				// otherwise, it's a PERSIANN file
-				imageList.add(new PERSIANNFile(f.getAbsolutePath()));
+				imageList.add(new PERSIANNFile2(f.getAbsolutePath()));
 			}
 		}
 		// Keep the list in chronological order
@@ -67,7 +67,7 @@ public class PERSIANNLoadr implements Loadr {
 		date0 = cal;
 		// rebuild X
 		for (int i=0; i<imageList.size(); i++) {
-			PERSIANNFile pf = imageList.get(i);
+			PERSIANNFile2 pf = imageList.get(i);
 			t[i] = diffDays(pf);
 		}
 	}
@@ -115,13 +115,15 @@ public class PERSIANNLoadr implements Loadr {
 		LinkedList<double[]> out = new LinkedList<double[]>();
 		// iterate over images
 //		System.out.println("DEBUG_INFO: imageList.size(): " + imageList.size());
-		
+		System.out.println("Persiann data: ");
 		long start = System.nanoTime();
 		for (int i=0; i<imageList.size(); i++) {
-			PERSIANNFile pf = imageList.get(i);
+			PERSIANNFile2 pf = imageList.get(i);
 			try {
 				
 				float val = pf.imageValue(x, y);
+				
+				
 				if (val == -9999.f) { continue; }
 				out.add(new double[] {t[i], val});
 			} catch (Exception e1) {
@@ -132,7 +134,6 @@ public class PERSIANNLoadr implements Loadr {
 		long stop = System.nanoTime(); 
 		double elapsed = (double)(stop - start) / 1000.0;
 //		System.err.println("time: " + elapsed);
-		
 		return out;
 	}
 	

@@ -3,6 +3,10 @@
  */
 package cn.edu.tsinghua.timeseries;
 
+import javax.media.jai.PlanarImage;
+import javax.media.jai.iterator.RandomIter;
+import javax.media.jai.iterator.RandomIterFactory;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -10,43 +14,50 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.media.jai.iterator.RandomIterFactory;
+
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
 
 import ru.sscc.spline.Spline;
 import cn.edu.tsinghua.lidar.BitChecker;
+import cn.edu.tsinghua.timeseries.Correlatr.Pixel;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.ImageData;
+import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Point;
 
 /**
  * @author Nicholas
  * Load a time series of imagery.
  */
-public class ImageLoadr2 implements Loadr {
+public class ImageLoadr4 implements Loadr {
 
 	private ArrayList<DatedQCImage> imageList;
 	private double[] t;
 	private Calendar date0;
-	private Dataset[] images;
-	private Dataset[] qcImages;
 	private ImageData[] _image_data;
 	private ImageData[] _qc_image_data;
-	
+	// center coords
+	final static double delta = 0.008365178679831331;
+	// center
+	final static double ulx = -179.9815962788889;
+	final static double uly = 69.99592926598972;
+
 	/**
 	 * 
 	 * @param directories
 	 * @throws Exception
 	 */
-	public ImageLoadr2(String[] directories) throws Exception {
+	public ImageLoadr4(String[] directories) throws Exception {
 		System.out.println("Initializing image loader...");
 		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "50");
 		gdal.SetCacheMax(1024);
 		imageList = new ArrayList<DatedQCImage>();
-		
+
 		for (int d=0; d<directories.length; d++) {
 			File dir = new File(directories[d]);
 			if (!dir.isDirectory()) {
@@ -77,47 +88,41 @@ public class ImageLoadr2 implements Loadr {
 						image.qcImageName = qcFile.getAbsolutePath();
 					}
 				}
-//				System.out.println(image);
+				//				System.out.println(image);
 				imageList.add(image);
 			}
 		}
-		
-		
+
+
 		// Keep the list in chronological order
 		Collections.sort(imageList);
 		System.out.println("\t Done!");
-		
+
 		// reference to the first image, unless otherwise specified
 		date0 = imageList.get(0).cal;
-		
-		images = new Dataset[imageList.size()];
-		qcImages = new Dataset[imageList.size()];
-		
-//		System.out.println("GDAL init...");
-//		gdal.AllRegister();
-		
+
+		System.out.println("GDAL init...");
+		gdal.AllRegister();
+
 		_image_data = new ImageData[imageList.size()];
 		_qc_image_data = new ImageData[imageList.size()];
-		
+
 		// set the time vector
 		t = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
 			t[i] = diffDays(dImage);
-			// low memory environment setting
-			images[i] = GDALUtils.getDataset(dImage.imageName);
-			qcImages[i] = GDALUtils.getDataset(dImage.qcImageName);
-			
+
 			// set Image Data
-//			_qc_image_data[i] = new ImageData(dImage.qcImageName, 1);
-//			_image_data[i] = new ImageData(dImage.imageName, 1);
-			
-//			System.out.println(dImage.imageName);
-			
+			_qc_image_data[i] = new ImageData(dImage.qcImageName, 1);
+			_image_data[i] = new ImageData(dImage.imageName, 1);
+
+			//			System.out.println(dImage.imageName);
+
 		}
 	}
-	
-	
+
+
 	/**
 	 * Optionally set the zero reference for the time series, i.e. the reference time compared
 	 * to which the t-coordinate of the images will be computed.
@@ -131,8 +136,8 @@ public class ImageLoadr2 implements Loadr {
 			t[i] = diffDays(dImage);
 		}
 	}
-	
-	
+
+
 	/**
 	 * 
 	 * @return
@@ -143,7 +148,7 @@ public class ImageLoadr2 implements Loadr {
 		}
 		return null;
 	} 
-	
+
 	/**
 	 * 
 	 * @param i
@@ -155,7 +160,7 @@ public class ImageLoadr2 implements Loadr {
 		}
 		return null;
 	} 
-	
+
 	/**
 	 * Get the overall length of the time series rounded to the nearest number of days.
 	 * @return
@@ -163,7 +168,7 @@ public class ImageLoadr2 implements Loadr {
 	public int getLengthDays() {
 		return diffDays(imageList.get(0).cal, getLast().cal);
 	}
-	
+
 	/**
 	 * 
 	 * @param c1
@@ -172,11 +177,11 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public static int diffDays(Calendar c1, Calendar c2) {
 		long milliseconds1 = c1.getTimeInMillis();
-	    long milliseconds2 = c2.getTimeInMillis();
-	    long diff = milliseconds2 - milliseconds1;
-	    return Math.round(diff / (24 * 60 * 60 * 1000));
+		long milliseconds2 = c2.getTimeInMillis();
+		long diff = milliseconds2 - milliseconds1;
+		return Math.round(diff / (24 * 60 * 60 * 1000));
 	}
-	
+
 	/**
 	 * 
 	 * @param im1
@@ -186,7 +191,7 @@ public class ImageLoadr2 implements Loadr {
 	public int diffDays(DatedQCImage im2) {
 		return diffDays(date0, im2.cal);
 	}
-	
+
 	/**
 	 * Return size of the list.
 	 * @return
@@ -194,7 +199,7 @@ public class ImageLoadr2 implements Loadr {
 	public int getLengthImages() {
 		return imageList.size();
 	}
-	
+
 	@Override
 	public String toString() {
 		String out = "";
@@ -203,7 +208,7 @@ public class ImageLoadr2 implements Loadr {
 		}
 		return out;
 	}
-	
+
 	/**
 	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
 	 * @param pt
@@ -215,13 +220,13 @@ public class ImageLoadr2 implements Loadr {
 		//---------------------------------------------------
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
-			
+
 			// The following two function open image every time 
 			// This should be optimized. Open all image add the beginning
 			// and store them in an array.
 			Dataset image = GDALUtils.getDataset(dImage.imageName);
 			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
-			
+
 			try {
 				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
 				if (!BitChecker.mod13ok(qc)) {
@@ -242,24 +247,24 @@ public class ImageLoadr2 implements Loadr {
 			}
 		}
 		//---------------------------------------------------
-//		for (int i=0; i<imageList.size(); i++) {
-//			try {
-//				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
-//				if (!BitChecker.mod13ok(qc)) {
-//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-//					continue;
-//				}
-//				// else, write the time offset and the image data
-//				double data = GDALUtils.imageValue(images[i], pt, 1);
-//				out.add(new double[] {t[i], data});
-//			} catch (Exception e1) {
-//				e1.printStackTrace();
-//			} 
-//		}
+		//		for (int i=0; i<imageList.size(); i++) {
+		//			try {
+		//				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
+		//				if (!BitChecker.mod13ok(qc)) {
+		//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+		//					continue;
+		//				}
+		//				// else, write the time offset and the image data
+		//				double data = GDALUtils.imageValue(images[i], pt, 1);
+		//				out.add(new double[] {t[i], data});
+		//			} catch (Exception e1) {
+		//				e1.printStackTrace();
+		//			} 
+		//		}
 		//---------------------------------------------------
 		return out;
 	}
-	
+
 	/**
 	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
 	 * @param pt
@@ -267,83 +272,43 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
-		
+
 		for (int i=0; i<imageList.size(); i++) {
-			try {
-				long start = System.nanoTime();
-				int qc = (int)GDALUtils.imageValue(qcImages[i], x, y, 1);
-				
-				long stop = System.nanoTime();
-				long elapsed = (stop - start);
-				
-				
-				if (!BitChecker.mod13ok(qc)) {
-					System.err.println("Bad data: " + qc);
-//					System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-					continue;
-				}
-				
-				long start2 = System.nanoTime();
-				
-				// else, write the time offset and the image data
-				double data = GDALUtils.imageValue(images[i], x, y, 1);
-				long stop2 = System.nanoTime();
-				long elapsed2 = (stop2 - start2);
-//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
-				out.add(new double[] {t[i], data});
-//				System.err.println(t[i] + '\t' + data);
-			} catch (Exception e1) {
-				e1.printStackTrace();
-			} 
-		}
-		
-		//---------------------------------------------------
-		return out;
-	}
-	
-	
-	/**
-	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
-	 * @param pt
-	 * @return
-	 */
-	public synchronized List<double[]> getSeries2(double x, double y) {		
-		LinkedList<double[]> out = new LinkedList<double[]>();
-		
-		for (int i=0; i<imageList.size(); i++) {
-//		for (int i = 0; i < 1; i ++) {
 			try {
 				long start = System.nanoTime();
 				Dataset dataset = _qc_image_data[i].image();
 				int qc = (int)_qc_image_data[i].imageValue(dataset, x, y, 1);
 				long stop = System.nanoTime();
 				long elapsed = (stop - start);
-				
-				
+				//				System.out.println(elapsed);
+
 				if (!BitChecker.mod13ok(qc)) {
-					System.err.println("Bad data ");
+//										System.err.println("Bad data: " + qc);
 					continue;
 				}
-				
+
 				long start2 = System.nanoTime();
-				
+
 				// else, write the time offset and the image data
 				double data = _image_data[i].imageValue(_image_data[i].image(), x, y, 1);
+				//				double data = 0;
 				long stop2 = System.nanoTime();
 				long elapsed2 = (stop2 - start2);
-//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
-				
+				//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
+
 				out.add(new double[] {t[i], data});
-//				System.err.println(t[i] + '\t' + data);
+				//				System.err.println(t[i] + '\t' + data);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} 
+
+
 		}
-		
+
 		//---------------------------------------------------
 		return out;
 	}
-	
+
 	/**
 	 * Get a complete X vector for the time series.
 	 * @return
@@ -357,14 +322,11 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public void close() {
 		for (int i=0; i<imageList.size(); i++) {
-			images[i].delete();
-			images[i] = null;
-			qcImages[i].delete();
-			qcImages[i] = null;
+			_image_data[i].image().delete();
+			_qc_image_data[i].image().delete();
 		}
-		System.gc();
 	}
-	
+
 	/**
 	 * Fit a thin plate spline to the series and interpolate missing values.
 	 * This will fail if first and/or last values are missing, i.e. there is no extrapolation.
@@ -396,25 +358,21 @@ public class ImageLoadr2 implements Loadr {
 		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
 		return TSUtils.evaluateSpline(spline, t);
 	}
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		
+
+	public static void smallTest() {
 		// 2010, 2011 EVI
 		String dir1 = "/home/nick/MOD13A2/2010";
 		String dir2 = "/home/nick/MOD13A2/2011";
-		
+
 		try {
-			ImageLoadr2 loadr = new ImageLoadr2(new String[] {dir2, dir1});
-//			List<double[]> series = loadr.getSeries(GISUtils.makePoint(-121.0, 38.0));
+			ImageLoadr4 loadr = new ImageLoadr4(new String[] {dir2, dir1});
+			//			List<double[]> series = loadr.getSeries(GISUtils.makePoint(-121.0, 38.0));
 			Point point = GISUtils.makePoint(-121.0, 38.0);
 			long start = System.nanoTime();
 			List<double[]> series = loadr.getSeries(point.getX(), point.getY());
 			long stop = System.nanoTime();
 			long interval = stop - start;
-			
+
 			for (double[] datapoint : series) {
 				System.out.println(datapoint[0]+", "+datapoint[1]);
 			}
@@ -423,8 +381,66 @@ public class ImageLoadr2 implements Loadr {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		
+	}
+
+	public static void largeTest() throws Exception {
+		final int width_begin = 10500;
+		final int width_end = 13000;
+		final int height_begin = 4500;
+		final int height_end = 5500;
+		String dir1 = "/home/nick/MOD13A2/2010";
+		String dir2 = "/home/nick/MOD13A2/2011";
+
+		String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+		PlanarImage ref = JAIUtils.readImage(reference);
+		RandomIter iter = RandomIterFactory.create(ref, null);
+
+		ImageLoadr4 loadr = new ImageLoadr4(new String[] {dir2, dir1});
+
+		/**
+		 * Please enumerate the pixel line by line 
+		 * (that is, counting from y, and then x)
+		 */
+
+		for (int  y = height_begin; y < height_end; y++) {
+			for (int x = width_begin; x < width_end; x++) {
+				double _x = ulx + x * delta;
+				double _y = uly - y * delta;
+				if (Math.abs(_y) > 60.0) {
+					//	System.out.println("PERSIANN out of bounds.");
+					continue; // outside bounds of PERSIANN
+				}
+
+				if (iter.getSample(x, y, 0) == 0) {
+					//					System.out.println("Not land.");
+					continue; // not land
+				}
+
+				long start = System.nanoTime();
+				List<double[]> series = loadr.getSeries(_x, _y);
+				long stop = System.nanoTime();
+				double interval = (stop - start) / 1000000.0;
+				System.err.println(interval);
+
+				//				for (double[] datapoint : series) {
+				//					System.out.println(datapoint[0]+", "+datapoint[1]);
+				//				}
+			}
+		}
+	}
+
+	/**
+	 * TO-DO: enumerate the pixel line by line rather than column by column
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		//		smallTest();
+		try {
+			largeTest();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
