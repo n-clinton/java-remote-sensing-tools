@@ -23,7 +23,7 @@ import com.vividsolutions.jts.geom.Point;
 /**
  * @author Nicholas
  * Load a time series of imagery.
- * Like ImageLoadr, but pure Java (no GDAL)
+ * Like ImageLoadr2, but pure Java (no GDAL)
  */
 public class ImageLoadr3 implements Loadr {
 
