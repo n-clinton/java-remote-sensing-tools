@@ -5,8 +5,6 @@ package cn.edu.tsinghua.timeseries;
 
 import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
-import java.security.Timestamp;
-import java.sql.Date;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -14,12 +12,9 @@ import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -33,52 +28,47 @@ import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 
 import ru.sscc.spline.Spline;
 
-import com.berkenviro.gis.GISUtils;
+import cn.edu.tsinghua.lidar.BitChecker;
+import cn.edu.tsinghua.modis.BitCheck;
+
 import com.berkenviro.imageprocessing.JAIUtils;
-import com.ibm.icu.text.DateFormat;
-import com.ibm.icu.text.SimpleDateFormat;
-import com.vividsolutions.jts.geom.Point;
 
 /**
- * @author Nicholas 20130809 Latest version running on server
+ * @author Nicholas Clinton
+ * @author Cong Hui He
+ * 
+ * 20131007 Cong Hui's version ran on server and ran out of heap space 
+ * ~3/4 of the way through the global dataset, using ImageLoadr4.
+ * 20131007 Clean-up.  Remove unused code, made new constructor, synchronized
+ * 	maxCorrelation1 and maxCorrelation to use the same logic. nc.
+ * 
  */
 public class Correlatr {
-	Loadr eviLoadr;
-	Loadr persiannLoadr;
+	Loadr responseLoadr;
+	Loadr predictLoadr;
 	int[] lags;
 	BlockingQueue<Pixel> pixels; // reusable objects
 	BlockingQueue<Pixel> queue; // read, but not processed
 	ThreadPoolExecutor service;
 	ExecutorCompletionService<Pixel> ecs; // processing
 	PlanarImage ref;
-
-
+	boolean maxCorrInterp;
+	
 	/**
 	 * 
-	 * @param eviDirectories
-	 * @param persiannDirectories
-	 * @param ymd
-	 *            is {year, month, day} where month is zero-referenced
-	 * @throws Exception
+	 * @param response
+	 * @param predictor
+	 * @param ymd is {year, month, day} where month is zero-referenced
 	 */
-	public Correlatr(String[] eviDirectories, String[] persiannDirectories,
-			int[] ymd) throws Exception {
-		
-		// ImageLoadr2 is the original reading class
-		// ImageLoadr4 is the modified buffered reading class
-//		eviLoadr = new ImageLoadr2(eviDirectories);
-		eviLoadr = new ImageLoadr4(eviDirectories);
-
-
-		persiannLoadr = new PERSIANNLoadr(persiannDirectories);
-
-
+	public Correlatr(Loadr response, Loadr predictor, int[] ymd) {
+		responseLoadr = response;
+		predictLoadr = predictor;
 		Calendar cal = Calendar.getInstance();
 		cal.set(ymd[0], ymd[1], ymd[2]);
 		if (ymd != null) {
 			System.out.println("Setting zero-reference to: " + cal.getTime());
-			eviLoadr.setDateZero(cal);
-			persiannLoadr.setDateZero(cal);
+			responseLoadr.setDateZero(cal);
+			predictLoadr.setDateZero(cal);
 		}
 	}
 
@@ -86,8 +76,8 @@ public class Correlatr {
 	 * 
 	 */
 	public void close() {
-		eviLoadr.close();
-		persiannLoadr.close();
+		responseLoadr.close();
+		predictLoadr.close();
 	}
 
 	/**
@@ -128,13 +118,13 @@ public class Correlatr {
 	}
 
 	/**
-	 * Use interpolating splines.
+	 * Use interpolating splines.  Response must be greater than zero.
 	 * 
 	 * @param response
 	 * @param covariate
 	 * @return
 	 */
-	public double[] maxCorrelation1(List<double[]> response,
+	public double[] maxCorrelationInterpolated(List<double[]> response,
 			List<double[]> covariate, int[] lags) {
 		VectorialCovariance cov = new VectorialCovariance(2, false);
 		RealMatrix vc = null; // the variance/covariance matrix
@@ -155,8 +145,13 @@ public class Correlatr {
 					continue; // don't go out of bounds
 				}
 				try {
-					cov.increment(new double[] { rSpline.value(t),
-							cSpline.value(t - lags[l]) });
+					double r = rSpline.value(t);
+					if (r < 0) { // want only EVI greater than zero
+						continue;
+					}
+					double c = cSpline.value(t - lags[l]);
+					// System.out.println(t+","+r+","+c);
+					cov.increment(new double[] { r, c });
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -168,12 +163,16 @@ public class Correlatr {
 			// System.out.println(correlations[l]);
 		}
 		int max = weka.core.Utils.maxIndex(correlations); // might be negative
+		if (correlations[max] < 0) {
+			int min = weka.core.Utils.minIndex(correlations);
+			return new double[] { correlations[min], lags[min] };
+		}
 		return new double[] { correlations[max], lags[max] };
 	}
 
 	/**
-	 * This version is meant for daily PERSIANN data, for which it makes no
-	 * sense to fit a spline.
+	 * This version is meant for daily predictor data (PERSIANN), for which it makes no
+	 * sense to fit a spline.  The response (EVI) must be greater than zero and n>=5.
 	 * 
 	 * @param response
 	 * @param covariate
@@ -181,12 +180,11 @@ public class Correlatr {
 	 */
 	public double[] maxCorrelation(List<double[]> response,
 			List<double[]> covariate, int[] lags) {
-		//
+		// insert the predictor data to a TreeMap, with key=time
 		TreeMap<Integer, Double> map = new TreeMap<Integer, Double>();
 		for (double[] tc : covariate) {
 			map.put((int) tc[0], tc[1]);
 		}
-		//
 
 		VectorialCovariance cov = new VectorialCovariance(2, false);
 		double[] correlations = new double[lags.length];
@@ -242,91 +240,19 @@ public class Correlatr {
 		return new double[] { correlations[max], lags[max] };
 	}
 
-	/**
-	 * Old-school, synchronous way.
-	 * 
-	 * @param EVIloadr
-	 * @param PERSIANNloadr
-	 * @param base
-	 */
-	public void writeImages(String base, String reference, int[] lags) {
-		// dimensions of the EVI images
-		int width = 43032;
-		int height = 15539;
-		// center coords
-		double delta = 0.008365178679831331;
-		// center
-		double ulx = -179.9815962788889;
-		double uly = 69.99592926598972;
-
-		// outputs, written as unsigned bytes
-		WritableRaster corr = RasterFactory.createBandedRaster(
-				DataBuffer.TYPE_BYTE, width, height, 1, // bands
-				new java.awt.Point(0, 0)); // origin
-		WritableRaster days = RasterFactory.createBandedRaster(
-				DataBuffer.TYPE_BYTE, width, height, 1, // bands
-				new java.awt.Point(0, 0)); // origin
-		WritableRaster eviN = RasterFactory.createBandedRaster(
-				DataBuffer.TYPE_BYTE, width, height, 1, // bands
-				new java.awt.Point(0, 0)); // origin
-
-		PlanarImage ref = JAIUtils.readImage(reference);
-		RandomIter iterator = RandomIterFactory.create(ref, null);
-
-		// for (int x=888; x<15358; x++) { // North America
-		// for (int y=700; y<12372; y++) {
-		for (int x = 888; x < 2000; x++) {
-			for (int y = 700; y < 2000; y++) {
-				double _x = ulx + x * delta;
-				double _y = uly - y * delta;
-				// System.out.println(x+","+y);
-				// System.out.println(_x+","+_y);
-				if (Math.abs(_y) > 60.0) {
-					// System.out.println("PERSIANN out of bounds.");
-					continue; // outside bounds of PERSIANN
-
-				}
-				if (iterator.getSample(x, y, 0) == 0) {
-					// System.out.println("Not land.");
-					continue; // not land
-				}
-
-				Point eviPt = GISUtils.makePoint(_x, _y);
-				List<double[]> evi = eviLoadr.getSeries(eviPt);
-				if (evi.size() < 5) { // arbitrary cutoff
-					continue;
-				}
-				Point persiannPt = GISUtils.makePoint(
-						(_x < 0 ? _x + 360.0 : _x), _y);
-				List<double[]> precip = persiannLoadr.getSeries(persiannPt);
-				if (precip.size() < 5) { // arbitrary cutoff
-					continue;
-				}
-				List<double[]> persiann = persiannLoadr.getSeries(persiannPt);
-				double[] correlation = maxCorrelation(evi, persiann, lags);
-				// 10*correlation, integer part
-				corr.setSample(x, y, 0, (correlation[0] * 100));
-				days.setSample(x, y, 0, correlation[1]);
-				eviN.setSample(x, y, 0, evi.size());
-				System.out.println(x + "," + y + "," + (correlation[0]) + ","
-						+ correlation[1] + "," + evi.size());
-			}
-		}
-		JAIUtils.writeTiff(corr, base + "_corr.tif");
-		JAIUtils.writeTiff(days, base + "_days.tif");
-		JAIUtils.writeTiff(eviN, base + "_eviN.tif");
-	}
 
 	/**
-	 * New-school, asynchronous.
 	 * 
-	 * @param base
-	 * @param reference
-	 * @param lags
+	 * @param base is the base filename for output files
+	 * @param reference is the pixel reference.  An output will be written at each reference pixel == 1.
+	 * @param lags is an array of integer lags to test
+	 * @param nThreads is the number of compute threads to use
+	 * @param maxCorrInterp if true will interpolate the predictor variable
 	 */
 	public void writeImagesParallel(String base, String reference, int[] lags,
-			int nThreads) {
+			int nThreads, boolean maxCorrInterp) {
 		this.lags = lags;
+		this.maxCorrInterp = maxCorrInterp;
 
 		// object pool of pixels
 		pixels = new ArrayBlockingQueue<Pixel>(3 * nThreads);
@@ -334,14 +260,14 @@ public class Correlatr {
 			pixels.add(new Pixel(false));
 		}
 		queue = new ArrayBlockingQueue<Pixel>(nThreads);
-		// ecs = new ExecutorCompletionService<Pixel>(
-		// Executors.newFixedThreadPool(nThreads));
+		// ecs = new ExecutorCompletionService<Pixel>(Executors.newFixedThreadPool(nThreads));
 		service = new ThreadPoolExecutor(nThreads, nThreads, 0L,
 				TimeUnit.MILLISECONDS, 
 				new ArrayBlockingQueue<Runnable>(nThreads), 
 				new ThreadPoolExecutor.DiscardPolicy());
 		ecs = new ExecutorCompletionService<Pixel>(service);
 		ref = JAIUtils.readImage(reference);
+		JAIUtils.register(ref);
 
 		// read thread
 		PixelEnumeration enumerator = new PixelEnumeration();
@@ -366,7 +292,7 @@ public class Correlatr {
 	 */
 	class Pixel implements Callable<Pixel> {
 
-		List<double[]> evi, persiann;
+		List<double[]> response, covariate;
 		int x, y;
 		double[] correlation;
 		boolean dummy;
@@ -379,18 +305,18 @@ public class Correlatr {
 			this.dummy = dummy;
 		}
 
-		public void set(List<double[]> evi, List<double[]> persiann, int x,
+		public void set(List<double[]> response, List<double[]> covariate, int x,
 				int y) {
-			this.evi = evi;
-			this.persiann = persiann;
+			this.response = response;
+			this.covariate = covariate;
 			this.x = x;
 			this.y = y;
 			dummy = false;
 		}
 
 		public void clear() {
-			evi = null;
-			persiann = null;
+			response = null;
+			covariate = null;
 			correlation = null;
 			x = -1;
 			y = -1;
@@ -400,16 +326,20 @@ public class Correlatr {
 		public Pixel call() {
 			long start = System.nanoTime();
 			// DUMMY, nothing to do
-			if (evi == null && persiann == null) {
+			if (response == null && covariate == null) {
 				return this;
 			}
 			// not enough data
-			if (evi.size() < 5 || persiann.size() < 5) {
+			if (response.size() < 5 || covariate.size() < 5) {
 				correlation = new double[] { 0, 0 };
 			}
 			// do the computation
 			else {
-				correlation = maxCorrelation(evi, persiann, lags);
+				if (maxCorrInterp) {
+					correlation = maxCorrelationInterpolated(response, covariate, lags);
+				} else {
+					correlation = maxCorrelation(response, covariate, lags);
+				}
 			}
 
 			long stop = System.nanoTime();
@@ -422,7 +352,7 @@ public class Correlatr {
 		@Override
 		public String toString() {
 			return "(" + x + "," + y + "): " + Arrays.toString(correlation)
-					+ ", n=" + evi.size();
+					+ ", n=" + response.size();
 		}
 	}
 
@@ -492,7 +422,7 @@ public class Correlatr {
 		public void run() {
 			long start = System.currentTimeMillis();
 			try {
-				ennumerate();
+				enumerate();
 				System.out.println("Adding a dummy pixel into the queue");
 
 				// when we finish enumeration, we add a dummy  Pixel into the queue
@@ -514,21 +444,18 @@ public class Correlatr {
 		 * 
 		 * @throws InterruptedException
 		 */
-		public void ennumerate() throws InterruptedException, Exception {
+		public void enumerate() throws InterruptedException, Exception {
 			// center coords
-			final double delta = 0.008365178679831331;
+//			final double delta = 0.008365178679831331;
+			final double delta = (Double) ref.getProperty("deltaX");
 			// center
-			final double ulx = -179.9815962788889;
-			final double uly = 69.99592926598972;
-
-			ReadRunner eviReader = new ReadRunner();
-			ReadRunner persiannReader = new ReadRunner();
-
-			// This is the hot point of the program
-			// The area is too large to operate
-			// each cycle will take several seconds
-
-			// ?? how to determine the value of width and height
+//			final double ulx = -179.9815962788889;
+//			final double uly = 69.99592926598972;
+			double ulx = (Double) ref.getProperty("ulX") + (Double) ref.getProperty("deltaX") / 2.0;
+			double uly = (Double) ref.getProperty("ulY") + (Double) ref.getProperty("deltaY") / 2.0;
+			
+			ReadRunner responseReader = new ReadRunner();
+			ReadRunner covariateReader = new ReadRunner();
 
 			// for (int x=888; x<15358; x++) { // North America
 			// for (int y=700; y<12372; y++) {
@@ -537,11 +464,10 @@ public class Correlatr {
 			// for (int y=2500; y<5500; y++) {
 
 			// this time, we continue to run the rest of the image
-			final int width_begin = 14548;
+			final int width_begin = 0;
 			final int width_end = ref.getWidth();
-			final int height_begin = 8756;
+			final int height_begin = 0;
 			final int height_end = ref.getHeight();
-
 
 			for (int  y = height_begin; y < height_end; y++) {
 				for (int x = width_begin; x < width_end; x++) {
@@ -559,24 +485,24 @@ public class Correlatr {
 						continue; // not land
 					}
 
-					eviReader.x = _x;
-					eviReader.y = _y;
-					eviReader.loadr = eviLoadr;
-					persiannReader.x = (_x < 0 ? _x + 360.0 : _x);
-					persiannReader.y = _y;
-					persiannReader.loadr = persiannLoadr;
+					responseReader.x = _x;
+					responseReader.y = _y;
+					responseReader.loadr = responseLoadr;
+					covariateReader.x = (_x < 0 ? _x + 360.0 : _x);
+					covariateReader.y = _y;
+					covariateReader.loadr = predictLoadr;
 
-					es.submit(eviReader).get();
+					es.submit(responseReader).get();
 
 
-					es.submit(persiannReader).get();
+					es.submit(covariateReader).get();
 
 					//					if (++counter == 400) {
 					//						break;
 					//					}
 					// re-use these pixels
 					Pixel p = pixels.take();
-					p.set(eviReader.list, persiannReader.list, x, y);
+					p.set(responseReader.list, covariateReader.list, x, y);
 					// System.out.println("read "+p);
 					queue.put(p);
 
@@ -704,7 +630,7 @@ public class Correlatr {
 
 				writeCorr((finishedPix.correlation[0] * 100), finishedPix);
 				writeDays((byte) finishedPix.correlation[1], finishedPix);
-				writeN(finishedPix.evi.size(), finishedPix);
+				writeN(finishedPix.response.size(), finishedPix);
 				// System.out.println(finishedPix);
 
 				// periodically write to disk
@@ -729,7 +655,6 @@ public class Correlatr {
 				// re-use the finished pixel
 				finishedPix.clear();
 				pixels.add(finishedPix);
-
 
 			}
 			diskWrite();
@@ -764,20 +689,63 @@ public class Correlatr {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		// 201310017 From Haohuan's server.  Ran in two separate runs:
+//		Correlatr corr = null;
+//		try {
+//			corr = new Correlatr(new String[] { "/home/nick/MOD13A2/2010",
+//			"/home/nick/MOD13A2/2011" }, new String[] {
+//					"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/" },
+//					new int[] { 2010, 0, 1 });
+//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
+//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
+//			corr.writeImagesParallel(base, reference, lags, 10); // well, 10 is a quite reasonable argument
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		// File 1: evi_persiann_126_corr
+		// File 2: evi_persiann_3_corr
+		// This construction method is now deprecated, to decouple construction from the type of imagery
+		// Also, this run never finished processing South America
+		
 		Correlatr corr = null;
 		try {
-			corr = new Correlatr(new String[] { "/home/nick/MOD13A2/2010",
-			"/home/nick/MOD13A2/2011" }, new String[] {
-					"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/" },
-					new int[] { 2010, 0, 1 });
+			// EVI vegetation index response
+			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+			String eviDir = "EVI";
+			String eviQCDir = "VI_QC";
+			BitCheck mod13Checker = new BitCheck() {
+				@Override
+				public boolean isOK(int check) {
+					return BitChecker.mod13ok(check);
+				}
+				
+			};
+			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+			// PERSIANN rainfall predictor
+			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+			// the Correlatr
+			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
 			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
 			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
 			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-			corr.writeImagesParallel(base, reference, lags, 10); // well, 10 is a quite reasonable argument
+			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		
+		/*
+		 * Note that the previous can result in zero correlation (indicating insufficient data)
+		 * from the following conditions: if a combination of no data (from either data source)
+		 * and/or EVI<0 results in <5 data points.
+		 */
+		
+		
+		
 
 	}
 

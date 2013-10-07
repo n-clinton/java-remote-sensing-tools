@@ -33,8 +33,6 @@ public class ImageLoadr2 implements Loadr {
 	private Calendar date0;
 	private Dataset[] images;
 	private Dataset[] qcImages;
-	private ImageData[] _image_data;
-	private ImageData[] _qc_image_data;
 	
 	/**
 	 * 
@@ -93,27 +91,15 @@ public class ImageLoadr2 implements Loadr {
 		images = new Dataset[imageList.size()];
 		qcImages = new Dataset[imageList.size()];
 		
-//		System.out.println("GDAL init...");
-//		gdal.AllRegister();
-		
-		_image_data = new ImageData[imageList.size()];
-		_qc_image_data = new ImageData[imageList.size()];
-		
 		// set the time vector
 		t = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
 			t[i] = diffDays(dImage);
-			// low memory environment setting
+
 			images[i] = GDALUtils.getDataset(dImage.imageName);
 			qcImages[i] = GDALUtils.getDataset(dImage.qcImageName);
-			
-			// set Image Data
-//			_qc_image_data[i] = new ImageData(dImage.qcImageName, 1);
-//			_image_data[i] = new ImageData(dImage.imageName, 1);
-			
-//			System.out.println(dImage.imageName);
-			
+
 		}
 	}
 	
@@ -205,59 +191,12 @@ public class ImageLoadr2 implements Loadr {
 	}
 	
 	/**
-	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
+	 * Due to disk read loads, synchronized, so multiple this.getSeries() requests don't occur.
 	 * @param pt
 	 * @return
 	 */
 	public synchronized List<double[]> getSeries(Point pt) {		
-		LinkedList<double[]> out = new LinkedList<double[]>();
-		// iterate over images
-		//---------------------------------------------------
-		for (int i=0; i<imageList.size(); i++) {
-			DatedQCImage dImage = imageList.get(i);
-			
-			// The following two function open image every time 
-			// This should be optimized. Open all image add the beginning
-			// and store them in an array.
-			Dataset image = GDALUtils.getDataset(dImage.imageName);
-			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
-			
-			try {
-				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
-				if (!BitChecker.mod13ok(qc)) {
-					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-					continue;
-				}
-				// else, write the time offset and the image data
-				double data = GDALUtils.imageValue(image, pt, 1);
-				out.add(new double[] {t[i], data});
-			} catch (Exception e1) {
-				e1.printStackTrace();
-			} finally {
-				image.delete();
-				qcImage.delete();
-				image = null;
-				qcImage = null;
-				//System.gc();
-			}
-		}
-		//---------------------------------------------------
-//		for (int i=0; i<imageList.size(); i++) {
-//			try {
-//				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
-//				if (!BitChecker.mod13ok(qc)) {
-//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-//					continue;
-//				}
-//				// else, write the time offset and the image data
-//				double data = GDALUtils.imageValue(images[i], pt, 1);
-//				out.add(new double[] {t[i], data});
-//			} catch (Exception e1) {
-//				e1.printStackTrace();
-//			} 
-//		}
-		//---------------------------------------------------
-		return out;
+		return getSeries(pt.getX(), pt.getY());
 	}
 	
 	/**
@@ -267,82 +206,51 @@ public class ImageLoadr2 implements Loadr {
 	 */
 	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
-		
+		// iterate over images
+		// the inefficient way:
+//		for (int i=0; i<imageList.size(); i++) {
+//			DatedQCImage dImage = imageList.get(i);
+//			Dataset image = GDALUtils.getDataset(dImage.imageName);
+//			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
+//			try {
+//				int qc = (int)GDALUtils.imageValue(qcImage, x, y, 1);
+//				if (!BitChecker.mod13ok(qc)) {
+//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+//					continue;
+//				}
+//				// else, write the time offset and the image data
+//				double data = GDALUtils.imageValue(image, x, y, 1);
+//				out.add(new double[] {t[i], data});
+//			} catch (Exception e1) {
+//				e1.printStackTrace();
+//			} finally {
+//				image.delete();
+//				qcImage.delete();
+//				image = null;
+//				qcImage = null;
+//				//System.gc();
+//			}
+//		}
+		//---------------------------------------------------
+		// the slightly less inefficient way
 		for (int i=0; i<imageList.size(); i++) {
 			try {
-				long start = System.nanoTime();
 				int qc = (int)GDALUtils.imageValue(qcImages[i], x, y, 1);
-				
-				long stop = System.nanoTime();
-				long elapsed = (stop - start);
-				
-				
 				if (!BitChecker.mod13ok(qc)) {
-					System.err.println("Bad data: " + qc);
-//					System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
+					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
 					continue;
 				}
-				
-				long start2 = System.nanoTime();
-				
 				// else, write the time offset and the image data
 				double data = GDALUtils.imageValue(images[i], x, y, 1);
-				long stop2 = System.nanoTime();
-				long elapsed2 = (stop2 - start2);
-//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
 				out.add(new double[] {t[i], data});
-//				System.err.println(t[i] + '\t' + data);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} 
 		}
-		
 		//---------------------------------------------------
 		return out;
 	}
 	
-	
-	/**
-	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
-	 * @param pt
-	 * @return
-	 */
-	public synchronized List<double[]> getSeries2(double x, double y) {		
-		LinkedList<double[]> out = new LinkedList<double[]>();
-		
-		for (int i=0; i<imageList.size(); i++) {
-//		for (int i = 0; i < 1; i ++) {
-			try {
-				long start = System.nanoTime();
-				Dataset dataset = _qc_image_data[i].image();
-				int qc = (int)_qc_image_data[i].imageValue(dataset, x, y, 1);
-				long stop = System.nanoTime();
-				long elapsed = (stop - start);
-				
-				
-				if (!BitChecker.mod13ok(qc)) {
-					System.err.println("Bad data ");
-					continue;
-				}
-				
-				long start2 = System.nanoTime();
-				
-				// else, write the time offset and the image data
-				double data = _image_data[i].imageValue(_image_data[i].image(), x, y, 1);
-				long stop2 = System.nanoTime();
-				long elapsed2 = (stop2 - start2);
-//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
-				
-				out.add(new double[] {t[i], data});
-//				System.err.println(t[i] + '\t' + data);
-			} catch (Exception e1) {
-				e1.printStackTrace();
-			} 
-		}
-		
-		//---------------------------------------------------
-		return out;
-	}
 	
 	/**
 	 * Get a complete X vector for the time series.
@@ -424,8 +332,6 @@ public class ImageLoadr2 implements Loadr {
 			e.printStackTrace();
 		}
 		
-		
-
 	}
 
 }

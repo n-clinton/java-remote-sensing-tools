@@ -1359,7 +1359,22 @@ public class JAIUtils {
 //		stretched = gaussianStretch(formatted);
 //		writeJPEG(formatted, out);
 
+		// 20131007
+		String image = "X:/Documents/global_phenology/land_mask.tif";
+		PlanarImage im = readImage(image);
+		register(im);
+		System.out.println("ulX="+im.getProperty("ulX"));
+		System.out.println("ulY="+im.getProperty("ulY"));
+		System.out.println("deltaX="+im.getProperty("deltaX"));
+		System.out.println("deltaY="+im.getProperty("deltaY"));
 		
+		Dataset data = GDALUtils.getDataset(image);
+		System.out.println(Arrays.toString(data.GetGeoTransform()));
+		
+		double ulx = (Double)im.getProperty("ulX") + (Double) im.getProperty("deltaX") / 2.0;
+		double uly = (Double) im.getProperty("ulY") + (Double) im.getProperty("deltaY") / 2.0;
+		System.out.println("ulx_center="+ulx);
+		System.out.println("uly_center="+uly);
 	}
 
 

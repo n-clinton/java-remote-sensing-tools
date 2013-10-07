@@ -3,10 +3,6 @@
  */
 package cn.edu.tsinghua.timeseries;
 
-import javax.media.jai.PlanarImage;
-import javax.media.jai.iterator.RandomIter;
-import javax.media.jai.iterator.RandomIterFactory;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -14,25 +10,28 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.media.jai.PlanarImage;
+import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
 
-import ru.sscc.spline.Spline;
 import cn.edu.tsinghua.lidar.BitChecker;
-import cn.edu.tsinghua.timeseries.Correlatr.Pixel;
+import cn.edu.tsinghua.modis.BitCheck;
 
 import com.berkenviro.gis.GISUtils;
-import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.ImageData;
 import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Point;
 
 /**
- * @author Nicholas
- * Load a time series of imagery.
+ * @author Nicholas Clinton
+ * @author Cong Hui He
+ * 
+ * Load a time series of imagery from the MODIS MOD13 product.
+ * 20131007. Clean up.  
  */
 public class ImageLoadr4 implements Loadr {
 
@@ -41,21 +40,22 @@ public class ImageLoadr4 implements Loadr {
 	private Calendar date0;
 	private ImageData[] _image_data;
 	private ImageData[] _qc_image_data;
-	// center coords
-	final static double delta = 0.008365178679831331;
-	// center
-	final static double ulx = -179.9815962788889;
-	final static double uly = 69.99592926598972;
+	
+	private BitCheck bitChecker;
 
 	/**
 	 * 
 	 * @param directories
 	 * @throws Exception
 	 */
-	public ImageLoadr4(String[] directories) throws Exception {
+	public ImageLoadr4(String[] directories, String dataDir, String qaqcDir, BitCheck bitChecker) throws Exception {
 		System.out.println("Initializing image loader...");
+		
+		this.bitChecker = bitChecker;
+		
 		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "50");
 		gdal.SetCacheMax(1024);
+		
 		imageList = new ArrayList<DatedQCImage>();
 
 		for (int d=0; d<directories.length; d++) {
@@ -75,14 +75,14 @@ public class ImageLoadr4 implements Loadr {
 				c.set(Integer.parseInt(ymd[0]), Integer.parseInt(ymd[1])-1, Integer.parseInt(ymd[2]));
 				image.cal = c;
 				// find the image in a subdirectory
-				File imageDir = new File(f.getPath()+"/EVI");
+				File imageDir = new File(f.getPath()+"/"+dataDir);
 				for (File iFile : imageDir.listFiles()) {
 					if (iFile.getName().endsWith(".tif")) {
 						image.imageName = iFile.getAbsolutePath();
 					}
 				}
 				// find the QC image in another subdirectory
-				File qcDir = new File(f.getPath()+"/VI_QC");
+				File qcDir = new File(f.getPath()+"/"+qaqcDir);
 				for (File qcFile : qcDir.listFiles()) {
 					if (qcFile.getName().endsWith(".tif")) {
 						image.qcImageName = qcFile.getAbsolutePath();
@@ -92,7 +92,6 @@ public class ImageLoadr4 implements Loadr {
 				imageList.add(image);
 			}
 		}
-
 
 		// Keep the list in chronological order
 		Collections.sort(imageList);
@@ -118,7 +117,6 @@ public class ImageLoadr4 implements Loadr {
 			_image_data[i] = new ImageData(dImage.imageName, 1);
 
 			//			System.out.println(dImage.imageName);
-
 		}
 	}
 
@@ -211,64 +209,18 @@ public class ImageLoadr4 implements Loadr {
 
 	/**
 	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
-	 * @param pt
-	 * @return
+	 * @param pt is a georeferenced Point
+	 * @return a list of {t, value} double arrays.
 	 */
 	public synchronized List<double[]> getSeries(Point pt) {		
-		LinkedList<double[]> out = new LinkedList<double[]>();
-		// iterate over images
-		//---------------------------------------------------
-		for (int i=0; i<imageList.size(); i++) {
-			DatedQCImage dImage = imageList.get(i);
-
-			// The following two function open image every time 
-			// This should be optimized. Open all image add the beginning
-			// and store them in an array.
-			Dataset image = GDALUtils.getDataset(dImage.imageName);
-			Dataset qcImage = GDALUtils.getDataset(dImage.qcImageName);
-
-			try {
-				int qc = (int)GDALUtils.imageValue(qcImage, pt, 1);
-				if (!BitChecker.mod13ok(qc)) {
-					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-					continue;
-				}
-				// else, write the time offset and the image data
-				double data = GDALUtils.imageValue(image, pt, 1);
-				out.add(new double[] {t[i], data});
-			} catch (Exception e1) {
-				e1.printStackTrace();
-			} finally {
-				image.delete();
-				qcImage.delete();
-				image = null;
-				qcImage = null;
-				//System.gc();
-			}
-		}
-		//---------------------------------------------------
-		//		for (int i=0; i<imageList.size(); i++) {
-		//			try {
-		//				int qc = (int)GDALUtils.imageValue(qcImages[i], pt, 1);
-		//				if (!BitChecker.mod13ok(qc)) {
-		//					//System.err.println("Bad data at "+pt+" t="+dImage.cal.getTime());
-		//					continue;
-		//				}
-		//				// else, write the time offset and the image data
-		//				double data = GDALUtils.imageValue(images[i], pt, 1);
-		//				out.add(new double[] {t[i], data});
-		//			} catch (Exception e1) {
-		//				e1.printStackTrace();
-		//			} 
-		//		}
-		//---------------------------------------------------
-		return out;
+		return getSeries(pt.getX(), pt.getY());
 	}
 
+
 	/**
-	 * Due to disk read loads, synchonized, so multiple this.getSeries() requests don't occur.
-	 * @param pt
-	 * @return
+	 * @param x is a georeferenced coordinate
+	 * @param y is a georeferenced coordinate
+	 * @return a list of {t, value} double arrays.
 	 */
 	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
@@ -282,7 +234,8 @@ public class ImageLoadr4 implements Loadr {
 				long elapsed = (stop - start);
 				//				System.out.println(elapsed);
 
-				if (!BitChecker.mod13ok(qc)) {
+				//if (!BitChecker.mod13ok(qc)) {
+				if (!bitChecker.isOK(qc)) {
 //										System.err.println("Bad data: " + qc);
 					continue;
 				}
@@ -301,11 +254,7 @@ public class ImageLoadr4 implements Loadr {
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} 
-
-
 		}
-
-		//---------------------------------------------------
 		return out;
 	}
 
@@ -359,13 +308,25 @@ public class ImageLoadr4 implements Loadr {
 		return TSUtils.evaluateSpline(spline, t);
 	}
 
+	/**
+	 * 
+	 */
 	public static void smallTest() {
 		// 2010, 2011 EVI
 		String dir1 = "/home/nick/MOD13A2/2010";
 		String dir2 = "/home/nick/MOD13A2/2011";
 
 		try {
-			ImageLoadr4 loadr = new ImageLoadr4(new String[] {dir2, dir1});
+			ImageLoadr4 loadr = new ImageLoadr4(
+					new String[] {dir2, dir1}, 
+					"EVI", "VI_QC", 
+					new BitCheck() {
+						@Override
+						public boolean isOK(int check) {
+							return BitChecker.mod13ok(check);
+						} 
+					}
+			);
 			//			List<double[]> series = loadr.getSeries(GISUtils.makePoint(-121.0, 38.0));
 			Point point = GISUtils.makePoint(-121.0, 38.0);
 			long start = System.nanoTime();
@@ -383,7 +344,17 @@ public class ImageLoadr4 implements Loadr {
 		}
 	}
 
+	/**
+	 * 
+	 * @throws Exception
+	 */
 	public static void largeTest() throws Exception {
+		// pixel size
+		final double delta = 0.008365178679831331;
+		// center of the upper left 
+		final double ulx = -179.9815962788889;
+		final double uly = 69.99592926598972;
+		
 		final int width_begin = 10500;
 		final int width_end = 13000;
 		final int height_begin = 4500;
@@ -395,7 +366,16 @@ public class ImageLoadr4 implements Loadr {
 		PlanarImage ref = JAIUtils.readImage(reference);
 		RandomIter iter = RandomIterFactory.create(ref, null);
 
-		ImageLoadr4 loadr = new ImageLoadr4(new String[] {dir2, dir1});
+		ImageLoadr4 loadr = new ImageLoadr4(
+				new String[] {dir2, dir1}, 
+				"EVI", "VI_QC", 
+				new BitCheck() {
+					@Override
+					public boolean isOK(int check) {
+						return BitChecker.mod13ok(check);
+					} 
+				}
+		);
 
 		/**
 		 * Please enumerate the pixel line by line 
