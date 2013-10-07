@@ -72,7 +72,8 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.util.AffineTransformation;
 
 /**
- * @author owner
+ * @author Nicholas Clinton
+ * 20131007. 
  *
  */
 public class GDALUtils {
@@ -84,7 +85,7 @@ public class GDALUtils {
 		System.out.println("GDAL init...");
 		gdal.AllRegister();
 	}
-
+	
 	/**
 	 * Lookup items (which might be wavelengths) in the GDAL metadata dictionary.
 	 * This was developed for a particular ENVI file format.  May or may not work with other datasets.
@@ -95,7 +96,7 @@ public class GDALUtils {
 		Dataset poDataset = getDataset(fileName);
 		return getWavelengths(poDataset);
 	}
-
+	
 	/**
 	 * Lookup items (which might be wavelengths) in the GDAL metadata dictionary.
 	 * This was developed for a particular ENVI file format.  May or may not work with other datasets.
@@ -119,7 +120,7 @@ public class GDALUtils {
 		}
 		return wavelengths;
 	}
-
+	
 	/**
 	 * Use getAttribute("wavelength") instead.  AVIRIS has a weird metadata key structure.
 	 * @param fileName is the AVIRIS filename
@@ -127,7 +128,7 @@ public class GDALUtils {
 	 */
 	@Deprecated
 	public static double[] getAVIRISWavelengths(String fileName) {
-
+		
 		File f = new File(fileName);
 		Dataset poDataset = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_ReadOnly);
 		double[] wavelengths = new double[poDataset.getRasterCount()];
@@ -149,7 +150,7 @@ public class GDALUtils {
 		}
 		return wavelengths;
 	}
-
+	
 	/**
 	 * Read an ENVI header file to retrieve the FWHMs.  Return them as a double[].
 	 * GDAL is only used to get the number of bands.
@@ -159,8 +160,8 @@ public class GDALUtils {
 	public static double[] getENVIfwhm(String fileName) {
 		return getAttribute(fileName, "fwhm");
 	}
-
-
+	
+	
 	/**
 	 * Read an ENVI header file to retrieve a metadata value with key = attribute.
 	 * GDAL is only used to get the number of bands.
@@ -206,10 +207,10 @@ public class GDALUtils {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
+		
 		return array;
 	}
-
+	
 	/**
 	 * 
 	 * @param fileName
@@ -220,17 +221,17 @@ public class GDALUtils {
 		Dataset data = (Dataset) gdal.Open(f.getAbsolutePath(), gdalconst.GA_ReadOnly);
 		return data;
 	}
-
+	
 	/**
 	 * AffineTransformation:
 	 * 	|x'| = 	| m00 m01 m02 |*|x|
      	|y'|	| m10 m11 m12 | |y|
      	|1 |	|  0   0   1  | |1|
-
-	 * GDAL:
-	 * 	Xp = padfTransform[0] + P*padfTransform[1] + L*padfTransform[2];
+     		
+     * GDAL:
+     * 	Xp = padfTransform[0] + P*padfTransform[1] + L*padfTransform[2];
    		Yp = padfTransform[3] + P*padfTransform[4] + L*padfTransform[5];
-
+   		
 	 * @param data
 	 * @return
 	 */
@@ -244,7 +245,7 @@ public class GDALUtils {
 		double m11 = padfTransform[5];
 		return new AffineTransformation(m00, m01, m02, m10, m11, m12);
 	}
-
+	
 	/**
 	 * 
 	 * @param source
@@ -257,7 +258,7 @@ public class GDALUtils {
 		dest.setProperty("deltaX", new Double(padfTransform[1]));
 		dest.setProperty("deltaY", new Double(padfTransform[5]));
 	}
-
+	
 	/**
 	 * This method takes a double[] [x,y] in the coordinate space of the 
 	 * projected image and the reference image and returns the [x,y]
@@ -273,7 +274,7 @@ public class GDALUtils {
 		Coordinate pix = new Coordinate();
 		inv.transform(new Coordinate(ImageProjXY[0], ImageProjXY[1]), pix);
 		if ((int)pix.x < 0 || (int)pix.x >= data.getRasterXSize() 
-				|| (int)pix.y < 0 || (int)pix.y >= data.getRasterYSize()) {
+		 || (int)pix.y < 0 || (int)pix.y >= data.getRasterYSize()) {
 			throw new Exception("Impossible coordinates: "+pix);
 		}
 		return new int[] {(int)(pix.x), (int)(pix.y)};
@@ -298,7 +299,7 @@ public class GDALUtils {
 		at.transform(pix, projPix);
 		return new double[] {projPix.x, projPix.y};
 	}
-
+	
 	/**
 	 * This method is for overlaying a georeferenced point on a referenced image.  
 	 * The coordinate system of the Dataset and Point must match.
@@ -311,7 +312,7 @@ public class GDALUtils {
 	public static double imageValue(Dataset data, Point pt, int b) throws Exception {
 		return imageValue(data, pt.getX(), pt.getY(), b);
 	}
-
+	
 	/**
 	 * 
 	 * @param data
@@ -322,16 +323,8 @@ public class GDALUtils {
 	 * @throws Exception
 	 */
 	public static double imageValue(Dataset data, double x, double y, int b) throws Exception {
-
-
 		int[] pixelXY = getPixelXY(new double[] {x, y}, data);
-		long start2 = System.nanoTime();
-		double ret_value = pixelValue(data, pixelXY[0], pixelXY[1], b); // It is slow
-		long stop2 = System.nanoTime();
-		long elapsed2 = (stop2 - start2);
-		//		System.err.println(elapsed2);
-
-		return ret_value;
+		return pixelValue(data, pixelXY[0], pixelXY[1], b);
 	}
 
 	/**
@@ -342,39 +335,16 @@ public class GDALUtils {
 	 * @param b is one-indexed band
 	 * @return
 	 */
-	public static double pixelValueFromBlock(Dataset data, int x, int y, int b) {
-		// for each image file, there is a dataset.
+	public static double pixelValue(Dataset data, int x, int y, int b) {
 		Band band = data.GetRasterBand(b);
 		int buf_type = band.getDataType();
-		int block_xsize = band.GetBlockXSize();
-		int block_ysize = band.GetBlockYSize();
-
-		if (x > block_xsize) {
-			System.err.println("index of X is larger than size of the block!");
-			System.exit(-1);
-		}
-
-		int buf_size = gdal.GetDataTypeSize(buf_type);
-
-		//System.err.println("xsize: " + block_xsize + ", ysize: " + block_ysize);
-		//    System.err.println("buf_type: "+ buf_type + ", buf_size: " + buf_size);
-
-		//    System.err.println("x: " + x + ", y: " + y);
+		int buf_size = gdal.GetDataTypeSize(buf_type) / 8;
 		ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
-
-
 		//ByteBuffer pixel = ByteBuffer.allocate(buf_size);
-
 		pixel.order(ByteOrder.nativeOrder());
-
 		// offset by pixel-1 to start reading at pixel
-		long start2 = System.nanoTime();
 		band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
-		long stop2 = System.nanoTime();
-		long elapsed2 = (stop2 - start2);
-		//    System.err.println(elapsed2);
-
-		//    band.ReadRaster(x, y, 1, 1, 1, 1, buf_type, pixel.array());
+		//band.ReadRaster(x, y, 1, 1, 1, 1, buf_type, pixel.array());
 
 		if (buf_type == gdalconstConstants.GDT_Byte) {
 			return ((int)pixel.get()) & 0xff;
@@ -389,67 +359,12 @@ public class GDALUtils {
 		} else if(buf_type == gdalconstConstants.GDT_UInt16) {
 			return pixel.getChar(); // ?????????????
 		}
-
-		return Double.NaN;
-	}
-
-	/**
-	 * Return image value from pixel coordinates.
-	 * @param data is the Dataset
-	 * @param x is pixel
-	 * @param y is line
-	 * @param b is one-indexed band
-	 * @return
-	 */
-	public static double pixelValue(Dataset data, int x, int y, int b) {
-		// for each image file, there is a dataset.
-		Band band = data.GetRasterBand(b);
-		int buf_type = band.getDataType();
-		int buf_size = gdal.GetDataTypeSize(buf_type) / 8;
-
-		int block_xsize = band.GetBlockXSize();
-		int block_ysize = band.GetBlockYSize();
-		//		System.err.println("xsize: " + block_xsize + ", ysize: " + block_ysize);
-		//		System.err.println("buf_type: "+ buf_type + ", buf_size: " + buf_size);
-		//		System.err.println("x: " + x  + ", y: " + y);
-
-		//		System.err.println("x: " + x + ", y: " + y);
-		ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
-
-
-		//ByteBuffer pixel = ByteBuffer.allocate(buf_size);
-
-		pixel.order(ByteOrder.nativeOrder());
-
-		// offset by pixel-1 to start reading at pixel
-		long start2 = System.nanoTime();
-		band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
-		long stop2 = System.nanoTime();
-		long elapsed2 = (stop2 - start2);
-		//		System.err.println(elapsed2);
-
-		//		band.ReadRaster(x, y, 1, 1, 1, 1, buf_type, pixel.array());
-
-		if (buf_type == gdalconstConstants.GDT_Byte) {
-			return ((int)pixel.get()) & 0xff;
-		} else if(buf_type == gdalconstConstants.GDT_Int16) {
-			return pixel.getShort();
-		} else if(buf_type == gdalconstConstants.GDT_Int32) {
-			return pixel.getInt();
-		} else if(buf_type == gdalconstConstants.GDT_Float32) {
-			return pixel.getFloat();
-		} else if(buf_type == gdalconstConstants.GDT_Float64) {
-			return pixel.getDouble();
-		} else if(buf_type == gdalconstConstants.GDT_UInt16) {
-			double ret = pixel.getChar(); // ?????????????
-//			System.out.println("ret: " + ret);
-			return ret;
-		}
-
+		
 		return Double.NaN;
 	}
 	
 	/**
+	 * Read a line of data
 	 * @param data
 	 * @param x
 	 * @param y
@@ -457,52 +372,37 @@ public class GDALUtils {
 	 * @param length
 	 * @return
 	 */
-	public static double [] pixelValues(Dataset data, int x, int y, int b, int length) {
-		// for each image file, there is a dataset.
+	public static double[] xPixelsValue(Dataset data, int x, int y, int b, int length) {
 		Band band = data.GetRasterBand(b);
 		int buf_type = band.getDataType();
 		int buf_size = length * gdal.GetDataTypeSize(buf_type) / 8;
-
-		int block_xsize = band.GetBlockXSize();
-		int block_ysize = band.GetBlockYSize();
-		//		System.err.println("xsize: " + block_xsize + ", ysize: " + block_ysize);
-		//		System.err.println("buf_type: "+ buf_type + ", buf_size: " + buf_size);
-		//		System.err.println("x: " + x  + ", y: " + y);
-
-		//		System.err.println("x: " + x + ", y: " + y);
-//		ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
-
-
-		ByteBuffer pixel = ByteBuffer.allocate(buf_size);
-
-		pixel.order(ByteOrder.nativeOrder());
-
+		//ByteBuffer pixel = ByteBuffer.allocateDirect(buf_size);
+		ByteBuffer pixels = ByteBuffer.allocate(buf_size);
+		pixels.order(ByteOrder.nativeOrder());
 		// offset by pixel-1 to start reading at pixel
-		band.ReadRaster(x, y, length, 1, length, 1, buf_type, pixel.array()); 
-
-
-		double [] ret = new double[length];
-		for (int i = 0; i < length; i++) {
-			if (buf_type == gdalconstConstants.GDT_Byte) {
-				ret[i] =  ((int)pixel.get()) & 0xff;
-			} else if(buf_type == gdalconstConstants.GDT_Int16) {
-				ret[i] =  pixel.getShort();
-			} else if(buf_type == gdalconstConstants.GDT_Int32) {
-				ret[i] =  pixel.getInt();
-			} else if(buf_type == gdalconstConstants.GDT_Float32) {
-				ret[i] =  pixel.getFloat();
-			} else if(buf_type == gdalconstConstants.GDT_Float64) {
-				ret[i] =  pixel.getDouble();
-			} else if(buf_type == gdalconstConstants.GDT_UInt16) {
-			  ret[i] =  pixel.getChar(); // ?????????????
-			}
-		}
-		
+		//band.ReadRaster_Direct(x, y, 1, 1, 1, 1, buf_type, pixel); 
+		band.ReadRaster(x, y, length, 1, length, 1, buf_type, pixels.array());
+		 double[] ret = new double[length];
+		 for (int r=0; r<ret.length; r++) {
+			 if (buf_type == gdalconstConstants.GDT_Byte) {
+					ret[r] = ((int)pixels.get()) & 0xff;
+				} else if(buf_type == gdalconstConstants.GDT_Int16) {
+					ret[r] = pixels.getShort();
+				} else if(buf_type == gdalconstConstants.GDT_Int32) {
+					ret[r] = pixels.getInt();
+				} else if(buf_type == gdalconstConstants.GDT_Float32) {
+					ret[r] = pixels.getFloat();
+				} else if(buf_type == gdalconstConstants.GDT_Float64) {
+					ret[r] = pixels.getDouble();
+				} else if(buf_type == gdalconstConstants.GDT_UInt16) {
+					ret[r] = pixels.getChar(); // ?????????????
+				}
+		 }
 		return ret;
 	}
-
+	
 	/**
-	 * 
+	 * Get a pixel vector (spectrum).
 	 * @param data
 	 * @param x
 	 * @param y
@@ -515,7 +415,7 @@ public class GDALUtils {
 		}
 		return values;
 	}
-
+	
 	/**
 	 * 
 	 * @param poDataset
@@ -573,16 +473,16 @@ public class GDALUtils {
 		}
 		SampleModel sModel = new BandedSampleModel(data_type, xsize, ysize, 1);
 		ColorModel cModel = new ComponentColorModel(
-				ColorSpace.getInstance(ColorSpace.CS_GRAY), 
-				false, 
-				false, 
-				ColorModel.OPAQUE, 
-				data_type);
+										ColorSpace.getInstance(ColorSpace.CS_GRAY), 
+										false, 
+										false, 
+										ColorModel.OPAQUE, 
+										data_type);
 		WritableRaster raster = Raster.createWritableRaster(sModel, buff, new java.awt.Point(0,0)); 
-
+		
 		return new BufferedImage(cModel, raster, false, null);
 	}
-
+	
 	/**
 	 * 
 	 * @param from
@@ -605,8 +505,8 @@ public class GDALUtils {
 		data.FlushCache();
 		data.delete();
 	}
-
-
+	
+	
 	/**
 	 * NOTE: OSX throws:
 	 * "ERROR 6: Unable to load PROJ.4 library (libproj.dylib), 
@@ -633,7 +533,7 @@ public class GDALUtils {
 				ref.getRasterYSize(),
 				1,
 				new java.awt.Point(0,0));
-
+		
 		for (int y=0; y<ref.getRasterYSize(); y++) {
 			for (int x=0; x<ref.getRasterXSize(); x++) {
 				try {
@@ -651,73 +551,73 @@ public class GDALUtils {
 		JAIUtils.writeTiff(xOut, referenceName.replace(".tif", "_long.tif"));
 		JAIUtils.writeTiff(yOut, referenceName.replace(".tif", "_lat.tif"));
 	}
-
+	
 	/**
 	 * Test code and processing log.
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		//String hFile = "H:/headwall/CIRPAS_2010/11-783-02_2010_10_11_19_30_39_9_rad";
-		//		String aFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/f110609t01p00r06rdn_a/f110609t01p00r06rdn_a_sc01_ort_img";
-		//		double[] waves = getENVIfwhm(aFile);
-
+//		String aFile = "C:/Users/owner/Documents/ASTL/Ivanpah_2011/Imagery/f110609t01p00r06rdn_a/f110609t01p00r06rdn_a_sc01_ort_img";
+//		double[] waves = getENVIfwhm(aFile);
+		
 		// 20121026 test code
-		//		try {
-		//			String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
-		//			PlanarImage pImage = JAIUtils.readImage(file);
-		//			System.out.println("UL:");
-		//			double[] projXY = JAIUtils.getProjectedXY(new int[] {0,0}, pImage);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 0, 0, 0));
-		//			System.out.println("LR:");
-		//			projXY = JAIUtils.getProjectedXY(new int[] {pImage.getWidth()-1, pImage.getHeight()-1}, pImage);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, pImage.getWidth()-1, pImage.getHeight()-1, 0));
-		//			System.out.println("arbitrary land:");
-		//			projXY = JAIUtils.getProjectedXY(new int[] {23870, 6388}, pImage);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 23870, 6388, 0));
-		//			System.out.println("\t long,lat = -121.0, 38.0");
-		//			System.out.println("\t data = "+JAIUtils.imageValue(GISUtils.makePoint(-121.0, 38.0), pImage));
-		//			
-		//			Dataset data = GDALUtils.getDataset(file);
-		//			System.out.println("UL:");
-		//			projXY = GDALUtils.getProjectedXY(new int[] {0,0}, data);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 0, 0, 1));
-		//			System.out.println("LR:");
-		//			projXY = GDALUtils.getProjectedXY(new int[] {data.getRasterXSize()-1, data.getRasterYSize()-1}, data);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+GDALUtils.pixelValue(data, data.getRasterXSize()-1, data.getRasterYSize()-1, 1));
-		//			System.out.println("arbitrary land:");
-		//			projXY = GDALUtils.getProjectedXY(new int[] {23870, 6388}, data);
-		//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
-		//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 23870, 6388, 1));
-		//			System.out.println("\t long,lat = -121.0, 38.0");
-		//			System.out.println("\t data = "+GDALUtils.imageValue(data, GISUtils.makePoint(-121.0, 38.0), 1));
-		//			
-		//		} catch (Exception e) {
-		//			e.printStackTrace();
-		//		}
-
-		//		System.out.println(
-		//				(getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif")).GetProjection());
+//		try {
+//			String file = "D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
+//			PlanarImage pImage = JAIUtils.readImage(file);
+//			System.out.println("UL:");
+//			double[] projXY = JAIUtils.getProjectedXY(new int[] {0,0}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 0, 0, 0));
+//			System.out.println("LR:");
+//			projXY = JAIUtils.getProjectedXY(new int[] {pImage.getWidth()-1, pImage.getHeight()-1}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, pImage.getWidth()-1, pImage.getHeight()-1, 0));
+//			System.out.println("arbitrary land:");
+//			projXY = JAIUtils.getProjectedXY(new int[] {23870, 6388}, pImage);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+JAIUtils.pixelValue(pImage, 23870, 6388, 0));
+//			System.out.println("\t long,lat = -121.0, 38.0");
+//			System.out.println("\t data = "+JAIUtils.imageValue(GISUtils.makePoint(-121.0, 38.0), pImage));
+//			
+//			Dataset data = GDALUtils.getDataset(file);
+//			System.out.println("UL:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {0,0}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 0, 0, 1));
+//			System.out.println("LR:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {data.getRasterXSize()-1, data.getRasterYSize()-1}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, data.getRasterXSize()-1, data.getRasterYSize()-1, 1));
+//			System.out.println("arbitrary land:");
+//			projXY = GDALUtils.getProjectedXY(new int[] {23870, 6388}, data);
+//			System.out.println("\t x,y = "+projXY[0]+","+projXY[1]);
+//			System.out.println("\t data = "+GDALUtils.pixelValue(data, 23870, 6388, 1));
+//			System.out.println("\t long,lat = -121.0, 38.0");
+//			System.out.println("\t data = "+GDALUtils.imageValue(data, GISUtils.makePoint(-121.0, 38.0), 1));
+//			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+//		System.out.println(
+//				(getDataset("D:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif")).GetProjection());
 		//System.out.println(gdal.GetCacheMax());
-
+		
 		//Dataset d = getDataset("I:/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif");
 		//d.delete();
 
 		// 20130202
-		//		String filename = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/Delta_Hymap_12.img";
-		//		Dataset poDataset = getDataset(filename);
-		//		BufferedImage buff = getBufferedImage(poDataset, 1);
-
-		//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
-		//		for (int b=0; b<4; b++) {
-		//			String outfile = filename.replace(".tif", "_b"+b+".tif");
-		//			transferGeo(filename, outfile);
-		//		}
-
+//		String filename = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/Delta_Hymap_12.img";
+//		Dataset poDataset = getDataset(filename);
+//		BufferedImage buff = getBufferedImage(poDataset, 1);
+		
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		for (int b=0; b<4; b++) {
+//			String outfile = filename.replace(".tif", "_b"+b+".tif");
+//			transferGeo(filename, outfile);
+//		}
+		
 		// 20130522
 		//String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
 		//String filename = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
@@ -729,59 +629,56 @@ public class GDALUtils {
 		//transferGeo(filename, outfile);
 		//outfile = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4_y.tif";
 		//transferGeo(filename, outfile);
-
+	
 		// 20130529
 		//String img = "/Users/nclinton/Documents/data/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif"; // doesn't work on mac
 		//String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
 		//writeLatLongImages(img);
-		//		String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
-		//		writeLatLongImages(img);
-		//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
-		//		writeLatLongImages(img);
-		//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
-		//		writeLatLongImages(img);
-
-
+//		String img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+//		img = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//		writeLatLongImages(img);
+		
+		
 		//String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4-J48.tif";
 		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_lat.tif";
 		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_long.tif";
 		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_sync.tif";
 		//String outfile = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5-TM-118-032-20091005-L4_meta_label_sync.tif";
 		//transferGeo(filename, outfile);
-
-		//		String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif");
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif");
-		//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif");
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif");
-		//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif");
-		//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif");
-
-
-		//			gdal.AllRegister();
-		String filename = "/home/nick/MOD13A2/2010/2010.01.01/VI_QC/2010.01.01_VI_QC_mosaic_geo.1_km_16_days_VI_Quality.tif";
-		String filename2 = "/home/nick/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
-		Dataset data = getDataset(filename2);
-
-
-		// that is expected array
-		final int kSize = 10;
-		final int x = 7051;
-		final int y = 3825;
-		double [] expected = new double[kSize];
-		for (int i = 0; i < kSize; i++) {
-			expected[i] = pixelValue(data, x + i, y, 1);
-
-		}
-		System.out.println(Arrays.toString(expected));
-
-		// for the test result
-		double [] testArray = pixelValues(data, x, y, 1, kSize);
-		System.out.println(Arrays.toString(testArray));
-
-
+		
+//		String filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5042034_03420090829_Rad_Ref_TRC_BYTE_long.tif");
+//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5176039_03920030707_Rad_Ref_TRC_BYTE_long.tif");
+//		filename = "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_J48.tif";
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_lat.tif");
+//		transferGeo(filename, "C:/Users/Nicholas/Documents/GlobalLandCover/test3/Meta/L5199033_03320100711_Rad_ref_TRC_BYTE_long.tif");
+		
+		// 20130619
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/test5_GEE/m37122h2sw_subset_10_05_05_rmf20130625.tiff";
+		//String filename = "/Users/nclinton/Documents/MASTER_imagery/MASTERL1B_0800510_06_20080826_2154_2157_V02_b0.tif";
+		//String outfile = "/Users/nclinton/Documents/GEE/region_merging/test/MASTERL1B_0800510_06_20080826_2154_2157_V02_30_05_05_20130625.tiff";
+		//transferGeo(filename, outfile);
+		
+		// 20130916
+//		String filename = "/Users/nclinton/Documents/GEE/region_merging/test/m37122h2sw_subset.tif";
+//		Dataset data = getDataset(filename);
+//		for (int y=0; y<10; y++) {
+//			double[]xs = new double[10];
+//			for (int x=0; x<10; x++) {
+//				xs[x] = pixelValue(data,x,y,1);
+//			}
+//			System.out.println(Arrays.toString(xs));
+//			System.out.println(Arrays.toString(xPixelsValue(data,0,y,1,10)));
+//			System.out.println();
+//		}
+		
 	}
 
 }
