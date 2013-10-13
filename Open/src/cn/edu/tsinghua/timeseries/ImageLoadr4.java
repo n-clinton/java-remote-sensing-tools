@@ -9,21 +9,9 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.media.jai.PlanarImage;
-import javax.media.jai.iterator.RandomIter;
-import javax.media.jai.iterator.RandomIterFactory;
-
-import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
-
-import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
-
-import com.berkenviro.gis.GISUtils;
-import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.ImageData;
-import com.berkenviro.imageprocessing.JAIUtils;
 import com.vividsolutions.jts.geom.Point;
 
 /**
@@ -32,6 +20,7 @@ import com.vividsolutions.jts.geom.Point;
  * 
  * Load a time series of imagery from the MODIS MOD13 product.
  * 20131007. Clean up.  
+ * 20131012. Move the test code to another class called ImageLoadr4Test
  */
 public class ImageLoadr4 implements Loadr {
 
@@ -48,6 +37,7 @@ public class ImageLoadr4 implements Loadr {
 	 * @param directories
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unchecked")
 	public ImageLoadr4(String[] directories, String dataDir, String qaqcDir, BitCheck bitChecker) throws Exception {
 		System.out.println("Initializing image loader...");
 		
@@ -100,9 +90,6 @@ public class ImageLoadr4 implements Loadr {
 		// reference to the first image, unless otherwise specified
 		date0 = imageList.get(0).cal;
 
-		System.out.println("GDAL init...");
-		gdal.AllRegister();
-
 		_image_data = new ImageData[imageList.size()];
 		_qc_image_data = new ImageData[imageList.size()];
 
@@ -115,8 +102,6 @@ public class ImageLoadr4 implements Loadr {
 			// set Image Data
 			_qc_image_data[i] = new ImageData(dImage.qcImageName, 1);
 			_image_data[i] = new ImageData(dImage.imageName, 1);
-
-			//			System.out.println(dImage.imageName);
 		}
 	}
 
@@ -227,30 +212,15 @@ public class ImageLoadr4 implements Loadr {
 
 		for (int i=0; i<imageList.size(); i++) {
 			try {
-				long start = System.nanoTime();
-				Dataset dataset = _qc_image_data[i].image();
-				int qc = (int)_qc_image_data[i].imageValue(dataset, x, y, 1);
-				long stop = System.nanoTime();
-				long elapsed = (stop - start);
-				//				System.out.println(elapsed);
-
-				//if (!BitChecker.mod13ok(qc)) {
+				int qc = (int)_qc_image_data[i].imageValue(x, y, 1);
 				if (!bitChecker.isOK(qc)) {
 //										System.err.println("Bad data: " + qc);
 					continue;
 				}
 
-				long start2 = System.nanoTime();
-
 				// else, write the time offset and the image data
-				double data = _image_data[i].imageValue(_image_data[i].image(), x, y, 1);
-				//				double data = 0;
-				long stop2 = System.nanoTime();
-				long elapsed2 = (stop2 - start2);
-				//				System.err.format("%-20d%-20d\n", elapsed, elapsed2);
-
+				double data = _image_data[i].imageValue(x, y, 1);
 				out.add(new double[] {t[i], data});
-				//				System.err.println(t[i] + '\t' + data);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} 
@@ -271,8 +241,8 @@ public class ImageLoadr4 implements Loadr {
 	 */
 	public void close() {
 		for (int i=0; i<imageList.size(); i++) {
-			_image_data[i].image().delete();
-			_qc_image_data[i].image().delete();
+			_image_data[i].deleteDataSet();
+			_qc_image_data[i].deleteDataSet();
 		}
 	}
 
@@ -306,122 +276,6 @@ public class ImageLoadr4 implements Loadr {
 		//Spline spline = TSUtils.duchonSpline(xy[0], xy[1]);
 		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
 		return TSUtils.evaluateSpline(spline, t);
-	}
-
-	/**
-	 * 
-	 */
-	public static void smallTest() {
-		// 2010, 2011 EVI
-		String dir1 = "/home/nick/MOD13A2/2010";
-		String dir2 = "/home/nick/MOD13A2/2011";
-
-		try {
-			ImageLoadr4 loadr = new ImageLoadr4(
-					new String[] {dir2, dir1}, 
-					"EVI", "VI_QC", 
-					new BitCheck() {
-						@Override
-						public boolean isOK(int check) {
-							return BitChecker.mod13ok(check);
-						} 
-					}
-			);
-			//			List<double[]> series = loadr.getSeries(GISUtils.makePoint(-121.0, 38.0));
-			Point point = GISUtils.makePoint(-121.0, 38.0);
-			long start = System.nanoTime();
-			List<double[]> series = loadr.getSeries(point.getX(), point.getY());
-			long stop = System.nanoTime();
-			long interval = stop - start;
-
-			for (double[] datapoint : series) {
-				System.out.println(datapoint[0]+", "+datapoint[1]);
-			}
-			loadr.close();
-			System.out.println("Time used: " + interval / 1000);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * 
-	 * @throws Exception
-	 */
-	public static void largeTest() throws Exception {
-		// pixel size
-		final double delta = 0.008365178679831331;
-		// center of the upper left 
-		final double ulx = -179.9815962788889;
-		final double uly = 69.99592926598972;
-		
-		final int width_begin = 10500;
-		final int width_end = 13000;
-		final int height_begin = 4500;
-		final int height_end = 5500;
-		String dir1 = "/home/nick/MOD13A2/2010";
-		String dir2 = "/home/nick/MOD13A2/2011";
-
-		String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-		PlanarImage ref = JAIUtils.readImage(reference);
-		RandomIter iter = RandomIterFactory.create(ref, null);
-
-		ImageLoadr4 loadr = new ImageLoadr4(
-				new String[] {dir2, dir1}, 
-				"EVI", "VI_QC", 
-				new BitCheck() {
-					@Override
-					public boolean isOK(int check) {
-						return BitChecker.mod13ok(check);
-					} 
-				}
-		);
-
-		/**
-		 * Please enumerate the pixel line by line 
-		 * (that is, counting from y, and then x)
-		 */
-
-		for (int  y = height_begin; y < height_end; y++) {
-			for (int x = width_begin; x < width_end; x++) {
-				double _x = ulx + x * delta;
-				double _y = uly - y * delta;
-				if (Math.abs(_y) > 60.0) {
-					//	System.out.println("PERSIANN out of bounds.");
-					continue; // outside bounds of PERSIANN
-				}
-
-				if (iter.getSample(x, y, 0) == 0) {
-					//					System.out.println("Not land.");
-					continue; // not land
-				}
-
-				long start = System.nanoTime();
-				List<double[]> series = loadr.getSeries(_x, _y);
-				long stop = System.nanoTime();
-				double interval = (stop - start) / 1000000.0;
-				System.err.println(interval);
-
-				//				for (double[] datapoint : series) {
-				//					System.out.println(datapoint[0]+", "+datapoint[1]);
-				//				}
-			}
-		}
-	}
-
-	/**
-	 * TO-DO: enumerate the pixel line by line rather than column by column
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		//		smallTest();
-		try {
-			largeTest();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 	}
 
 }

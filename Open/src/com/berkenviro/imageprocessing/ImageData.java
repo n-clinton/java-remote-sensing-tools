@@ -3,8 +3,6 @@ package com.berkenviro.imageprocessing;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
-
 import org.gdal.gdal.Band;
 import org.gdal.gdal.Dataset;
 import org.gdal.gdal.gdal;
@@ -12,324 +10,163 @@ import org.gdal.gdalconst.gdalconst;
 import org.gdal.gdalconst.gdalconstConstants;
 
 /**
+ * This class is used to access/get the pixel values from image file. 
+ *
+ * A instance of the class should be created to represent each file. Thus, 
+ * there is a pixel buffer/dataset that is private to each file, so that 
+ * the buffer can reduce the number of read operation while reading the 
+ * image,  which will boost the program.
  * 
+ * On the other hand, it requires a large amount of memory as each file 
+ * should be equipped with a buffer/dataset.  
+ *
  * @author Cong Hui He
  * 
- * 20131007. Added comments, formatted, made GDAL init static. nc.  Cong Hui TODO: document.
+ * logs:
+ * 20131007. Added comments, formatted, made GDAL init static. nc.  Cong Hui 
+ * 20131012. Make the code clean and more readable. CongHui
  */
 public class ImageData {
-	
+	private int        _block_xsize; 	// the length of a row of the image
+	private int        _buffer_size; 	// size of the buffer allocated for holding the image
+	private Dataset    _image;			// a dataset holding the information of image
+	private int        _band_index;
+	private ByteBuffer _pixel_buffer;	// buffer containing the data read from image file
+	private int        _data_type;
+	private int        _y_index      = -1;
+	private Band       _band;
+
 	/**
 	 * Initialize GDAL.
 	 */
 	static { gdal.AllRegister(); }
-	
-	private int _block_xsize;
-	private int _buffer_size;
-	private boolean _initialized = false;
-	private Dataset _image;
-	private int _band_index;
-	private ByteBuffer _pixel_buffer;
-	private boolean _buffer_empty = true;
-	private int _data_type;
-	private int _y_index = -1;
-	private Band _band;
-	
+
 	/**
+	 * Just do the initialization, such as initialize the data member and  
+	 * allocate memory for the buffer
 	 * 
-	 * @param filename
-	 * @param band_index
+	 * @param filename the file where the dataset is related to
+	 * @param band_index the index of the band the dataset will cover
 	 */
 	public ImageData(String filename, int band_index) {
-		if (!_initialized) {
-			this.init(filename, band_index);
-			_initialized = true;
-		}
-	}
-	
-	/**
-	 * 
-	 * @param filename
-	 * @param band_index
-	 */
-	private void init(String filename, int band_index) {
 		File image_file = new File(filename);
-		_image = (Dataset) gdal.Open(image_file.getAbsolutePath(), gdalconst.GA_ReadOnly);
-		config(band_index);
+		_image = gdal.Open(image_file.getAbsolutePath(), gdalconst.GA_ReadOnly);
+		reconfigBand(band_index);
+		_buffer_size = gdal.GetDataTypeSize(_data_type) / 8 * _block_xsize;
+		_pixel_buffer = ByteBuffer.allocate(_buffer_size);
+		_pixel_buffer.order(ByteOrder.nativeOrder());
 	}
-	
-	/**
-	 * 
+
+	/***
+	 * reconfigure some data member that is band relevant
 	 * @param band_index
 	 */
-	private void config(int band_index) {
+	private void reconfigBand(int band_index) {
 		_band_index = band_index;
 		_band = _image.GetRasterBand(_band_index);
 		_block_xsize = _band.GetBlockXSize();
 		_data_type = _band.getDataType();
-		if (!_initialized) {
-			_buffer_size = gdal.GetDataTypeSize(_data_type) / 8 * _block_xsize;
-			_pixel_buffer = ByteBuffer.allocate(_buffer_size);
-			_pixel_buffer.order(ByteOrder.nativeOrder());
-		}
-		_buffer_empty = true;
 	}
-	
+
+
 	/**
-	 * 
-	 * @param data
-	 * @param x
-	 * @param y
-	 * @param b
-	 * @return
-	 * @throws Exception
+	 * Get the value of image data point given the point in GEO image.
+	 *
+	 * Implementation: first transform the coordinates from GEO to image, 
+	 * then pass the coordinate of the pixel to get the pixel value.
+	 *
+	 * @param x_index X-coordinate in GEO
+	 * @param y_index Y-coordinate in GEO
+	 * @param band_index band index
+	 * @return the value of image data point given the point in GEO image.
 	 */
-	public double imageValue(Dataset data, double x, double y, int b) throws Exception {
-		
-		int[] pixelXY = GDALUtils.getPixelXY(new double[] {x, y}, data); // constant time
-		
-		long start2 = System.nanoTime();
-		double ret_value = pixelValueBuffered(pixelXY[0], pixelXY[1], b); // It is slow
-		long stop2 = System.nanoTime();
-		long elapsed2 = (stop2 - start2);
-//		System.err.println(elapsed2);
-		
-		return ret_value;
-	}
-	
-	/**
-	 * Return image value from pixel coordinates.
-	 * @param data is the Dataset
-	 * @param x_index is pixel
-	 * @param y_index is line
-	 * @param band_index is one-indexed band
-	 * @return
-	 */
-	public double pixelValue(int x_index, int y_index, int band_index) {
-		int x_size = 1;
-		// for each image file, there is a dataset.
-		if (band_index != _band_index || y_index != _y_index) {
-			// reset the buffer;
-			config(band_index);
-			_y_index = y_index;
-		}
-		
-		_pixel_buffer = ByteBuffer.allocate(_buffer_size);
-		_pixel_buffer.order(ByteOrder.nativeOrder());
-		_band.ReadRaster(x_index, y_index,  
-				x_size, 1, // x size; y size
-				x_size, 1, // buffer x size; buffer y size
-				_data_type, 
-				_pixel_buffer.array()); 
-		
-		if (_data_type == gdalconstConstants.GDT_Byte) {
-			return ((int)_pixel_buffer.get()) & 0xff;
-		} else if(_data_type == gdalconstConstants.GDT_Int16) {
-			return _pixel_buffer.getShort();
-		} else if(_data_type == gdalconstConstants.GDT_Int32) {
-			return _pixel_buffer.getInt();
-		} else if(_data_type == gdalconstConstants.GDT_Float32) {
-			return _pixel_buffer.getFloat();
-		} else if(_data_type == gdalconstConstants.GDT_Float64) {
-			return _pixel_buffer.getDouble();
-		} else if(_data_type == gdalconstConstants.GDT_UInt16) {
-			double ret = _pixel_buffer.getChar();
-			return ret;
-		}
-		
-		System.out.println("no no no ");
-		return Double.NaN;
-	}
-	
-	/**
-	 * 
-	 * @param x_index
-	 * @param y_index
-	 * @param band_index
-	 * @return
-	 */
-	public double pixelValueBuffered(int x_index, int y_index, int band_index) {
-		// for each image file, there is a dataset.
-		if (band_index != _band_index || y_index != _y_index) {
-			// reset the buffer;
-			config(band_index);
-			_y_index = y_index;
-			
-			_pixel_buffer = ByteBuffer.allocate(_buffer_size);
-			_pixel_buffer.order(ByteOrder.nativeOrder());
-//			System.err.println("Reading the image...");
-			_band.ReadRaster(0, y_index,  
-					_block_xsize, 1, // x size; y size
-					_block_xsize, 1, // buffer x size; buffer y size
-					_data_type, 
-					_pixel_buffer.array()); 
-		}
-		
-		int offset = (x_index * 2);
-		
-		if (_data_type == gdalconstConstants.GDT_Byte) {
-			return ((int)_pixel_buffer.get()) & 0xff;
-		} else if(_data_type == gdalconstConstants.GDT_Int16) {
-			return _pixel_buffer.getShort(offset);
-		} else if(_data_type == gdalconstConstants.GDT_Int32) {
-			return _pixel_buffer.getInt();
-		} else if(_data_type == gdalconstConstants.GDT_Float32) {
-			return _pixel_buffer.getFloat();
-		} else if(_data_type == gdalconstConstants.GDT_Float64) {
-			return _pixel_buffer.getDouble();
-		} else if(_data_type == gdalconstConstants.GDT_UInt16) {
-			double ret = _pixel_buffer.getChar(offset);
-			return ret;
-		}
-		
-		System.out.println("no no no ");
-		return Double.NaN;
-	}
-	
-	/**
-	 * 
-	 * @param x_index
-	 * @param y_index
-	 * @param band_index
-	 * @param length
-	 * @return
-	 */
-	public double [] pixelValues(int x_index, int y_index, int band_index, int length) {
-		final int x_size = length;
-		if (band_index != _band_index || y_index != _y_index) {
-			// reset the buffer;
-			config(band_index);
-			_y_index = y_index;
-			_pixel_buffer = ByteBuffer.allocate(_buffer_size);
-			_pixel_buffer.order(ByteOrder.nativeOrder());
-//			_band.ReadRaster(x_index, y_index,  
-//					x_size, 1, // x size; y size
-//					x_size, 1, // buffer x size; buffer y size
-//					_data_type, 
-//					_pixel_buffer.array()); 
-			
-			_band.ReadRaster(0, y_index,  
-					_block_xsize, 1, // x size; y size
-					_block_xsize, 1, // buffer x size; buffer y size
-					_data_type, 
-					_pixel_buffer.array()); 
-		}
-		
-		double [] ret = new double[x_size];
-		for (int i = 0; i < x_size; i++) {
-			if (_data_type == gdalconstConstants.GDT_Byte) {
-				ret[i] =  ((int)_pixel_buffer.get()) & 0xff;
-			} else if(_data_type == gdalconstConstants.GDT_Int16) {
-				ret[i] = _pixel_buffer.getShort((x_index+i) * 2);
-			} else if(_data_type == gdalconstConstants.GDT_Int32) {
-				ret[i] = _pixel_buffer.getInt();
-			} else if(_data_type == gdalconstConstants.GDT_Float32) {
-				ret[i] = _pixel_buffer.getFloat();
-			} else if(_data_type == gdalconstConstants.GDT_Float64) {
-				ret[i] = _pixel_buffer.getDouble();
-			} else if(_data_type == gdalconstConstants.GDT_UInt16) {
-				ret[i] =_pixel_buffer.getChar((x_index + i)*2); // we have to double the index, but I don't know why
-			}
-		}
-		
-		return ret;
+	public double imageValue(double x_index, double y_index, int band_index)  {
+		int[] pixelXY = null; // pixel in image coordinate
+		try {
+			// do the coordinate transformation from GEO to image
+			pixelXY = GDALUtils.getPixelXY(new double[] {x_index, y_index}, _image);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return 0;
+		} 
+
+		// get the value given the pixel coordinate
+		return pixelValue(pixelXY[0], pixelXY[1], band_index); 
 	}
 
 	/**
-	 * 
-	 * @return
+	 * Get the value of the pixel index at (x_index, y_index) from the 
+	 * buffer.  
+	 *
+	 * Implementation: A whole line of the image will be read into the 
+	 * buffer. Thus, if you the pixel you are reading stays at the same 
+	 * line as the last pixel you read, the pixel will be get directly from 
+	 * the buffer. However, if the pixel you are about to read jumps to a 
+	 * different line, that line will be read into the buffer, which will 
+	 * replace the previous line.  Therefore, to gain a better performance, 
+	 * it is a good idea to read the pixels line by line, from left to 
+	 * right and then top to bottom.
+	 *
+	 * @param x_index X-coordinate of the pixel
+	 * @param y_index Y-coordinate of the pixel
+	 * @param band_index band number of the pixel
+	 * @return the value of the pixel
 	 */
-	public Band band() {
-		return _band;
-	}
-	
-	/**
-	 * 
-	 * @return
-	 */
-	public Dataset image() {
-		return this._image;
-	}
-	
-	/**
-	 * 
-	 * @param a
-	 * @param b
-	 * @return
-	 */
-	static boolean doubleArrayEquals(double []a, double [] b) {
-		if (a.length != b.length) {
-			System.out.println("length of two array are not equal");
-			return false;
+	public double pixelValue(int x_index, int y_index, int band_index) {
+		if (band_index != _band_index || y_index != _y_index) {
+			// if the |band_index| or |y_index| are not the same as the previous 
+			// ones, we need to read a new line.
+
+			// 1. do some configuration
+			reconfigBand(band_index);
+			_y_index = y_index;
+			_pixel_buffer = ByteBuffer.allocate(_buffer_size);
+			_pixel_buffer.order(ByteOrder.nativeOrder());
+
+			// 2. perform a read operation
+			_band.ReadRaster(
+					0, y_index,       // (x_begin, y_begin), it reads from begining of the line
+					_block_xsize, 1,  // (x size; y size), |_block_size| is the length of a line
+					_block_xsize, 1,  // buffer x size; buffer y size
+					_data_type, 
+					_pixel_buffer.array()); 
 		}
-		
-		for (int i = 0; i < a.length; i++) {
-			if (!doubleEquals(a[i], b[i])) {
-				return false;
-			}
-		}
-		
-		return true;
+
+		return getValueFromRightDataType(x_index);
 	}
-	
-	/**
+
+
+	/***
 	 * 
-	 * @param a
-	 * @param b
+	 * @param offset
 	 * @return
 	 */
-	static boolean doubleEquals(double a, double b) {
-		double epsilon = 1e-10;
-		return Math.abs(a - b) < epsilon ? true : false;
+	private double getValueFromRightDataType(int offset) {
+		// the offset is a magic number. I have no idea why the |offset| 
+		// should be doubled for type |GDT_UInt16| and |GDT_Int16|, but 
+		// it does result in correct value by several experiments.
+		
+		if (_data_type == gdalconstConstants.GDT_Byte) {
+			return ((int)_pixel_buffer.get(offset)) & 0xff; // verified
+		} else if(_data_type == gdalconstConstants.GDT_Int16) {
+			return _pixel_buffer.getShort(offset * 2);    	// verified
+		} else if(_data_type == gdalconstConstants.GDT_Int32) {
+			return _pixel_buffer.getInt(offset);
+		} else if(_data_type == gdalconstConstants.GDT_Float32) {
+			return _pixel_buffer.getFloat(offset);
+		} else if(_data_type == gdalconstConstants.GDT_Float64) {
+			return _pixel_buffer.getDouble(offset);
+		} else if(_data_type == gdalconstConstants.GDT_UInt16) {
+			return _pixel_buffer.getChar(offset * 2);		// verified
+		}
+		return Double.NaN;
 	}
-	
-	/**
-	 * 
-	 * @param args
-	 * @throws Exception
+
+	/***
+	 * reclaim the resources
 	 */
-	public static void main(String args[]) throws Exception {
-		
-		// TEST:
-//		gdal.AllRegister();  // this should no longer be required. nc.
-//		String filename = "/home/nick/MOD13A2/2010/2010.01.01/VI_QC/2010.01.01_VI_QC_mosaic_geo.1_km_16_days_VI_Quality.tif";
-//		String filename2 = "/home/nick/MOD13A2/2010/2010.01.01/EVI/2010.01.01_EVI_mosaic_geo.1_km_16_days_EVI.tif";
-//		ImageData imageData = new ImageData(filename2, 1);
-//		
-//		// that is expected array
-//		final int kSize = 10;
-//		final int x = 7051;
-//		final int y = 3825;
-//		double [] expected = new double[kSize];
-//		
-//		long start = System.nanoTime();
-//		for (int i = 0; i < kSize; i++) {
-//			expected[i] = imageData.pixelValue(x + i, y, 1); // that is great
-//			
-//		}
-//		long stop = System.nanoTime();
-//		long slowTime = (stop - start) / 1000;
-//		System.out.println("slowTime: " + slowTime);
-//		
-//		// for the test result
-//		ImageData testData = new ImageData(filename2, 1);
-//		
-//		start = System.nanoTime();
-//		double [] testArray = testData.pixelValues(x, y, 1, kSize);
-//		stop = System.nanoTime();
-//		long fastTime = (stop - start) / 1000;
-//		System.out.println("fastTime: " + fastTime);
-//		
-//		if (doubleArrayEquals(expected, testArray)) {
-//			System.out.println(Arrays.toString(expected));
-//			System.out.println(Arrays.toString(testArray));
-//			System.out.println("OK");
-//		} else {
-//			System.out.println(Arrays.toString(expected));
-//			System.out.println(Arrays.toString(testArray));
-//			System.err.println("Two array are not equals");
-//		}
-		
+	public void deleteDataSet() {
+		_image.delete();
 	}
 
 }
