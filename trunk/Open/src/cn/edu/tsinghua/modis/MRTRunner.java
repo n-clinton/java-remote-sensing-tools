@@ -524,7 +524,10 @@ public class MRTRunner {
 //		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
 //		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
 		
-		
+		// 20131011
+//		String productDir = "D:/MYD11A2/2011";
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
 		
 		
 	}

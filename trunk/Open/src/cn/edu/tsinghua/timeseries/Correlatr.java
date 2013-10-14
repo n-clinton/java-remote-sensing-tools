@@ -709,6 +709,40 @@ public class Correlatr {
 		// This construction method is now deprecated, to decouple construction from the type of imagery
 		// Also, this run never finished processing South America
 		
+//		Correlatr corr = null;
+//		try {
+//			// EVI vegetation index response
+//			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+//			String eviDir = "EVI";
+//			String eviQCDir = "VI_QC";
+//			BitCheck mod13Checker = new BitCheck() {
+//				@Override
+//				public boolean isOK(int check) {
+//					return BitChecker.mod13ok(check);
+//				}
+//				
+//			};
+//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//			// PERSIANN rainfall predictor
+//			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+//			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+//			// the Correlatr
+//			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
+//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
+//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
+//			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		/*
+		 * Note that the previous can result in zero correlation (indicating insufficient data)
+		 * from the following conditions: if a combination of no data (from either data source)
+		 * and/or EVI<0 results in <5 data points.
+		 */
+		
+		// 20131014 Temperature processing
 		Correlatr corr = null;
 		try {
 			// EVI vegetation index response
@@ -723,29 +757,30 @@ public class Correlatr {
 				
 			};
 			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-			// PERSIANN rainfall predictor
-			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
-			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+			
+			// MODIS Aqua daytime temperature
+			String[] temperature = new String[] {"/home/nick/MYD11A2/2010", "/home/nick/MYD11A2/2011"};
+			String tempDir = "LST_DAY";
+			String tempQCDir = "QC_DAY";
+			BitCheck mod11Checker = new BitCheck() {
+				@Override
+				public boolean isOK(int check) {
+					return BitChecker.mod11ok(check);
+				}
+				
+			};
+			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
+			
 			// the Correlatr
-			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
+			corr = new Correlatr(responseLoadr, predictLoadr, new int[] { 2010, 0, 1 });
 			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
+			String base = "/home/nick/workspace/CLINTON/Open/result/evi_temperature_";
 			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
 			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		
-		/*
-		 * Note that the previous can result in zero correlation (indicating insufficient data)
-		 * from the following conditions: if a combination of no data (from either data source)
-		 * and/or EVI<0 results in <5 data points.
-		 */
-		
-		
-		
 
 	}
 
