@@ -720,7 +720,6 @@ public class Correlatr {
 //				public boolean isOK(int check) {
 //					return BitChecker.mod13ok(check);
 //				}
-//				
 //			};
 //			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 //			// PERSIANN rainfall predictor
@@ -754,7 +753,6 @@ public class Correlatr {
 				public boolean isOK(int check) {
 					return BitChecker.mod13ok(check);
 				}
-				
 			};
 			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			
@@ -767,7 +765,6 @@ public class Correlatr {
 				public boolean isOK(int check) {
 					return BitChecker.mod11ok(check);
 				}
-				
 			};
 			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
 			
