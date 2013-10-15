@@ -91,10 +91,6 @@ public class PERSIANNLoadr implements Loadr {
 		return ImageLoadr2.diffDays(date0, pf.cal);
 	}
 	
-	public int diffDays(PERSIANNFile2 pf) {
-		return ImageLoadr2.diffDays(date0, pf.cal);
-	}
-	
 	
 	/**
 	 * 
