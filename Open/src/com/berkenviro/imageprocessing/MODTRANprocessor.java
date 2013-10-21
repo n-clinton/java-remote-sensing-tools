@@ -62,6 +62,7 @@ import java.io.RandomAccessFile;
 import java.math.BigDecimal;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -255,6 +256,8 @@ public class MODTRANprocessor {
 				}
 			}
 			
+			boolean print = false;
+			
 			// file has been read, data is in the list, convert to a double[]
 			output = new double [15][data.size()];
 			for (int i=0; i<data.size(); i++) {
@@ -262,49 +265,49 @@ public class MODTRANprocessor {
 				String theDouble;
 				// fixed format based extraction
 				theDouble = toParse.substring(0, 8).trim();
-				//System.out.println(toParse.substring(0, 8).trim());
+				if (print) { System.out.println(toParse.substring(0, 8).trim()); }
 				output[0][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // FREQ
 				theDouble = toParse.substring(8, 19).trim();
-				//System.out.println(toParse.substring(8, 19).trim());
+				if (print) { System.out.println(toParse.substring(8, 19).trim()); }
 				output[1][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // TOT TRANS
 				theDouble = toParse.substring(19, 30).trim();
-				//System.out.println(toParse.substring(19, 30).trim());
+				if (print) { System.out.println(toParse.substring(19, 30).trim()); }
 				output[2][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // PTH THRML
 				theDouble = toParse.substring(30, 41).trim();
-				//System.out.println(toParse.substring(30, 41).trim());
+				if (print) { System.out.println(toParse.substring(30, 41).trim()); }
 				output[3][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // THRML SCT
 				theDouble = toParse.substring(41, 52).trim();
-				//System.out.println(toParse.substring(41, 52).trim());
+				if (print) { System.out.println(toParse.substring(41, 52).trim()); }
 				output[4][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // SURF EMIS
 				theDouble = toParse.substring(52, 63).trim();
-				//System.out.println(toParse.substring(52, 63).trim());
+				if (print) { System.out.println(toParse.substring(52, 63).trim()); }
 				output[5][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // SOL SCAT
 				theDouble = toParse.substring(63, 74).trim();
-				//System.out.println(toParse.substring(63, 74).trim());
+				if (print) { System.out.println(toParse.substring(63, 74).trim()); }
 				output[6][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // SING SCAT
 				theDouble = toParse.substring(74, 85).trim();
-				//System.out.println(toParse.substring(74, 85).trim());
+				if (print) { System.out.println(toParse.substring(74, 85).trim()); }
 				output[7][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // GRND RFLT
 				theDouble = toParse.substring(85, 96).trim();
-				//System.out.println(toParse.substring(85, 96).trim());
+				if (print) { System.out.println(toParse.substring(85, 96).trim()); }
 				output[8][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // DRCT RFLT
 				theDouble = toParse.substring(96, 107).trim();
-				//System.out.println(toParse.substring(96, 107).trim());
+				if (print) { System.out.println(toParse.substring(96, 107).trim()); }
 				output[9][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // TOTAL RAD
 				theDouble = toParse.substring(107, 116).trim();
-				//System.out.println(toParse.substring(107, 116).trim());
+				if (print) { System.out.println(toParse.substring(107, 116).trim()); }
 				output[10][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // REF SOL
 				theDouble = toParse.substring(116, 125).trim();
-				//System.out.println(toParse.substring(116, 125).trim());
+				if (print) { System.out.println(toParse.substring(116, 125).trim()); }
 				output[11][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // SOL@OBS
 				theDouble = toParse.substring(125, 133).trim();
-				//System.out.println(toParse.substring(125, 133).trim());
+				if (print) { System.out.println(toParse.substring(125, 133).trim()); }
 				output[12][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // DEPTH
 				theDouble = toParse.substring(133, 140).trim();
-				//System.out.println(toParse.substring(133, 140).trim());
+				if (print) { System.out.println(toParse.substring(133, 140).trim()); }
 				output[13][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // DIR_EM
 				theDouble = toParse.substring(140, 151).trim();
-				//System.out.println(toParse.substring(140, 151).trim());
+				if (print) { System.out.println(toParse.substring(140, 151).trim()); }
 				output[14][i] = theDouble.equals("") ? 0.0 : (new BigDecimal(theDouble)).doubleValue(); // TOA_SUN
 				
 			}
@@ -1429,72 +1432,94 @@ public class MODTRANprocessor {
 		// 20110620 testing
 		
 		// srfs:
-		String srfRoot = "H:/SARP2010/srfs/msr040610a.c";
-		// srf parameters
-		int band1 = 1;
-		int bandN = 25;
-		int srfHeader = 12;
-		boolean microns = true;
-		
-		// Modtran 4 output:
-		String r0tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r0.tp7";
-		String r05tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r05.tp7";
-		String r10tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r10.tp7";
-		String[] tape7s = {r0tp7, r05tp7, r10tp7};
-		// Modtran 5 output
-		String mod5r0 = "C:/Users/owner/Documents/MODTRAN/pc_5v2r11/TEST/11652_Ivanpah_us76_r0.tp7";
-		String acdFile = "C:/Users/owner/Documents/MODTRAN/pc_5v2r11/TEST/11652_Ivanpah_us76_r0.acd";
-		
-		// Exo-atmospheric irradiance:
-		//String exoFile = "C:/Users/owner/Documents/MODTRAN/SolarIrradiance.txt";
-		String exoFile = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/DATA/newkur.dat";
-		double[][] exo = mIrrad(exoFile);
-		
-		// imagery:
-		String input = "H:/10-004-03/Central_Valley/MASTERL1B_1000403_01_20100629_1846_1854_V02_b1_25";
-		String output = "H:/10-004-03/Central_Valley/MASTERL1B_1000403_01_20100629_1846_1854_V02_b1_25_ref_kurucz.tif";
-		// image parameters
-		double sensor_zenith = 0.0; // degrees
-		double sun_zenith = 19.8; // degrees
-		int year = 2010;
-		int month = 6;
-		int day = 30;
-		
-		// tee'd output
-		String processLog = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_processing_kurucz.txt";
-		
-		
-		// go:
-		try {
-			PrintStream console = System.out;
-			OutputStream fileStream = new FileOutputStream(processLog,true);
-			System.setOut(new PrintStream(new TeeOutputStream(System.out, fileStream)));
-			// first 25 bands SRFs
-			List<double[][]> srfs = SRFUtils.readSRFs(srfRoot, band1, bandN, srfHeader, microns);
-			// generate unknowns Modtran 4
-			double[][] unknowns4 = vbMod4(tape7s, srfs, exo, sensor_zenith);
-			double[][] unknowns5 = acdMod5(acdFile, mod5r0, srfs);
-			
-			// in-band exo-atmospheric irradiance
-			double[] bExo = SRFUtils.getInBand(srfs, exo);
-			
-			System.setOut(console);
-			// process mod4
-			rad2ref(input, output, bExo, unknowns4, year, month, day, sun_zenith);
-			// process mod5
-			//rad2ref(input, output, bExo, unknowns5, year, month, day, sun_zenith);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-			
+//		String srfRoot = "H:/SARP2010/srfs/msr040610a.c";
+//		// srf parameters
+//		int band1 = 1;
+//		int bandN = 25;
+//		int srfHeader = 12;
+//		boolean microns = true;
+//		
+//		// Modtran 4 output:
+//		String r0tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r0.tp7";
+//		String r05tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r05.tp7";
+//		String r10tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_r10.tp7";
+//		String[] tape7s = {r0tp7, r05tp7, r10tp7};
+//		// Modtran 5 output
+//		String mod5r0 = "C:/Users/owner/Documents/MODTRAN/pc_5v2r11/TEST/11652_Ivanpah_us76_r0.tp7";
+//		String acdFile = "C:/Users/owner/Documents/MODTRAN/pc_5v2r11/TEST/11652_Ivanpah_us76_r0.acd";
+//		
+//		// Exo-atmospheric irradiance:
+//		//String exoFile = "C:/Users/owner/Documents/MODTRAN/SolarIrradiance.txt";
+//		String exoFile = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/DATA/newkur.dat";
+//		double[][] exo = mIrrad(exoFile);
+//		
+//		// imagery:
+//		String input = "H:/10-004-03/Central_Valley/MASTERL1B_1000403_01_20100629_1846_1854_V02_b1_25";
+//		String output = "H:/10-004-03/Central_Valley/MASTERL1B_1000403_01_20100629_1846_1854_V02_b1_25_ref_kurucz.tif";
+//		// image parameters
+//		double sensor_zenith = 0.0; // degrees
+//		double sun_zenith = 19.8; // degrees
+//		int year = 2010;
+//		int month = 6;
+//		int day = 30;
+//		
+//		// tee'd output
+//		String processLog = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/1000403_line1_OAK_sonde_processing_kurucz.txt";
+//		
+//		// go:
+//		try {
+//			PrintStream console = System.out;
+//			OutputStream fileStream = new FileOutputStream(processLog,true);
+//			System.setOut(new PrintStream(new TeeOutputStream(System.out, fileStream)));
+//			// first 25 bands SRFs
+//			List<double[][]> srfs = SRFUtils.readSRFs(srfRoot, band1, bandN, srfHeader, microns);
+//			// generate unknowns Modtran 4
+//			double[][] unknowns4 = vbMod4(tape7s, srfs, exo, sensor_zenith);
+//			double[][] unknowns5 = acdMod5(acdFile, mod5r0, srfs);
+//			
+//			// in-band exo-atmospheric irradiance
+//			double[] bExo = SRFUtils.getInBand(srfs, exo);
+//			
+//			System.setOut(console);
+//			// process mod4
+//			rad2ref(input, output, bExo, unknowns4, year, month, day, sun_zenith);
+//			// process mod5
+//			//rad2ref(input, output, bExo, unknowns5, year, month, day, sun_zenith);
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		}	
 		
 //		String srfRoot = "C:/Users/owner/Documents/ASTL/MASTER_srfs_June2011/msr0611a.c";
 //		String r0tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/11652_Ivanpah_us76_r0.tp7";
 //		String r05tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/11652_Ivanpah_us76_r05.tp7";
 //		String r10tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/11652_Ivanpah_us76_r10.tp7";
 		
+		// 20131022
+		// Landsat 8 processing for class demo
+		String newkur = "/Volumes/LaCieX/Documents/Modtran/newkur.dat";
+		String r0tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_00_az_zen.tp7";
+		String r05tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_05_az_zen.tp7";
+		String r10tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_10_az_zen.tp7";
 		
+		double[][] r00 = readTape7mod5(r0tp7, 1);
+		double[][] r05 = readTape7mod5(r05tp7, 1);
+		double[][] r10 = readTape7mod5(r10tp7, 1);
+		double[][] exo = mIrrad(newkur);
 		
+		double sensor_zenith = 0.0;
+				
+		List<double[][]> srfs = 
+			SRFUtils.readSRFs(
+				"/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/l8srf",
+				1, 8, 1, false
+			);
+		
+		int band = 1;
+		for (double[][] srf : srfs) {
+			double[] vbmod5 = vbMod4(r00, r05, r10, srf, exo, sensor_zenith);
+			System.out.println("Band "+band+" : "+Arrays.toString(vbmod5));
+			band++;
+		}
 	}
 
 }
