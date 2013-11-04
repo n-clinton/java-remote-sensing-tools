@@ -1208,11 +1208,11 @@ public class MODTRANprocessor {
 	/**
 	 * Inverse Planck function.
 	 * @param radiance in units of Watts/M^2/sr/micron
-	 * @param l_gnd is downwelling radiance at the target
-	 * @param tao is target to sensor transmittance
-	 * @param path is the thermal path radiance
-	 * @param lambda is the (center) wavelength
-	 * @param e is the in-band emissivity of the target
+	 * @param l_gnd is downwelling radiance at the target in Watts/M^2/sr/micron
+	 * @param tao is target to sensor transmittance, unitless
+	 * @param path is the thermal path radiance, in Watts/M^2/sr/micron
+	 * @param lambda is the (center) wavelength, nm
+	 * @param e is the in-band emissivity of the target, unitless
 	 * @return the temp in K
 	 */
 	public static float rad2temp(double radiance, double l_gnd, double tao, double path, double lambda, double e) {
@@ -1227,6 +1227,8 @@ public class MODTRANprocessor {
 		double L_bb = ( L_up - (rho * l_gnd) ) / e;
 		// truncate
 		L_bb = (L_bb < 0) ? Float.MIN_NORMAL : L_bb;
+		// convert to radiance in Watts/M^2/sr/meter
+		L_bb = L_bb*Math.pow(10,6);
 		// convert to meters
 		lambda = lambda*Math.pow(10, -9);
 		
@@ -1241,7 +1243,7 @@ public class MODTRANprocessor {
 	 * @param input is the full path of the input image 
 	 * @param output is full path name of the output image
 	 * @param unknowns is the array of in-band thermal unknowns.
-	 * @param wavelengths is the array of band wavlengths
+	 * @param wavelengths is the array of band wavelengths
 	 * @param emissivity is the array of in-band emissivities of the target
 	 */
 	public static void rad2temp(String input, 
@@ -1495,31 +1497,45 @@ public class MODTRANprocessor {
 //		String r10tp7 = "C:/Users/owner/Documents/MODTRAN/mod4v2r1/PC/TEST/11652_Ivanpah_us76_r10.tp7";
 		
 		// 20131022
-		// Landsat 8 processing for class demo
-		String newkur = "/Volumes/LaCieX/Documents/Modtran/newkur.dat";
-		String r0tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_00_az_zen.tp7";
-		String r05tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_05_az_zen.tp7";
-		String r10tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_10_az_zen.tp7";
-		
-		double[][] r00 = readTape7mod5(r0tp7, 1);
-		double[][] r05 = readTape7mod5(r05tp7, 1);
-		double[][] r10 = readTape7mod5(r10tp7, 1);
-		double[][] exo = mIrrad(newkur);
-		
-		double sensor_zenith = 0.0;
+		// Landsat 8 OLI processing for class demo
+//		String newkur = "/Volumes/LaCieX/Documents/Modtran/newkur.dat";
+//		String r0tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_00_az_zen.tp7";
+//		String r05tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_05_az_zen.tp7";
+//		String r10tp7 = "/Volumes/LaCieX/Documents/Modtran/Dunhuang_10_az_zen.tp7";
+//		
+//		double[][] r00 = readTape7mod5(r0tp7, 1);
+//		double[][] r05 = readTape7mod5(r05tp7, 1);
+//		double[][] r10 = readTape7mod5(r10tp7, 1);
+//		double[][] exo = mIrrad(newkur);
+//		
+//		double sensor_zenith = 0.0;
 				
-		List<double[][]> srfs = 
-			SRFUtils.readSRFs(
-				"/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/l8srf",
-				1, 8, 1, false
-			);
+//		List<double[][]> srfs = 
+//			SRFUtils.readSRFs(
+//				"/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/l8srf",
+//				1, 8, 1, false
+//			);
+//		
+//		int band = 1;
+//		for (double[][] srf : srfs) {
+//			double[] vbmod5 = vbMod4(r00, r05, r10, srf, exo, sensor_zenith);
+//			System.out.println("Band "+band+" : "+Arrays.toString(vbmod5));
+//			band++;
+//		}
 		
-		int band = 1;
-		for (double[][] srf : srfs) {
-			double[] vbmod5 = vbMod4(r00, r05, r10, srf, exo, sensor_zenith);
-			System.out.println("Band "+band+" : "+Arrays.toString(vbmod5));
-			band++;
-		}
+		// 20131022 thermal processing for tirs band 11: 11.5-12.5 microns
+		// simulated Gaussian spectral response function, zero mean
+//		double[][] srf11 = (new GaussFunction()).getGauss(1000);
+//		// shift into position
+//		for (int l=0; l<srf11[0].length; l++) {
+//			srf11[0][l] = srf11[0][l] + 12000.0;
+//			//System.out.println(srf11[0][l]+","+srf11[1][l]);
+//		}
+//		double[] vbmod5 = thermal(r00, r05, r10, srf11);
+//		System.out.println("Band 11 : "+Arrays.toString(vbmod5));
+		
+
+
 	}
 
 }

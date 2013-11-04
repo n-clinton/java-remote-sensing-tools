@@ -299,8 +299,17 @@ public class SRFUtils {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+		// Landsat 8 in-band exo-atmospheric irradiance
+		String irrad = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/SolarIrradiance.txt";
+		double[][] exo = Utils.readFile(new File(irrad), 2);
+		List<double[][]> srfs = readSRFs("/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/l8srf",
+				1, 8, 1, false);
+		int band = 1;
+		for (double[][] srf : srfs) {
+			System.out.println("band "+band+": "+SRFUtils.getFirstMoment(srf)+" : "+Utils.convolve3(srf, exo));
+			band++;
+		}
+		
 	}
 
 }
