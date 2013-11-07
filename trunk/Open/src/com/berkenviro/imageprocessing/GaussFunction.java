@@ -24,6 +24,8 @@
  */
 package com.berkenviro.imageprocessing;
 
+import java.util.Arrays;
+
 import org.apache.commons.math.FunctionEvaluationException;
 import org.apache.commons.math.analysis.DifferentiableMultivariateVectorialFunction;
 import org.apache.commons.math.analysis.MultivariateMatrixFunction;
@@ -103,11 +105,44 @@ public class GaussFunction implements ParametricRealFunction {
 		return xy;
 	}
 	
+	/**
+	 * Return a symmetric kernel from the given Gaussian parameters.
+	 * Not normalized.
+	 * @param radius is the distance in pixels from the center pixel
+	 * @param parameters is {a, mu, sigma}
+	 * @return
+	 */
+	public double[][] getKernel(int radius, double[] parameters) {
+		double[][] kernel = new double[2*radius+1][2*radius+1];
+		for (int x=-radius; x<=radius; x++) {
+			int i = x+radius;
+			for (int y=-radius; y<=radius; y++) {
+				int j = y+radius;
+				try {
+					kernel[i][j] = value(x, parameters)*value(y, parameters);
+				} catch (FunctionEvaluationException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return kernel;
+	}
 	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
+//		double sigma = 1.0;
+//		double[][] kernel1 = (new GaussFunction()).getKernel(1, new double[] {1.0/sigma, 0, sigma});
+//		sigma = 0.5;
+//		double[][] kernel2 = (new GaussFunction()).getKernel(1, new double[] {1.0/sigma, 0, sigma});
+//		
+//		double[][] kernel = new double[kernel1.length][kernel1.length];
+//		for (int r=0; r<kernel.length; r++) {
+//			for (int c=0; c<kernel.length; c++) {
+//				kernel[r][c] = kernel2[r][c]-kernel1[r][c];
+//			}
+//		}
 		
 	}
 
