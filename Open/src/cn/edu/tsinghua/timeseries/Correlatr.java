@@ -720,6 +720,7 @@ public class Correlatr {
 //				public boolean isOK(int check) {
 //					return BitChecker.mod13ok(check);
 //				}
+//				
 //			};
 //			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 //			// PERSIANN rainfall predictor
@@ -753,6 +754,7 @@ public class Correlatr {
 				public boolean isOK(int check) {
 					return BitChecker.mod13ok(check);
 				}
+				
 			};
 			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			
@@ -765,6 +767,7 @@ public class Correlatr {
 				public boolean isOK(int check) {
 					return BitChecker.mod11ok(check);
 				}
+				
 			};
 			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
 			
@@ -774,7 +777,7 @@ public class Correlatr {
 			String base = "/home/nick/workspace/CLINTON/Open/result/evi_temperature_";
 			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
+			corr.writeImagesParallel(base, reference, lags, 10, true); // well, 10 is a quite reasonable argument
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
