@@ -41,6 +41,7 @@ import com.berkenviro.imageprocessing.JAIUtils;
  * ~3/4 of the way through the global dataset, using ImageLoadr4.
  * 20131007 Clean-up.  Remove unused code, made new constructor, synchronized
  * 	maxCorrelation1 and maxCorrelation to use the same logic. nc.
+ * 20140102 changed the enumerate() bounds and added main code to run Tierra del Fuego
  * 
  */
 public class Correlatr {
@@ -466,7 +467,8 @@ public class Correlatr {
 			// this time, we continue to run the rest of the image
 			final int width_begin = 0;
 			final int width_end = ref.getWidth();
-			final int height_begin = 0;
+			//final int height_begin = 0;
+			final int height_begin = 13888; // 20140102 missing piece
 			final int height_end = ref.getHeight();
 
 			for (int  y = height_begin; y < height_end; y++) {
@@ -743,6 +745,46 @@ public class Correlatr {
 		 */
 		
 		// 20131014 Temperature processing
+//		Correlatr corr = null;
+//		try {
+//			// EVI vegetation index response
+//			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+//			String eviDir = "EVI";
+//			String eviQCDir = "VI_QC";
+//			BitCheck mod13Checker = new BitCheck() {
+//				@Override
+//				public boolean isOK(int check) {
+//					return BitChecker.mod13ok(check);
+//				}
+//				
+//			};
+//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//			
+//			// MODIS Aqua daytime temperature
+//			String[] temperature = new String[] {"/home/nick/MYD11A2/2010", "/home/nick/MYD11A2/2011"};
+//			String tempDir = "LST_DAY";
+//			String tempQCDir = "QC_DAY";
+//			BitCheck mod11Checker = new BitCheck() {
+//				@Override
+//				public boolean isOK(int check) {
+//					return BitChecker.mod11ok(check);
+//				}
+//				
+//			};
+//			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
+//			
+//			// the Correlatr
+//			corr = new Correlatr(responseLoadr, predictLoadr, new int[] { 2010, 0, 1 });
+//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_temperature_";
+//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
+//			corr.writeImagesParallel(base, reference, lags, 10, true); // well, 10 is a quite reasonable argument
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20140102 Final missing piece at Tierra del Fuego
 		Correlatr corr = null;
 		try {
 			// EVI vegetation index response
@@ -757,27 +799,16 @@ public class Correlatr {
 				
 			};
 			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-			
-			// MODIS Aqua daytime temperature
-			String[] temperature = new String[] {"/home/nick/MYD11A2/2010", "/home/nick/MYD11A2/2011"};
-			String tempDir = "LST_DAY";
-			String tempQCDir = "QC_DAY";
-			BitCheck mod11Checker = new BitCheck() {
-				@Override
-				public boolean isOK(int check) {
-					return BitChecker.mod11ok(check);
-				}
-				
-			};
-			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
-			
+			// PERSIANN rainfall predictor
+			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 			// the Correlatr
-			corr = new Correlatr(responseLoadr, predictLoadr, new int[] { 2010, 0, 1 });
+			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
 			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-			String base = "/home/nick/workspace/CLINTON/Open/result/evi_temperature_";
+			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
 			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-			corr.writeImagesParallel(base, reference, lags, 10, true); // well, 10 is a quite reasonable argument
+			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
