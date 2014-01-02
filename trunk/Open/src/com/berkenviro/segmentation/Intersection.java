@@ -294,18 +294,6 @@ public class Intersection {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		String f1 = "C:/Users/owner/Documents/Asli_segmentation/TrainingFiles/pca_train1.shp";
-		String f2 = "C:/Users/owner/Documents/Asli_segmentation/newBISresults/pca_175_01_09.shp";
-		File file1 = new File(f1);
-		File file2 = new File(f2);
-		try {
-			Intersection i = new Intersection(file1, file2);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
 		
 	}
 	
