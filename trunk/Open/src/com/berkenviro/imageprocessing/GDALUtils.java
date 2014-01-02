@@ -506,6 +506,21 @@ public class GDALUtils {
 		data.delete();
 	}
 	
+	/**
+	 * 
+	 * @param name
+	 */
+	public static void describeGeo(String name) {
+		Dataset dataset = getDataset(name);
+		double[] geo = dataset.GetGeoTransform();
+		System.out.println("Geo transform: ");
+		for (int i=0; i<geo.length; i++) {
+			System.out.print(geo[i]+", ");
+		}
+		String proj = dataset.GetProjectionRef();
+		System.out.println("Projection: ");
+		System.out.println(proj);
+	}
 	
 	/**
 	 * NOTE: OSX throws:
@@ -678,6 +693,11 @@ public class GDALUtils {
 //			System.out.println(Arrays.toString(xPixelsValue(data,0,y,1,10)));
 //			System.out.println();
 //		}
+		
+		String monthFile = "/Users/nclinton/Documents/"
+				+ "GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/"
+				+ "NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
+		describeGeo(monthFile);
 		
 	}
 
