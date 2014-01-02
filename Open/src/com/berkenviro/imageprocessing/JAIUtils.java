@@ -217,45 +217,28 @@ public class JAIUtils {
 	 * @param filename is the absolute path of the file
 	 * @return a PlanarImage
 	 */
-	public static PlanarImage readImage(String filename) {
+	public static TiledImage readImage(String filename) {
 	     
 		RenderedOp im = JAI.create("fileload", filename);
-	
 		// set the filename property
 		im.setProperty("fileName", filename);
-		//System.out.println("Loaded: "+im.getProperty("fileName"));
 		
-	    // For now ... make x & y tiles 512 **Note:  shouldn't hardcode this
-	    SampleModel sampleModel = im.getSampleModel().createCompatibleSampleModel(512,512);
-	
-	    // Create the tiled image
-	    TiledImage tm = new TiledImage(im.getMinX(),
-	    		 						im.getMinY(),
-	    		 						im.getWidth(),
-	    		 						im.getHeight(),
-	    		 						im.getTileGridXOffset(),
-	    		 						im.getTileGridYOffset(),
-	    		 						sampleModel,
-	    		 						im.getColorModel());
-	    tm.set(im);
-	
-	    // Request tiles from tiledimage thereby forcing them 
-	    // to be loaded from the RenderedImaged.
-	    // Commented due to taking forever and eventually causing a memory error.
-	    /*
-	    for (int ty=0; ty<tm.getNumYTiles(); ty++) {
-	    	for (int tx=0; tx<tm.getNumXTiles(); tx++) {
-	    		tm.getTile(tx,ty);
-	    	}
-	    }
-	    */
-	    
-	    // Let's get rid of the duplicate image
-	    im = null;
-	    // garbage collect
-	    runGc();
-	    // Return a tiled image
-	    return tm;
+		// 20131224 Not sure why it's necessary to make a copy
+//	    // make x & y tiles 512  ??
+//	    SampleModel sampleModel = im.getSampleModel().createCompatibleSampleModel(512, 512);
+//	    // Create the tiled image
+//	    TiledImage tm = new TiledImage(im.getMinX(),
+//	    		 						im.getMinY(),
+//	    		 						im.getWidth(),
+//	    		 						im.getHeight(),
+//	    		 						im.getTileGridXOffset(),
+//	    		 						im.getTileGridYOffset(),
+//	    		 						sampleModel,
+//	    		 						im.getColorModel());
+//	    tm.set(im);
+		
+		// careful: this image is writable
+		return new TiledImage(im, true);
 	}
 
 	/**
@@ -306,6 +289,55 @@ public class JAIUtils {
 		return ti;
 	}
 
+	/**
+	 * 
+	 * @param in is a one-band input
+	 * @param scaleOffset is {scale, offset}
+	 * @return
+	 */
+	public static PlanarImage rescale(PlanarImage in, double[] scaleOffset) {
+		// make the output image
+		int width = in.getWidth();
+		int height = in.getHeight();
+		// create a float (32 bit) sample model
+		SampleModel sModel = RasterFactory.createBandedSampleModel(
+				DataBuffer.TYPE_FLOAT,
+				width,
+				height,
+				1);
+		ColorModel cModel = PlanarImage.createColorModel(sModel);
+		TiledImage tImage = new TiledImage(0,0,width,height,0,0,sModel,cModel);
+		// iterate over the input, set the output raster value
+		RandomIter iterator = RandomIterFactory.create(in, null);
+		for (int y=0; y<height; y++) {  	// each line
+			for (int x=0; x<width; x++){	// each pixel
+				double pix = iterator.getSampleDouble(x,y,0);
+				tImage.setSample(x, y, 0, pix*scaleOffset[0]+scaleOffset[1]);
+			}
+		}
+		return tImage;
+	}
+	
+	/**
+	 * 
+	 * @param in
+	 * @return
+	 */
+	public static PlanarImage mean(PlanarImage[] in) {
+		PlanarImage im = in[0];
+		ParameterBlock pb;
+		for (int i=1; i<in.length; i++) {
+			pb = new ParameterBlock();
+			pb.addSource(in[i]);
+			pb.addSource(im);
+			im = JAI.create("add", pb);
+		}
+		ParameterBlock pbMean = new ParameterBlock();
+		pbMean.addSource(im);
+		pbMean.add(new double[] {in.length});
+		return JAI.create("DivideByConst", pbMean);
+	}
+	
 	
 	/**
 	 * Get the GeoTiff Fields.
@@ -352,9 +384,10 @@ public class JAIUtils {
 		
 		 TIFFField[] tFields = dir.getFields();
 		 System.out.println("TIFF 6.0 tags present:");
-		 for (int i=1; i<tFields.length; i++) {
+		 for (TIFFField field : tFields) {
 			 // dump field ID's to terminal
-			 System.out.println("tag ID: "+tFields[i].getTag());
+			 System.out.println("tag ID: "+field.getTag() + ", tag: "+
+					 (field.getType() == TIFFField.TIFF_ASCII  ? field.getAsString(0) : "") );
 		 }
 		 
 		 // look for particular fields associated with the GeoTIFF spec
@@ -1099,7 +1132,7 @@ public class JAIUtils {
 	    											DataBuffer.TYPE_FLOAT,
 	    											width,
 	    											height,
-	    											band,
+	    											1, // number of bands
 	    											new Point(0,0));
 			// get stats from the entire image
 			ParameterBlock pb = new ParameterBlock();
@@ -1360,21 +1393,43 @@ public class JAIUtils {
 //		writeJPEG(formatted, out);
 
 		// 20131007
-		String image = "X:/Documents/global_phenology/land_mask.tif";
-		PlanarImage im = readImage(image);
-		register(im);
-		System.out.println("ulX="+im.getProperty("ulX"));
-		System.out.println("ulY="+im.getProperty("ulY"));
-		System.out.println("deltaX="+im.getProperty("deltaX"));
-		System.out.println("deltaY="+im.getProperty("deltaY"));
+//		String image = "X:/Documents/global_phenology/land_mask.tif";
+//		PlanarImage im = readImage(image);
+//		register(im);
+//		System.out.println("ulX="+im.getProperty("ulX"));
+//		System.out.println("ulY="+im.getProperty("ulY"));
+//		System.out.println("deltaX="+im.getProperty("deltaX"));
+//		System.out.println("deltaY="+im.getProperty("deltaY"));
+//		
+//		Dataset data = GDALUtils.getDataset(image);
+//		System.out.println(Arrays.toString(data.GetGeoTransform()));
+//		
+//		double ulx = (Double)im.getProperty("ulX") + (Double) im.getProperty("deltaX") / 2.0;
+//		double uly = (Double) im.getProperty("ulY") + (Double) im.getProperty("deltaY") / 2.0;
+//		System.out.println("ulx_center="+ulx);
+//		System.out.println("uly_center="+uly);
 		
-		Dataset data = GDALUtils.getDataset(image);
-		System.out.println(Arrays.toString(data.GetGeoTransform()));
+		// Lab 4 exercise
+//		String image = "/Users/nclinton/Documents/Tsinghua/remote_sensing_class/lecture_images/" +
+//				"MODIS_downloads_EE_demo/MOD09GA_005_2013_10_11_geographic/" +
+//				"MOD09GA_005_2013_10_11.sur_refl_b01.tif";
+//		PlanarImage pi = readImage(image);
+//		System.out.println(isGeoTiff(image));
+//		describeGeoTiff(image);
+//		for (int y=0; y<10; y++) {
+//			for (int x=0; x<10; x++) {
+//				double[] coords = null;
+//				try {
+//					coords = getProjectedXY(new int[] {x,y}, pi);
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}
+//				System.out.println("("+x+","+y+"): "+Arrays.toString(coords));
+//			}
+//		}
 		
-		double ulx = (Double)im.getProperty("ulX") + (Double) im.getProperty("deltaX") / 2.0;
-		double uly = (Double) im.getProperty("ulY") + (Double) im.getProperty("deltaY") / 2.0;
-		System.out.println("ulx_center="+ulx);
-		System.out.println("uly_center="+uly);
+		String check = "/Users/nclinton/Documents/GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
+		describeGeoTiff(check);
 	}
 
 

@@ -132,17 +132,18 @@ public class GaussFunction implements ParametricRealFunction {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-//		double sigma = 1.0;
-//		double[][] kernel1 = (new GaussFunction()).getKernel(1, new double[] {1.0/sigma, 0, sigma});
-//		sigma = 0.5;
-//		double[][] kernel2 = (new GaussFunction()).getKernel(1, new double[] {1.0/sigma, 0, sigma});
-//		
-//		double[][] kernel = new double[kernel1.length][kernel1.length];
-//		for (int r=0; r<kernel.length; r++) {
-//			for (int c=0; c<kernel.length; c++) {
-//				kernel[r][c] = kernel2[r][c]-kernel1[r][c];
-//			}
-//		}
+		double sigma = 1.0;
+		double[][] kernel1 = (new GaussFunction()).getKernel(2, new double[] {1.0/sigma, 0, sigma});
+		sigma = 0.5;
+		double[][] kernel2 = (new GaussFunction()).getKernel(2, new double[] {1.0/sigma, 0, sigma});
+		
+		double[][] kernel = new double[kernel1.length][kernel1.length];
+		for (int r=0; r<kernel.length; r++) {
+			for (int c=0; c<kernel.length; c++) {
+				kernel[r][c] = kernel2[r][c]-kernel1[r][c];
+			}
+			System.out.println(Arrays.toString(kernel[r]));
+		}
 		
 	}
 
