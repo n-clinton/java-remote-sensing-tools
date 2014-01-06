@@ -5,11 +5,14 @@ package cn.edu.tsinghua.timeseries;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import org.gdal.gdal.gdal;
+
+import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
 import com.berkenviro.imageprocessing.ImageData;
 import com.vividsolutions.jts.geom.Point;
@@ -278,4 +281,32 @@ public class ImageLoadr4 implements Loadr {
 		return TSUtils.evaluateSpline(spline, t);
 	}
 
+	/*
+	 * 
+	 */
+	public static void main(String[] args) {
+		String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
+		String eviDir = "EVI";
+		String eviQCDir = "VI_QC";
+		BitCheck mod13Checker = new BitCheck() {
+			@Override
+			public boolean isOK(int check) {
+				return BitChecker.mod13ok(check);
+			}
+			
+		};
+		try {
+			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+			double x = 71.0;
+			for (double y=48.0; y<70.0; y+=0.5) {
+				List<double[]> series = responseLoadr.getSeries(x,y);
+				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
+//				for (double[] t : series) {
+//					System.out.println("\t"+Arrays.toString(t));
+//				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }

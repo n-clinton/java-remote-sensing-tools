@@ -6,6 +6,7 @@ package cn.edu.tsinghua.timeseries;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -191,7 +192,21 @@ public class PERSIANNLoadr implements Loadr {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		// PERSIANN rainfall predictor
+		String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
+		try {
+			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+			double x = -71.0;
+			for (double y=-48.0; y>-70.0; y-=0.5) {
+				List<double[]> series = predictorLoadr.getSeries(x,y);
+				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
+//				for (double[] t : series) {
+//					System.out.println("\t"+Arrays.toString(t));
+//				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 	}
 

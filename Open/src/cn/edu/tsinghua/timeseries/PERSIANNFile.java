@@ -110,7 +110,9 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 	 */
 	public int[] getPixelXY(double[] projXY) throws Exception {
 		Coordinate pix = new Coordinate();
-		inv.transform(new Coordinate(projXY[0], projXY[1]), pix);
+		// correct for -180:180 geographic coordinates
+		inv.transform(new Coordinate((projXY[0] < 0 ? projXY[0] + 360.0 : projXY[0]), 
+				projXY[1]), pix);
 		if ((int)pix.x < 0 || (int)pix.x >= width || (int)pix.y < 0 || (int)pix.y >= height) {
 			throw new Exception("Impossible coordinates: "+pix);
 		}
