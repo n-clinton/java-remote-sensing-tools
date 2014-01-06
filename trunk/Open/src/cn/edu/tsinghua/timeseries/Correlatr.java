@@ -220,12 +220,14 @@ public class Correlatr {
 			}
 			// not enough data
 			if (cov.getN() < 5) {
+				System.err.println("\t Not enough data in the covariance.");
 				return new double[] { 0, 0 };
 			}
 			// the variance/covariance matrix
 			RealMatrix vc = cov.getResult();
 			// if either variable is constant...
 			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
+				System.err.println("\t No variance.");
 				return new double[] { 0, 0 };
 			}
 			// normalize by SD
@@ -332,6 +334,7 @@ public class Correlatr {
 			}
 			// not enough data
 			if (response.size() < 5 || covariate.size() < 5) {
+				System.err.println("\t Not enough data: response n="+response.size()+", covariate n="+covariate.size());
 				correlation = new double[] { 0, 0 };
 			}
 			// do the computation
@@ -465,12 +468,16 @@ public class Correlatr {
 			// for (int y=2500; y<5500; y++) {
 
 			// this time, we continue to run the rest of the image
-			final int width_begin = 0;
-			final int width_end = ref.getWidth();
-			//final int height_begin = 0;
-			final int height_begin = 13888; // 20140102 missing piece
-			final int height_end = ref.getHeight();
-
+//			final int width_begin = 0;
+//			final int width_end = ref.getWidth();
+//			final int height_begin = 0;
+//			final int height_end = ref.getHeight();
+			// 20140102 Tierra del Fuego
+			final int width_begin = 12265;
+			final int width_end = 14712;
+			final int height_begin = 13959;
+			final int height_end = 15227;
+			
 			for (int  y = height_begin; y < height_end; y++) {
 				for (int x = width_begin; x < width_end; x++) {
 					double _x = ulx + x * delta;
@@ -478,7 +485,7 @@ public class Correlatr {
 					// System.out.println(x+","+y);
 					// System.out.println(_x+","+_y);
 					if (Math.abs(_y) > 60.0) {
-						//						System.out.println("PERSIANN out of bounds.");
+						System.out.println("PERSIANN out of bounds.");
 						continue; // outside bounds of PERSIANN
 
 					}
@@ -633,7 +640,7 @@ public class Correlatr {
 				writeCorr((finishedPix.correlation[0] * 100), finishedPix);
 				writeDays((byte) finishedPix.correlation[1], finishedPix);
 				writeN(finishedPix.response.size(), finishedPix);
-				// System.out.println(finishedPix);
+				System.out.println(finishedPix);
 
 				// periodically write to disk
 				counter++;
@@ -785,10 +792,12 @@ public class Correlatr {
 //		}
 		
 		// 20140102 Final missing piece at Tierra del Fuego
+		// still not getting that piece down there.  Edit enumerate() and here for debug:
 		Correlatr corr = null;
 		try {
 			// EVI vegetation index response
-			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+			//String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+			String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
 			String eviDir = "EVI";
 			String eviQCDir = "VI_QC";
 			BitCheck mod13Checker = new BitCheck() {
@@ -800,12 +809,15 @@ public class Correlatr {
 			};
 			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			// PERSIANN rainfall predictor
-			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+			//String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
 			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 			// the Correlatr
 			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
-			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
+			//String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+			String reference = "X:/Documents/global_phenology/land_mask.tif";
+			//String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
+			String base = "X:/Documents/global_phenology/precipitation/evi_persiann_tdf_";
 			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
 			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
