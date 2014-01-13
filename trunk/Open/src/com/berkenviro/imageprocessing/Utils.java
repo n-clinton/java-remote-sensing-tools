@@ -34,6 +34,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.TreeMap;
 
 import org.apache.commons.math.FunctionEvaluationException;
 import org.apache.commons.math.MaxIterationsExceededException;
@@ -848,98 +852,6 @@ public class Utils {
 			}
 		}
 		return histogram;
-	}
-	
-	
-	/**
-	 * 
-	 * @param strings1
-	 * @param strings2
-	 * @param j1a
-	 * @param j1b
-	 * @param j2a
-	 * @param j2b
-	 * @return
-	 */
-	public static String[][] nestedJoin(String[][] strings1, String[][] strings2, int j1a, int j1b, int j2a, int j2b) {
-		// return strings2 joined to strings1
-		String[][] joinedStrings = new String[strings1.length+strings2.length][strings1[0].length];
-		// 
-		for (int i=0; i<strings1[j1a].length; i++) {
-			//System.out.println("Processing record "+i);
-			// copy to output table whether a match is found or not
-			for (int s1=0; s1<strings1.length; s1++) {
-				joinedStrings[s1][i] = strings1[s1][i];
-				System.out.print(joinedStrings[s1][i]+",");
-			}
-			for (int j=0; j<strings2[j2a].length; j++) {
-				// if right join 'a' field, ...
-				if (strings2[j2a][j].equals(strings1[j1a][i])) {
-					//System.out.println("\t"+strings2[j2a][j]+" = "+strings1[j1a][i]);
-					// look for a matching record
-					int k=j;
-					while (k<strings2[j2a].length && strings2[j2a][k].equals(strings1[j1a][i])) {
-						//System.out.println("\t\t Checking record "+k+" : "+ strings1[j1b][i]);
-						if(strings2[j2b][k].trim().toLowerCase().equals(strings1[j1b][i].trim().toLowerCase())) {
-							//System.out.println("\t\t\t"+strings2[j2b][k]+" = "+strings1[j1b][i]);
-							for (int s2=0; s2<strings2.length; s2++) {
-								joinedStrings[strings1.length+s2][i] = strings2[s2][k];
-								System.out.print(joinedStrings[strings1.length+s2][i]+",");
-							}
-							System.out.println();
-							break;
-						}
-						k++;
-					}
-					break;
-				}
-			}
-		}
-		
-		return joinedStrings;
-	}
-	
-	
-	/**
-	 * Test code and processing log.
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		/*
-		for (int m=1; m<=12; m++) {
-			for (int d=1; d<=28; d++) {
-				System.out.println(esDistance(2011, m, d));
-			}
-		}
-		*/ //OK
-		
-		// yield 1
-//		File file = new File("C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_comp.csv");
-//		String[][] strings1 = readTextFile(file, 1);
-//		file = new File("C:/Users/Nicholas/Documents/urban/agriculture/FAO_producer_price.csv");
-//		String[][] strings2 = readTextFile(file, 1);
-//		
-//		String[][] joinedStrings = nestedJoin(strings1, strings2, 2, 3, 1, 2);
-//		writeFile(joinedStrings, "C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_prices.csv");
-		
-		// yield2
-//		File file = new File("C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_comp2.csv");
-//		String[][] strings1 = readTextFile(file, 1);
-//		file = new File("C:/Users/Nicholas/Documents/urban/agriculture/FAO_producer_price.csv");
-//		String[][] strings2 = readTextFile(file, 1);
-//		
-//		String[][] joinedStrings = nestedJoin(strings1, strings2, 2, 3, 1, 2);
-//		writeFile(joinedStrings, "C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_prices2.csv");
-		
-//		File file = new File("C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_dollar_export.csv");
-//		String[][] strings1 = readTextFile(file, 1);
-//		file = new File("C:/Users/Nicholas/Documents/urban/agriculture/FAO_producer_price.csv");
-//		String[][] strings2 = readTextFile(file, 1);
-//		
-//		String[][] joinedStrings = nestedJoin(strings1, strings2, 0, 1, 1, 2);
-//		writeFile(joinedStrings, "C:/Users/Nicholas/Documents/urban/agriculture/country_yield2009_pop2010_dollar_export_prices.csv");
-		
-		
 	}
 
 	
