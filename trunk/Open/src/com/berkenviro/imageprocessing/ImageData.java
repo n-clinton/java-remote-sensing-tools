@@ -25,6 +25,7 @@ import org.gdal.gdalconst.gdalconstConstants;
  * logs:
  * 20131007. Added comments, formatted, made GDAL init static. nc.  Cong Hui 
  * 20131012. Make the code clean and more readable. CongHui
+ * 20140120. Changed _block_xsize to be the number of pixels in a line, per the variable declaration
  */
 public class ImageData {
 	private int        _block_xsize; 	// the length of a row of the image
@@ -57,6 +58,11 @@ public class ImageData {
 		_pixel_buffer.order(ByteOrder.nativeOrder());
 	}
 
+	@Override
+	public String toString() {
+		return _pixel_buffer.toString();
+	}
+ 	
 	/***
 	 * reconfigure some data member that is band relevant
 	 * @param band_index
@@ -64,7 +70,15 @@ public class ImageData {
 	private void reconfigBand(int band_index) {
 		_band_index = band_index;
 		_band = _image.GetRasterBand(_band_index);
-		_block_xsize = _band.GetBlockXSize();
+		//_block_xsize = _band.GetBlockXSize();
+		//System.out.println("\t BlockXSize: "+_band.GetBlockXSize());
+		//System.out.println("\t New BlockXSize: "+_image.GetRasterXSize());
+		/*
+		 * In the class variable declaration, it says that _block_xsize is
+		 * "the length of a row of the image".  While it may coincidentally
+		 * correspond to the line length, it is not necessarily true.
+		 */
+		_block_xsize = _image.GetRasterXSize();
 		_data_type = _band.getDataType();
 	}
 
@@ -169,6 +183,27 @@ public class ImageData {
 		_image.delete();
 	}
 
+	/**
+	 * 
+	 * @param args
+	 */
+	public static void main(String[] args) {
+//		String image = "/Users/nclinton/Documents/XJY_carbon/prec/prec_01.tif";
+//		Dataset data = GDALUtils.getDataset(image);
+//		try {
+//			System.out.println("Image value: "+GDALUtils.imageValue(data, -120.0, 38.0, 1));
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		// OK
+		
+//		ImageData data = new ImageData(image, 1);
+//		double check = data.imageValue(120.0, 38.0, 1);
+//		System.out.println("Image value: "+ check);
+		// OK after change in ImageData.reconfigBand() to make the width correct.  Check w/ Cong Hui
+		
+	}
 }
 
 
