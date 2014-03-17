@@ -793,37 +793,39 @@ public class Correlatr {
 		
 		// 20140102 Final missing piece at Tierra del Fuego
 		// still not getting that piece down there.  Edit enumerate() and here for debug:
-		Correlatr corr = null;
-		try {
-			// EVI vegetation index response
-			//String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
-			String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
-			String eviDir = "EVI";
-			String eviQCDir = "VI_QC";
-			BitCheck mod13Checker = new BitCheck() {
-				@Override
-				public boolean isOK(int check) {
-					return BitChecker.mod13ok(check);
-				}
-				
-			};
-			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-			// PERSIANN rainfall predictor
-			//String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
-			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
-			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
-			// the Correlatr
-			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
-			//String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-			String reference = "X:/Documents/global_phenology/land_mask.tif";
-			//String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
-			String base = "X:/Documents/global_phenology/precipitation/evi_persiann_tdf_";
-			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		Correlatr corr = null;
+//		try {
+//			// EVI vegetation index response
+//			//String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
+//			String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
+//			String eviDir = "EVI";
+//			String eviQCDir = "VI_QC";
+//			BitCheck mod13Checker = new BitCheck() {
+//				@Override
+//				public boolean isOK(int check) {
+//					return BitChecker.mod13ok(check);
+//				}
+//				
+//			};
+//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//			// PERSIANN rainfall predictor
+//			//String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
+//			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
+//			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+//			// the Correlatr
+//			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
+//			//String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
+//			String reference = "X:/Documents/global_phenology/land_mask.tif";
+//			//String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
+//			String base = "X:/Documents/global_phenology/precipitation/evi_persiann_tdf_";
+//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
+//			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		// 20140317 redo
 
 	}
 
