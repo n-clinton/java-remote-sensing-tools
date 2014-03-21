@@ -325,7 +325,7 @@ public class MRTRunner {
 				return "EVI";
 			}
 			if (subset.equals(MRTRunner.COMPOSITE_DOY)) {
-				return "COMPOSITE_DOY";
+				return "DOY";
 			}
 			if (subset.equals(MRTRunner.MOD13_VI_QUALITY)) {
 				return "VI_QC";
@@ -529,7 +529,11 @@ public class MRTRunner {
 //		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
 //		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
 		
-		
+		// 20140316
+		String productDir = "D:/MOD13A2/2010";
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
+		productDir = "D:/MOD13A2/2011";
+		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
 	}
 	
 }
