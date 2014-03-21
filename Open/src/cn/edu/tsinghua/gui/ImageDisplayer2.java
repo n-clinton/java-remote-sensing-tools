@@ -166,20 +166,20 @@ public class ImageDisplayer2 extends JFrame implements MouseMotionListener, Mous
 			};
 			final ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			// PERSIANN rainfall predictor----------------------------------------------------------
-//			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
-//			final PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
+			final PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 			// LST
-			String[] lst = new String[] {"D:/MYD11A2/2010/", "D:/MYD11A2/2011/"};
-			String tempDir = "LST_DAY";
-			String tempQCDir = "QC_DAY";
-			BitCheck mod11Checker = new BitCheck() {
-				@Override
-				public boolean isOK(int check) {
-					return BitChecker.mod11ok(check);
-				}
-				
-			};
-			final ImageLoadr4 predictorLoadr = new ImageLoadr4(lst, tempDir, tempQCDir, mod11Checker);
+//			String[] lst = new String[] {"D:/MYD11A2/2010/", "D:/MYD11A2/2011/"};
+//			String tempDir = "LST_DAY";
+//			String tempQCDir = "QC_DAY";
+//			BitCheck mod11Checker = new BitCheck() {
+//				@Override
+//				public boolean isOK(int check) {
+//					return BitChecker.mod11ok(check);
+//				}
+//				
+//			};
+//			final ImageLoadr4 predictorLoadr = new ImageLoadr4(lst, tempDir, tempQCDir, mod11Checker);
 			// set date. DO NOT NOT do this!!!!!!!!!!!
 			Calendar cal = Calendar.getInstance();
 			cal.set(2010, 0, 0);
