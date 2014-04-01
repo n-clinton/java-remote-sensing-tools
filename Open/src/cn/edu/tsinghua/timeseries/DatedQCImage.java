@@ -13,6 +13,7 @@ public class DatedQCImage implements Comparable {
 
 	String imageName;
 	String qcImageName;
+	String dateName;
 	Calendar cal;
 	
 	public DatedQCImage() {

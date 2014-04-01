@@ -10,10 +10,13 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.gdal.gdal.gdal;
 
+import ru.sscc.spline.Spline;
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
+
 import com.berkenviro.imageprocessing.ImageData;
 import com.vividsolutions.jts.geom.Point;
 
@@ -21,17 +24,14 @@ import com.vividsolutions.jts.geom.Point;
  * @author Nicholas Clinton
  * @author Cong Hui He
  * 
- * Load a time series of imagery from a MODIS product.
- * 20131007. Clean up.  
- * 20131012. Move the test code to another class called ImageLoadr4Test
+ * Modified version of ImageLoadr4 to incorporate pixel level date information
  */
-public class ImageLoadr4 implements Loadr {
+public class ImageLoadr6 implements Loadr {
 
 	private ArrayList<DatedQCImage> imageList;
-	private double[] t;
-	private Calendar date0;
 	private ImageData[] _image_data;
 	private ImageData[] _qc_image_data;
+	private ImageData[] _doy_image_data;
 	
 	private BitCheck bitChecker;
 
@@ -40,10 +40,11 @@ public class ImageLoadr4 implements Loadr {
 	 * 	subdirectories named by date, according to the convention of the USGS archives
 	 * @param dataDir is the name of the subdirectory (under date) containing the image data
 	 * @param qaqcDir is the name of the subdirectory (under date) containing the QA/QC data
+	 * @param doyDir is the name of the subdirectory (under date) containing the DOY data
 	 * @param bitChecker is a BitChecker used to evaluate the QC data
 	 * @throws Exception 
 	 */
-	public ImageLoadr4(String[] directories, String dataDir, String qaqcDir, BitCheck bitChecker) throws Exception {
+	public ImageLoadr6(String[] directories, String dataDir, String qaqcDir, String doyDir, BitCheck bitChecker) throws Exception {
 		System.out.println("Initializing image loader...");
 		
 		this.bitChecker = bitChecker;
@@ -62,6 +63,7 @@ public class ImageLoadr4 implements Loadr {
 				// Instantiate a new image Object
 				DatedQCImage image = new DatedQCImage();
 				// parse the directory name to get a date
+				// this will be adjusted by the 
 				String[] ymd = f.getName().split("\\.");
 				Calendar c = Calendar.getInstance();
 				c.set(Integer.parseInt(ymd[0]), Integer.parseInt(ymd[1])-1, Integer.parseInt(ymd[2]));
@@ -80,6 +82,13 @@ public class ImageLoadr4 implements Loadr {
 						image.qcImageName = qcFile.getAbsolutePath();
 					}
 				}
+				// find the DOY image in another subdirectory
+				File dayDir = new File(f.getPath()+"/"+doyDir);
+				for (File dayFile : dayDir.listFiles()) {
+					if (dayFile.getName().endsWith(".tif")) {
+						image.dateName = dayFile.getAbsolutePath();
+					}
+				}
 				//				System.out.println(image);
 				imageList.add(image);
 			}
@@ -89,36 +98,16 @@ public class ImageLoadr4 implements Loadr {
 		Collections.sort(imageList);
 		System.out.println("\t Done!");
 
-		// reference to the first image, unless otherwise specified
-		date0 = imageList.get(0).cal;
-
 		_image_data = new ImageData[imageList.size()];
 		_qc_image_data = new ImageData[imageList.size()];
+		_doy_image_data = new ImageData[imageList.size()];
 
-		// set the time vector
-		t = new double[imageList.size()];
 		for (int i=0; i<imageList.size(); i++) {
 			DatedQCImage dImage = imageList.get(i);
-			t[i] = diffDays(dImage);
-
 			// set Image Data
 			_qc_image_data[i] = new ImageData(dImage.qcImageName, 1);
 			_image_data[i] = new ImageData(dImage.imageName, 1);
-		}
-	}
-
-
-	/**
-	 * Optionally set the zero reference for the time series, i.e. the reference time compared
-	 * to which the t-coordinate of the images will be computed.
-	 * @param cal
-	 */
-	public void setDateZero(Calendar cal) {
-		date0 = cal;
-		// rebuild t
-		for (int i=0; i<imageList.size(); i++) {
-			DatedQCImage dImage = imageList.get(i);
-			t[i] = diffDays(dImage);
+			_doy_image_data[i] = new ImageData(dImage.dateName, 1);
 		}
 	}
 
@@ -167,15 +156,6 @@ public class ImageLoadr4 implements Loadr {
 		return Math.round(diff / (24 * 60 * 60 * 1000));
 	}
 
-	/**
-	 * 
-	 * @param im1
-	 * @param im2
-	 * @return
-	 */
-	public int diffDays(DatedQCImage im2) {
-		return diffDays(date0, im2.cal);
-	}
 
 	/**
 	 * Return size of the list.
@@ -205,11 +185,6 @@ public class ImageLoadr4 implements Loadr {
 
 
 	/**
-	 * WARNING!  When run on MOD13A2 data, this may result in DUPLICATE data points
-	 * at the end of one year and beginning of the next.  It may not be obvious because 
-	 * the nominal 16-day composite times are different.  This problem became apparent with 
-	 * ImageLoadr6.
-	 * 
 	 * @param x is a georeferenced coordinate
 	 * @param y is a georeferenced coordinate
 	 * @return a list of {t, value} double arrays.
@@ -217,17 +192,47 @@ public class ImageLoadr4 implements Loadr {
 	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
 
+		// zero reference for this time series
+		Calendar cal0 = imageList.get(0).cal;
+		int doy0 = (int)_doy_image_data[0].imageValue(x, y, 1);
+		cal0.set(Calendar.DAY_OF_YEAR, doy0);
+		
 		for (int i=0; i<imageList.size(); i++) {
 			try {
 				int qc = (int)_qc_image_data[i].imageValue(x, y, 1);
 				if (!bitChecker.isOK(qc)) {
-//										System.err.println("Bad data: " + qc);
+//					System.err.println("Bad data: " + qc);
 					continue;
 				}
-
-				// else, write the time offset and the image data
+				
+				// time
+				Calendar cal = imageList.get(i).cal;
+				int doy = (int)_doy_image_data[i].imageValue(x, y, 1);
+				// account for annual roll-overs
+				if ((cal.get(Calendar.DAY_OF_YEAR) - doy) > 16) {
+					cal.set(Calendar.YEAR, cal.get(Calendar.YEAR)+1);
+					cal.set(Calendar.DAY_OF_YEAR, doy);
+				}
+				else if ((cal.get(Calendar.DAY_OF_YEAR) - doy) < -16) {
+					cal.set(Calendar.YEAR, cal.get(Calendar.YEAR)-1);
+					cal.set(Calendar.DAY_OF_YEAR, doy);
+				} else {
+					cal.set(Calendar.DAY_OF_YEAR, doy);
+				}
+				
+				double t = diffDays(cal0, cal);
+				// check if this is a duplicate data point
+				// can happen at the annual boundary of composites
+				if (out.size() > 0) {
+					double[] last = out.getLast();
+					if (last[0] == t) {
+						continue; // already have this data point.
+					}
+				}
 				double data = _image_data[i].imageValue(x, y, 1);
-				out.add(new double[] {t[i], data});
+				// write the time offset and the image data
+				out.add(new double[] {t, data});
+				
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			} 
@@ -235,13 +240,6 @@ public class ImageLoadr4 implements Loadr {
 		return out;
 	}
 
-	/**
-	 * Get a complete X vector for the time series.
-	 * @return
-	 */
-	public double[] getX() {
-		return t;
-	}
 
 	/**
 	 * 
@@ -253,71 +251,60 @@ public class ImageLoadr4 implements Loadr {
 		}
 	}
 
-	/**
-	 * WARNING!  When run on MOD13A2 data, this may result in DUPLICATE data points. 
-	 * 
-	 * Fit a thin plate spline to the series and interpolate missing values.
-	 * This will fail if first and/or last values are missing, i.e. there is no extrapolation.
-	 * @param pt is a georeferenced point with the same coordinate system as the images.
-	 * @return a vector of Y values where missing values are interpolated
-	 */
-	public synchronized double[] getY(Point pt) throws Exception {
-		// get the time series under the point
-		List<double[]> series = getSeries(pt);
-		if (series.size() == imageList.size()) {
-			double[] y = new double[series.size()];
-			for (int t=0; t<series.size(); t++) {
-				y[t] = series.get(t)[1];
-			}
-			return y;
-		}
-		else if (series.size() < 4) {  // not enough points to do an interpolation, 4 is arbitrary
-			throw new Exception("Not enough data!  n="+series.size());
-		}
-		else if (series.get(0)[0] > t[0]) { // do not extrapolate in the beginning
-			throw new Exception("Start of series out of range: "+series.get(0)[0]);
-		}
-		else if (series.get(series.size()-1)[0] < t[t.length-1]) { // do not extrapolate at the end
-			throw new Exception("End of series out of range: "+series.get(series.size()-1)[0]);
-		}
-		double[][] xy = TSUtils.getSeriesAsArray(series);
-		// fit a spline to interpolate
-		DuchonSplineFunction spline = new DuchonSplineFunction(xy);
-		return TSUtils.evaluateSpline(spline, t);
+	
+	// The following three need to be re-implemented
+	@Override
+	public void setDateZero(Calendar cal) {}
+
+	@Override
+	public double[] getY(Point pt) throws Exception {
+		return null;
 	}
+
+	@Override
+	public double[] getX() {
+		return null;
+	}
+
 
 	/*
 	 * 
 	 */
 	public static void main(String[] args) {
-//		String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
+//		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
 //		String eviDir = "EVI";
 //		String eviQCDir = "VI_QC";
+//		String doyDir = "DOY";
 //		BitCheck mod13Checker = new BitCheck() {
 //			@Override
 //			public boolean isOK(int check) {
 //				return BitChecker.mod13ok(check);
 //			}
-//			
 //		};
 //		try {
-//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//
+//			ImageLoadr4 loadr4 = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//			ImageLoadr6 loadr6 = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 //			double x = 71.0;
 //			for (double y=48.0; y<70.0; y+=0.5) {
-//				List<double[]> series = responseLoadr.getSeries(x,y);
-//				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
-//				for (double[] t : series) {
-//					System.out.println("\t"+Arrays.toString(t));
+//				List<double[]> series4 = loadr4.getSeries(x,y);
+//				List<double[]> series6 = loadr6.getSeries(x,y);
+//				System.out.println("Point: "+Arrays.toString(new double[] {x,y})
+//						+"Length 4:"+series4.size()+" Length 6:"+series6.size());
+//				for (int t=0; t<series4.size(); t++) {
+//					System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
 //				}
 //			}
 //		} catch (Exception e) {
 //			e.printStackTrace();
 //		}
 		
-		// 20140321 check blank spots
+		
+		// 20140321 blank spot check
 		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
 		String eviDir = "EVI";
 		String eviQCDir = "VI_QC";
+		String doyDir = "DOY";
 		BitCheck mod13Checker = new BitCheck() {
 			@Override
 			public boolean isOK(int check) {
@@ -325,17 +312,25 @@ public class ImageLoadr4 implements Loadr {
 			}
 		};
 		try {
-			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+
+			ImageLoadr4 loadr4 = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+			ImageLoadr6 loadr6 = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 			double x = -87.9108613514;
 			double y = 40.4467308069;
-			List<double[]> series = responseLoadr.getSeries(x,y);
-			System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
-			for (double[] t : series) {
-				System.out.println("\t"+Arrays.toString(t));
+			List<double[]> series4 = loadr4.getSeries(x,y);
+			List<double[]> series6 = loadr6.getSeries(x,y);
+			System.out.println("Point: "+Arrays.toString(new double[] {x,y})
+					+"Length 4 = "+series4.size()+" Length 6 = "+series6.size());
+			for (int t=0; t<series6.size(); t++) {
+				System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
 			}
+			
+			double[][] xy = TSUtils.getSeriesAsArray(series6);
+			Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
 	}
+
+	
 }

@@ -72,7 +72,7 @@ public class BitChecker {
 				return true;
 			}
 			if (mod13qa(check) == 1) { // other quality
-				if (mod13usefulness(check) < 9) {
+				if (mod13usefulness(check) < 8) { // value of 9 was criticized by reviewers
 					return true;
 				}
 			}
