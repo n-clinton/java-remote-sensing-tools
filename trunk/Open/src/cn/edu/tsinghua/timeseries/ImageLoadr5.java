@@ -35,7 +35,6 @@ public class ImageLoadr5 implements Loadr  {
 	private Calendar date0;
 	private ImageData[] _image_data;
 	
-
 	/**
 	 * 
 	 * @param directories
@@ -44,9 +43,6 @@ public class ImageLoadr5 implements Loadr  {
 	@SuppressWarnings("unchecked")
 	public ImageLoadr5(String[] directories) throws Exception {
 		System.out.println("Initializing image loader...");
-
-		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "50");
-		gdal.SetCacheMax(1024);
 		
 		imageList = new ArrayList<DatedQCImage>();
 
@@ -207,6 +203,26 @@ public class ImageLoadr5 implements Loadr  {
 			} 
 		}
 		return out;
+	}
+	
+	/**
+	 * Get a Y-vector from WorldClim.  Should be length 12 (months).
+	 * @param x is a georeferenced coordinate
+	 * @param y is a georeferenced coordinate
+	 * @return a vector of Y values with NaN for missing data
+	 */
+	public synchronized double[] getY(double x, double y) {		
+		double[] y_vec = new double[imageList.size()];
+		for (int i=0; i<imageList.size(); i++) {
+			try {
+				// else, write the time offset and the image data
+				y_vec[i] = _image_data[i].imageValue(x, y, 1);
+			} catch (Exception e1) {
+				y_vec[i] = Double.NaN;
+				e1.printStackTrace();
+			} 
+		}
+		return y_vec;
 	}
 
 	/**

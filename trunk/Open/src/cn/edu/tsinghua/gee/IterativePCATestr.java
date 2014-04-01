@@ -3,8 +3,6 @@
  */
 package cn.edu.tsinghua.gee;
 
-import it.geosolutions.imageio.plugins.envihdr.ENVIHdrImageReaderSpi;
-import it.geosolutions.imageio.plugins.geotiff.GeoTiffImageReaderSpi;
 
 import java.awt.image.renderable.ParameterBlock;
 import java.io.File;
@@ -49,9 +47,9 @@ public class IterativePCATestr {
 		System.out.println("Using input: "+imageFileName);
 		ImageReader reader = null;
 		try {
-			//reader = new GeoTiffImageReaderSpi().createReaderInstance();
-			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
-		} catch (IOException e) {
+			// TODO: fix
+			reader = null;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		final ParameterBlockJAI pbjImageRead;

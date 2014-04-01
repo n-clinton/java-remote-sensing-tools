@@ -694,11 +694,53 @@ public class GDALUtils {
 //			System.out.println();
 //		}
 		
-		String monthFile = "/Users/nclinton/Documents/"
-				+ "GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/"
-				+ "NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
-		describeGeo(monthFile);
+//		String monthFile = "/Users/nclinton/Documents/"
+//				+ "GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/"
+//				+ "NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
+//		describeGeo(monthFile);
 		
+		// 20140321
+		String fromFile = "/data/GlobalLandCover/modis/land_mask.tif";
+//		String toFile = "/home/nclinton/Documents/evi_persiann_us_20140319_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140319_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140319_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140319_p.tif";
+//		transferGeo(fromFile, toFile);
+//		String toFile = "/home/nclinton/Documents/evi_persiann_us_20140321_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140321_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140321_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140321_p.tif";
+//		transferGeo(fromFile, toFile);
+//		String toFile = "/home/nclinton/Documents/evi_persiann_us_20140322_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140322_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140322_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140322_p.tif";
+//		transferGeo(fromFile, toFile);
+//		String toFile = "/home/nclinton/Documents/evi_persiann_us_20140323_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140323_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140323_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140323_p.tif";
+//		transferGeo(fromFile, toFile);
+		String toFile = "/home/nclinton/Documents/evi_persiann_20140324_merge.tif";
+		transferGeo(fromFile, toFile);
+		toFile = "/home/nclinton/Documents/evi_persiann_20140324_corr.tif";
+		transferGeo(fromFile, toFile);
+		toFile = "/home/nclinton/Documents/evi_persiann_20140324_days.tif";
+		transferGeo(fromFile, toFile);
+		toFile = "/home/nclinton/Documents/evi_persiann_20140324_p.tif";
+		transferGeo(fromFile, toFile);
 	}
 
 }

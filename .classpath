@@ -2,16 +2,20 @@
 <classpath>
 	<classpathentry kind="src" path="trunk/Open/src"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="C:/Program Files/GDAL/java/gdal.jar">
-		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Program Files/GDAL"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/gdal-1.10.1/swig/java/gdal.jar"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/gdal-1.10.1/swig/java"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JTS"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/CommonsMath"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Weka"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JAI"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/ImageIO-ext"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools2.7.4"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JavaAPIforKml"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/ejml/ejml-0.23.jar"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/ftp4j-1.7/ftp4j-1.7.jar"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/google-gson-2.2.4/gson-2.2.4.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JSci"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/json_simple-1.1-all/lib/json_simple-1.1.jar"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/JSpline/lib/jspline.jar"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/SavitskyGolay/sgfilter_v1r5_src/sgfilter_v1r5.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools2.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="/home/nclinton/Java_libs/JavaAPIforKml.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
