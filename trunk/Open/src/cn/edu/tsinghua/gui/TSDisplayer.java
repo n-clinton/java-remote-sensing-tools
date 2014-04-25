@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.text.NumberFormat;
 import java.util.List;
 
@@ -31,19 +32,19 @@ import org.apache.commons.math.random.RandomDataImpl;
 import org.apache.commons.math.stat.StatUtils;
 
 import com.berkenviro.gis.GISUtils;
+import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.GDALUtils;
 import com.berkenviro.imageprocessing.JAIUtils;
 import com.berkenviro.imageprocessing.SplineFunction;
+import com.berkenviro.imageprocessing.Utils;
 import com.sun.media.jai.widget.DisplayJAI;
 
 import cn.edu.tsinghua.timeseries.DuchonSplineFunction;
 import cn.edu.tsinghua.timeseries.Extremum;
 import cn.edu.tsinghua.timeseries.ImageLoadr2;
 import cn.edu.tsinghua.timeseries.TSUtils;
-
 import ru.sscc.spline.Spline;
 import ru.sscc.spline.polynomial.PSpline;
-
 import JSci.awt.DefaultGraph2DModel;
 import JSci.awt.Graph2D;
 import JSci.awt.DefaultGraph2DModel.DataSeries;
@@ -275,7 +276,8 @@ public class TSDisplayer extends JFrame implements ActionListener {
 			double[] minMax = getXRange();
 			// smooth with an FFT
 			//smooth = TSUtils.smoothFunction(spline, minMax[0], minMax[1], 0.85);
-			smooth = TSUtils.smoothFunction(spline, minMax[0], minMax[1], 
+			ArrayFunction arrFunction = new ArrayFunction(series);
+			smooth = TSUtils.smoothFunction(arrFunction, minMax[0], minMax[1], 
 					Double.parseDouble(smoothField.getText()));
 			addSeries(smooth);
 			// first derivative 
@@ -287,9 +289,7 @@ public class TSDisplayer extends JFrame implements ActionListener {
         	//UnivariateRealFunction secDerivative = derivative.derivative();
             //addSpline(secDerivative, derivRange);
 			// smooth with Savitzky-Golay, just for comparison
-			double[][] interpolated = TSUtils.splineValues(spline, minMax, 500);
-			//double[][] smooth2 = TSUtils.sgSmooth(interpolated, 5, 1);
-			double[][] smooth2 = TSUtils.sgSmooth(interpolated, 
+			double[][] smooth2 = TSUtils.sgSmooth(series, 
 					Integer.parseInt(widthField.getText()), 
 					Integer.parseInt(degreeField.getText()));
 			addSeries(smooth2);
@@ -439,23 +439,47 @@ public class TSDisplayer extends JFrame implements ActionListener {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		final double[][] check = new double[2][200];
-		RandomDataImpl gauss = new RandomDataImpl();
-		int index = 0;
-		double inc = 2.0*Math.PI/100.0;
-		for (int t=0; t<200; t++) {
-			check[0][t] = t*inc;
-			double noise = 
-			check[1][t] = 2.0 + Math.cos(check[0][t]) + gauss.nextGaussian(0, 0.3);
-		}
 		
-  		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-          public void run() {	
-        	  TSDisplayer disp = new TSDisplayer();
-        	  disp.graphSeries(check);
-          }
-  		});
+		// Smoothing demo
+//		final double[][] check = new double[2][200];
+//		RandomDataImpl gauss = new RandomDataImpl();
+//		int index = 0;
+//		double inc = 2.0*Math.PI/100.0;
+//		for (int t=0; t<200; t++) {
+//			check[0][t] = t*inc;
+//			double noise = 
+//			check[1][t] = 2.0 + Math.cos(check[0][t]) + gauss.nextGaussian(0, 0.3);
+//		}
+//		
+//  		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+//          public void run() {	
+//        	  TSDisplayer disp = new TSDisplayer();
+//        	  disp.graphSeries(check);
+//          }
+//  		});
 		
+		// test smoothings:
+		String MCD43 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MCD43_export.txt";
+		final double[][] mcd43 = Utils.readFile(new File(MCD43), 1);
+		String MOD13 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MOD13_export.txt";
+		final double[][] mod13 = Utils.readFile(new File(MOD13), 1);
+		String MYD13 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD13_export.txt";
+		final double[][] myd13 = Utils.readFile(new File(MYD13), 1);
+		String MOD09 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MOD09_export.txt";
+		final double[][] mod09 = Utils.readFile(new File(MOD09), 1);
+		String MYD09 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_export.txt";
+		final double[][] myd09 = Utils.readFile(new File(MYD09), 1);
+		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+			public void run() {	
+				TSDisplayer disp = new TSDisplayer();
+				disp.graphSeries(myd09);
+				disp = new TSDisplayer();
+				disp.graphSeries(myd13);
+				disp = new TSDisplayer();
+				disp.graphSeries(mcd43);
+			}
+		});
+
 	}
 
 }

@@ -1428,8 +1428,8 @@ public class JAIUtils {
 //			}
 //		}
 		
-		String check = "/Users/nclinton/Documents/GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
-		describeGeoTiff(check);
+//		String check = "/Users/nclinton/Documents/GlobalPhenology/climate_anomalies/precip/NCCCSM_1PTO2X_1_pr-change_o0001-0030/NCCCSM_1PTO2X_1_pr-change_o0001-0030_01.tif";
+//		describeGeoTiff(check);
 	}
 
 
