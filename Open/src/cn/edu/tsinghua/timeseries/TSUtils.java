@@ -3,6 +3,7 @@
  */
 package cn.edu.tsinghua.timeseries;
 
+import java.io.File;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,12 +28,12 @@ import JSci.awt.DefaultGraph2DModel;
 import JSci.awt.Graph2D;
 import JSci.awt.DefaultGraph2DModel.DataSeries;
 import JSci.swing.JLineGraph;
-
 import cn.edu.tsinghua.gui.TSDisplayer;
 
 import com.berkenviro.gis.GISUtils;
 import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.SplineFunction;
+import com.berkenviro.imageprocessing.Utils;
 
 import ru.sscc.spline.Spline;
 import ru.sscc.spline.analytic.GSplineCreator;
@@ -89,9 +90,9 @@ public class TSUtils {
 	 * @param p the proportion of frequency components to REMOVE.
 	 * @return
 	 */
-	public static double[][] smoothFunction(final UnivariateRealFunction spline, double min, double max, double p) {
+	public static double[][] smoothFunction(UnivariateRealFunction spline, double min, double max, double p) {
 		double[] smooth = null;
-		int n = 128;
+		int n = 1024;
 		FastFourierTransformer fft = new FastFourierTransformer();
 		try {
 			// transform
@@ -600,35 +601,72 @@ public class TSUtils {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String dir1 = "D:/MOD13A2/2010/";
-		String dir2 = "D:/MOD13A2/2011/";
-		try {
-			ImageLoadr2 loadr = new ImageLoadr2(new String[] {dir2, dir1});
-			List<double[]>pixelValues = loadr.getSeries(GISUtils.makePoint(-83.1438, 9.594));
-			final double[][] series = TSUtils.getSeriesAsArray(pixelValues);
-			// splines on the original data, un-scaled
-			final DuchonSplineFunction dSpline = new DuchonSplineFunction(series);
-			double[] minMax = {StatUtils.min(series[0]), StatUtils.max(series[0])};
-			final double[][] smooth1 = TSUtils.sgSmooth(series, 5, 2);
-			final double[][] smooth2 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.7);
-			final double[][] smooth3 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.05);
+		// check smoothing
+//		String dir1 = "D:/MOD13A2/2010/";
+//		String dir2 = "D:/MOD13A2/2011/";
+//		try {
+//			ImageLoadr2 loadr = new ImageLoadr2(new String[] {dir2, dir1});
+//			List<double[]>pixelValues = loadr.getSeries(GISUtils.makePoint(-83.1438, 9.594));
+//			final double[][] series = TSUtils.getSeriesAsArray(pixelValues);
+//			// splines on the original data, un-scaled
+//			final DuchonSplineFunction dSpline = new DuchonSplineFunction(series);
+//			double[] minMax = {StatUtils.min(series[0]), StatUtils.max(series[0])};
+//			final double[][] smooth1 = TSUtils.sgSmooth(series, 5, 2);
+//			final double[][] smooth2 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.7);
+//			final double[][] smooth3 = TSUtils.smoothFunction(dSpline, minMax[0], minMax[1], 0.05);
+//
+//			SwingUtilities.invokeLater(new Runnable() {
+//	            public void run() {
+//	            	TSDisplayer disp = new TSDisplayer();
+//	            	disp.graphSeries(series);
+//	            	disp.addSpline(dSpline);
+//	            	disp.graphSeries(smooth1);
+//	            	//disp.graphSeries(smooth2);
+//	            	disp.graphSeries(smooth3);
+//
+//	            }
+//	        });
+//	        
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 
-			SwingUtilities.invokeLater(new Runnable() {
-	            public void run() {
-	            	TSDisplayer disp = new TSDisplayer();
-	            	disp.graphSeries(series);
-	            	disp.addSpline(dSpline);
-	            	disp.graphSeries(smooth1);
-	            	//disp.graphSeries(smooth2);
-	            	disp.graphSeries(smooth3);
-
-	            }
-	        });
-	        
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
+//		String MCD43 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MCD43_export.txt";
+//		double[][] mcd43 = Utils.readFile(new File(MCD43), 1);
+//		ArrayFunction mcd43f = new ArrayFunction(mcd43);
+//		double[][] mcd43smooth = smoothFunction(mcd43f, 0, 365, 0.992);
+//		String MOD13 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MOD13_export.txt";
+//		double[][] mod13 = Utils.readFile(new File(MOD13), 1);
+//		ArrayFunction mod13f = new ArrayFunction(mod13);
+//		double[][] mod13smooth = smoothFunction(mod13f, 8, 362, 0.992);
+//		String MYD13 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD13_export.txt";
+//		double[][] myd13 = Utils.readFile(new File(MYD13), 1);
+//		ArrayFunction myd13f = new ArrayFunction(myd13);
+//		double[][] myd13smooth = smoothFunction(myd13f, 16, 355, 0.992);
+//		String MOD09 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MOD09_export.txt";
+//		double[][] mod09 = Utils.readFile(new File(MOD09), 1);
+//		ArrayFunction mod09f = new ArrayFunction(mod09);
+//		double[][] mod09smooth = smoothFunction(mod09f, 0, 365, 0.992);
+//		String MYD09 = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_export.txt";
+//		double[][] myd09 = Utils.readFile(new File(MYD09), 1);
+//		ArrayFunction myd09f = new ArrayFunction(myd09);
+//		double[][] myd09smooth = smoothFunction(myd09f, 0, 365, 0.992);
+//		
+//		double[][] combined = {mcd43smooth[0], mcd43smooth[1], 
+//								mod13smooth[0], mod13smooth[1], 
+//								myd13smooth[0], myd13smooth[1],
+//								mod09smooth[0], mod09smooth[1],
+//								myd09smooth[0], myd09smooth[1]};
+//		Utils.writeFile(combined, "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/Combined_export.csv");
+		
+		
+		String azimuth = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_export.txt";
+		double[][] az = Utils.readFile(new File(azimuth), 1);
+		ArrayFunction azf = new ArrayFunction(az);
+		double[][] aZsmooth = smoothFunction(azf, 0, 365, 0.992);
+		double[][] azOut = {aZsmooth[0], aZsmooth[1]};
+		Utils.writeFile(azOut, "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_smooth.csv");
+		
 	}
 
 }
