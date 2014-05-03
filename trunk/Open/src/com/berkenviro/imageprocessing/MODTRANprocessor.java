@@ -44,8 +44,6 @@
  */
 package com.berkenviro.imageprocessing;
 
-import it.geosolutions.imageio.plugins.envihdr.ENVIHdrImageReaderSpi;
-
 import java.awt.Point;
 import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
@@ -68,6 +66,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.media.jai.JAI;
@@ -878,7 +877,8 @@ public class MODTRANprocessor {
 		ImageReader reader;
 		try {
 			// Read the input
-			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+			//reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+			reader = ImageIO.getImageReaders(inFile).next();
 			final ParameterBlockJAI pbjImageRead;
 			pbjImageRead = new ParameterBlockJAI("ImageRead");
 			pbjImageRead.setParameter("Input", inFile);
@@ -1261,7 +1261,8 @@ public class MODTRANprocessor {
 		ImageReader reader;
 		try {
 			// Read the input
-			reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+			//reader = new ENVIHdrImageReaderSpi().createReaderInstance();
+			reader = ImageIO.getImageReaders(inFile).next();
 			final ParameterBlockJAI pbjImageRead;
 			pbjImageRead = new ParameterBlockJAI("ImageRead");
 			pbjImageRead.setParameter("Input", inFile);
