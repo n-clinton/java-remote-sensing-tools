@@ -6,8 +6,8 @@ package cn.edu.tsinghua.gee;
 
 import java.awt.image.renderable.ParameterBlock;
 import java.io.File;
-import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.media.jai.JAI;
 import javax.media.jai.ParameterBlockJAI;
@@ -22,11 +22,6 @@ import org.apache.commons.math.linear.ArrayRealVector;
 import org.apache.commons.math.linear.EigenDecompositionImpl;
 import org.apache.commons.math.linear.RealMatrix;
 import org.apache.commons.math.linear.RealVector;
-import org.apache.commons.math.random.JDKRandomGenerator;
-import org.apache.commons.math.random.UncorrelatedRandomVectorGenerator;
-import org.apache.commons.math.random.UniformRandomGenerator;
-import org.apache.commons.math.stat.descriptive.MultivariateSummaryStatistics;
-import org.apache.commons.math.stat.descriptive.SynchronizedMultivariateSummaryStatistics;
 import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 import org.apache.commons.math.util.MathUtils;
 
@@ -45,13 +40,7 @@ public class IterativePCATestr {
 	 */
 	public IterativePCATestr (String imageFileName) {
 		System.out.println("Using input: "+imageFileName);
-		ImageReader reader = null;
-		try {
-			// TODO: fix
-			reader = null;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		ImageReader reader = ImageIO.getImageReaders(new File(imageFileName)).next();
 		final ParameterBlockJAI pbjImageRead;
 		pbjImageRead = new ParameterBlockJAI("ImageRead");
 		pbjImageRead.setParameter("Input", new File(imageFileName));
