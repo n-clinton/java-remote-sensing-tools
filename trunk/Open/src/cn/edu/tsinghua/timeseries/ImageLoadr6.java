@@ -300,7 +300,7 @@ public class ImageLoadr6 implements Loadr {
 //		}
 		
 		
-		// 20140321 blank spot check
+		// 20140321 blank spots check
 		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
 		String eviDir = "EVI";
 		String eviQCDir = "VI_QC";
@@ -315,14 +315,20 @@ public class ImageLoadr6 implements Loadr {
 
 			ImageLoadr4 loadr4 = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			ImageLoadr6 loadr6 = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
-			double x = -87.9108613514;
-			double y = 40.4467308069;
-			List<double[]> series4 = loadr4.getSeries(x,y);
+//			double x = -87.9108613514;
+//			double y = 40.4467308069;
+//			double x = 135.2;
+//			double y = -24.0;
+			double x = 133.4;
+			double y = -13.3;
+//			List<double[]> series4 = loadr4.getSeries(x,y);
 			List<double[]> series6 = loadr6.getSeries(x,y);
 			System.out.println("Point: "+Arrays.toString(new double[] {x,y})
-					+"Length 4 = "+series4.size()+" Length 6 = "+series6.size());
+//					+"Length 4 = "+series4.size()+" Length 6 = "+series6.size());
+					+" Length 6 = "+series6.size());
 			for (int t=0; t<series6.size(); t++) {
-				System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
+//				System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
+				System.out.println("\t loadr6:"+Arrays.toString(series6.get(t)));
 			}
 			
 			double[][] xy = TSUtils.getSeriesAsArray(series6);
