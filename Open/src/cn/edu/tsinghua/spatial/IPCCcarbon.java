@@ -338,7 +338,7 @@ public class IPCCcarbon {
 		else if((int)(ecoregion/100) == 4){
 			return 0.48;
 		}
-		else{
+		else {
 			return 0.47;
 		}	
 	}

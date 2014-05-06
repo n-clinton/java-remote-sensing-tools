@@ -193,17 +193,28 @@ public class PERSIANNLoadr implements Loadr {
 	 */
 	public static void main(String[] args) {
 		// PERSIANN rainfall predictor
-		String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
+		//String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
+		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
 		try {
 			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
-			double x = -71.0;
-			for (double y=-48.0; y>-70.0; y-=0.5) {
-				List<double[]> series = predictorLoadr.getSeries(x,y);
-				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
+			Calendar cal = Calendar.getInstance();
+			cal.set(2010, 0, 1);
+			predictorLoadr.setDateZero(cal);
+//			double x = -71.0;
+//			for (double y=-48.0; y>-70.0; y-=0.5) {
+//				List<double[]> series = predictorLoadr.getSeries(x,y);
+//				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
 //				for (double[] t : series) {
 //					System.out.println("\t"+Arrays.toString(t));
 //				}
-			}
+//			}
+//			double x = 133.1;
+//			double y = -19.0;
+//			List<double[]> series = predictorLoadr.getSeries(x,y);
+//			for (int t=0; t<series.size(); t++) {
+//				System.out.println("\t predictorLoadr:"+Arrays.toString(series.get(t)));
+//			}
+			// consistent with Correlatr, 6 months of missing PERSIANN
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

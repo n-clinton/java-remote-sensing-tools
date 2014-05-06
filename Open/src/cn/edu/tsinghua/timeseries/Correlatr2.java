@@ -37,39 +37,57 @@ import cn.edu.tsinghua.modis.BitCheck;
 import com.berkenviro.imageprocessing.JAIUtils;
 
 /**
- * Legacy class.  The same functionality is available from Correlatr2 with longestSum=0.
- * Use that instead.  This one is just a processing record now.
  * @author Nicholas Clinton
  * @author Cong Hui He
  * 
+ * 
  */
-public class Correlatr {
+public class Correlatr2 {
+	
+	int longestLag;
+	int longestSum;
+	boolean maxCorrInterp;
+	
 	Loadr responseLoadr;
 	Loadr predictLoadr;
-	int[] lags;
+	PlanarImage ref;
+	
 	BlockingQueue<Pixel> pixels; // reusable objects
 	BlockingQueue<Pixel> queue; // read, but not processed
 	ThreadPoolExecutor service;
 	ExecutorCompletionService<Pixel> ecs; // processing
-	PlanarImage ref;
-	boolean maxCorrInterp;
 	
 	/**
 	 * 
 	 * @param response
 	 * @param predictor
+	 * @param reference is the pixel reference.  An output will be written at each reference pixel == 1.
 	 * @param ymd is {year, month, day} where month is zero-referenced
+	 * @param lags is an array of integer lags to test
+	 * @param longestSum is the most number of days to sum the covariate
+	 * @param maxCorrInterp if true will interpolate the predictor variable
+	 * @throws Exception
 	 */
-	public Correlatr(Loadr response, Loadr predictor, int[] ymd) {
+	public Correlatr2(Loadr response, Loadr predictor, String reference, 
+			int[] ymd, int longestLag, int longestSum, boolean maxCorrInterp) throws Exception {
+		System.out.println("Initializing... ");
+		this.maxCorrInterp = maxCorrInterp;
+		System.out.println("Interpolation is "+this.maxCorrInterp);
+		this.longestLag = longestLag;
+		System.out.println("longestLag: "+this.longestLag);
+		this.longestSum = longestSum;
+		System.out.println("Sum days: "+this.longestSum);
+		
+		ref = JAIUtils.readImage(reference);
+		JAIUtils.register(ref);
 		responseLoadr = response;
 		predictLoadr = predictor;
 		Calendar cal = Calendar.getInstance();
 		cal.set(ymd[0], ymd[1], ymd[2]);
-		if (ymd != null) {
-			System.out.println("Setting zero-reference to: " + cal.getTime());
-			responseLoadr.setDateZero(cal);
-			predictLoadr.setDateZero(cal);
-		}
+		System.out.println("Setting zero-reference to: " + cal.getTime());
+		responseLoadr.setDateZero(cal);
+		predictLoadr.setDateZero(cal);
+
 	}
 
 	/**
@@ -80,43 +98,7 @@ public class Correlatr {
 		predictLoadr.close();
 	}
 
-	/**
-	 * Use interpolating splines.
-	 * 
-	 * @param response
-	 * @param covariate
-	 * @param lag
-	 * @return
-	 */
-//	public static double correlation(List<double[]> response,
-//			List<double[]> covariate, int lag) {
-//		VectorialCovariance cov = new VectorialCovariance(2, false);
-//		double min = response.get(0)[0]; // minumum X
-//		double max = response.get(response.size() - 1)[0];
-//		// fit splines
-//		double[][] xy = TSUtils.getSeriesAsArray(response);
-//		Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
-//		xy = TSUtils.getSeriesAsArray(covariate);
-//		Spline cSpline = TSUtils.duchonSpline(xy[0], xy[1]);
-//		// compute covariance
-//		for (double t = min; t <= max; t++) { // daily step
-//			if (t - lag < 0 || t - lag > covariate.get(covariate.size() - 1)[0]) {
-//				continue; // don't go out of bounds
-//			}
-//			try {
-//				// System.out.println(t+","+r+","+c);
-//				cov.increment(new double[] { rSpline.value(t),
-//						cSpline.value(t - lag) });
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		RealMatrix vc = cov.getResult();
-//		// normalize by SD
-//		return vc.getEntry(0, 1)
-//				/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
-//	}
-
+	
 	/**
 	 * Use interpolating splines.  Response must be greater than zero.
 	 * 
@@ -124,64 +106,100 @@ public class Correlatr {
 	 * @param covariate
 	 * @return
 	 */
-	public double[] maxCorrelationInterpolated(List<double[]> response,
-			List<double[]> covariate, int[] lags) {
+	public double[] maxCorrelationInterpolatedSummed(List<double[]> response, List<double[]> covariate) {
 		VectorialCovariance cov = new VectorialCovariance(2, false);
-		RealMatrix vc = null; // the variance/covariance matrix
-		double[] correlations = new double[lags.length];
-		double[] n = new double[lags.length];
-		
-		double t0 = response.get(0)[0]; // minumum t
-		double tn = response.get(response.size() - 1)[0]; // max t
 		// fit splines
 		double[][] xy = TSUtils.getSeriesAsArray(response);
 		Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
 		xy = TSUtils.getSeriesAsArray(covariate);
 		Spline cSpline = TSUtils.duchonSpline(xy[0], xy[1]);
-		for (int l = 0; l < lags.length; l++) {
-			cov.clear();
-			// compute covariance
-			for (double t = t0; t <= tn; t++) { // daily step
-				if (t - lags[l] < 0) {
-					continue; // don't go out of bounds
-				}
-				try {
-					double r = rSpline.value(t);
-					if (r < 0) { // want only EVI greater than zero
-						continue;
+		
+		double minCorr = 1.0;
+		double maxCorr = -1.0;
+		int minLag = 0;
+		int maxLag = 0;
+		int minSum = 0;
+		int maxSum = 0;
+		int minN = 0;
+		int maxN = 0;
+		double t0 = response.get(0)[0]; // minumum t
+		double tn = response.get(response.size() - 1)[0]; // max t
+		for (int sum=0; sum<=longestSum; sum+=5) {
+			//System.out.print("sum="+sum+", ");
+			for (int l = 0; l <= longestLag; l+=5) {
+				//System.out.print("\t lag="+lags[l]+", ");
+				cov.clear();
+				// compute covariance
+				for (double t = t0; t <= tn; t++) { // daily step
+					if (t - l - sum < 0) {
+						//System.out.println("\t\t out of bounds"+(t - lags[l] - sum));
+						continue; // don't go out of bounds
 					}
-					double c = cSpline.value(t - lags[l]);
-					// System.out.println(t+","+r+","+c);
-					cov.increment(new double[] { r, c });
-				} catch (Exception e) {
-					e.printStackTrace();
+					try {
+						double r = rSpline.value(t);
+						if (r < 0) { // want only EVI greater than zero
+							//System.err.println("\t\t EVI<0.");
+							continue;
+						}
+						// summation
+						double cSum = 0;
+						int index = (int) (t - l);
+						//System.out.println("\t\t Summing from "+(t - lags[l])+"...");
+						for (int s=0; s<=sum; s++) {
+							//System.out.println("\t\t\t time="+index);
+							double c = cSpline.value(index);
+							//System.out.println("\t\t\t adding..."+c);
+							cSum += c;
+							index--;
+						}
+						//System.out.println("\t\t incrementing: "+t+","+r+","+cSum);
+						cov.increment(new double[] { r, cSum });
+					} catch (Exception e) {
+						//e.printStackTrace();
+					}
+				}
+
+				// the variance/covariance matrix
+				RealMatrix vc = cov.getResult();
+				// if either variable is constant...
+				if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
+					//System.err.println("\t No variance.");
+					return new double[] {0, 0, 0, 0};
+				}
+				// normalize by SD
+				double correlation = vc.getEntry(0, 1)
+						/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
+				if (correlation < minCorr) {
+					minCorr = correlation;
+					minLag = l;
+					minSum = sum;
+					minN = (int)cov.getN();
+				}
+				if (correlation > maxCorr) {
+					maxCorr = correlation;
+					maxLag = l;
+					maxSum = sum;
+					maxN = (int)cov.getN();
 				}
 			}
-			vc = cov.getResult();
-			// normalize by SD
-			correlations[l] = vc.getEntry(0, 1)
-					/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
-			// System.out.println(correlations[l]);
-			n[l] = cov.getN();
 		}
-		int max = weka.core.Utils.maxIndex(correlations); // might be negative
-		if (correlations[max] < 0) {
-			int min = weka.core.Utils.minIndex(correlations);
-			return new double[] { correlations[min], lags[min], n[min]};
+
+		if (maxCorr < 0) {
+			return new double[] {minCorr, minLag, minSum, minN};
 		}
-		return new double[] { correlations[max], lags[max], n[max]};
+		return new double[] {maxCorr, maxLag, maxSum, maxN};
 	}
 
+	
 	/**
 	 * This version is meant for daily predictor data (PERSIANN), for which it makes no
-	 * sense to fit a spline.  The response (EVI) must be greater than zero and n>=5.
+	 * sense to fit a spline.  The response (EVI) must be greater than zero.
 	 * 
 	 * @param response
 	 * @param covariate
-	 * @return
+	 * @return 
 	 */
-	public double[] maxCorrelation(List<double[]> response,
-			List<double[]> covariate, int[] lags) {
+	public double[] maxCorrelationSummed(List<double[]> response, List<double[]> covariate) {
 		// insert the predictor data to a TreeMap, with key=time
 		TreeMap<Integer, Double> map = new TreeMap<Integer, Double>();
 		for (double[] tc : covariate) {
@@ -189,71 +207,98 @@ public class Correlatr {
 		}
 
 		VectorialCovariance cov = new VectorialCovariance(2, false);
-		double[] correlations = new double[lags.length];
-		double[] n = new double[lags.length];
-		double t0 = response.get(0)[0]; // minumum t
-		double tn = response.get(response.size() - 1)[0]; // max t
 		// fit a spline to the EVI response
 		double[][] xy = TSUtils.getSeriesAsArray(response);
 		Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
-		for (int l = 0; l < lags.length; l++) {
-			cov.clear();
-			// compute covariance
-			for (double t = t0; t <= tn; t++) { // daily step
-				if (t - lags[l] < 0) {
-					continue; // don't go out of bounds
-				}
-				try {
-					// this will sometimes throw an Exception if the spline can't be created
-					double r = rSpline.value(t);
-					if (r < 0) { // want only EVI greater than zero
-						continue;
+		double minCorr = 1.0;
+		double maxCorr = -1.0;
+		int minLag = 0;
+		int maxLag = 0;
+		int minSum = 0;
+		int maxSum = 0;
+		int minN = 0;
+		int maxN = 0;
+		double t0 = response.get(0)[0]; // minumum t
+		double tn = response.get(response.size() - 1)[0]; // max t
+		for (int sum=0; sum<=longestSum; sum+=5) {
+			//System.out.println("sum="+sum+", ");
+			for (int l = 0; l<=longestLag; l+=5) {
+				//System.out.println("\t lag="+lags[l]+", ");
+				cov.clear();
+				// compute covariance
+				for (double t = t0; t <= tn; t++) { // daily step
+					if (t - l - sum < 0) {
+						//System.err.println("\t\t out of bounds"+(t - lags[l] - sum));
+						continue; // don't go out of bounds
 					}
-					Double cDouble = map.get((int) t - lags[l]);
-					if (cDouble == null) { // t was a no data point
-						continue;
+					try {
+						double r = rSpline.value(t);
+						if (r < 0) { // want only EVI greater than zero
+							//System.err.println("\t\t EVI<0.");
+							continue;
+						}
+						// summation
+						double cSum = 0;
+						int index = (int) (t - l);
+						//System.out.println("\t\t Summing from "+(t - lags[l])+"...");
+						for (int s=0; s<=sum; s++) {
+							//System.out.println("\t\t\t time="+index);
+							Double cDouble = map.get(index);
+							if (cDouble == null) { // index was a no data point
+								//System.err.println("\t\t\t"+index+" was no data.");
+								continue;
+							}
+							//System.out.println("\t\t\t adding: "+cDouble.doubleValue());
+							cSum += cDouble.doubleValue();
+							index--;
+						}
+						if (index < (t - l)) { // don't increment a false zero (all no-data)
+							//System.out.println("\t\t incrementing: "+t+","+r+","+cSum);
+							cov.increment(new double[] { r, cSum });
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
-					// System.out.println(t+","+r+","+c);
-					cov.increment(new double[] { r, cDouble.doubleValue() });
-				} catch (Exception e) {
-					//e.printStackTrace();
 				}
-			}
 
-			// the variance/covariance matrix
-			RealMatrix vc = cov.getResult();
-			// if either variable is constant...
-			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
-				//System.err.println("\t No variance.");
-				return new double[] { 0, 0, 0};
-			}
-			// normalize by SD
-			correlations[l] = vc.getEntry(0, 1)
-					/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
-			// System.out.println(correlations[l]);
-			n[l] = (int)cov.getN();
+				// the variance/covariance matrix
+				RealMatrix vc = cov.getResult();
+				// if either variable is constant...
+				if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
+					//System.err.println("\t No variance.");
+					return new double[] {0, 0, 0, 0};
+				}
+				// normalize by SD
+				double correlation = vc.getEntry(0, 1)
+						/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
+				if (correlation < minCorr) {
+					minCorr = correlation;
+					minLag = l;
+					minSum = sum;
+					minN = (int)cov.getN();
+				}
+				if (correlation > maxCorr) {
+					maxCorr = correlation;
+					maxLag = l;
+					maxSum = sum;
+					maxN = (int)cov.getN();
+				}
+			} // lags
+		} // summation
+
+		if (maxCorr < 0) {
+			return new double[] {minCorr, minLag, minSum, minN};
 		}
-		int max = weka.core.Utils.maxIndex(correlations); // might be negative
-		if (correlations[max] < 0) {
-			int min = weka.core.Utils.minIndex(correlations);
-			return new double[] { correlations[min], lags[min], n[min]};
-		}
-		return new double[] { correlations[max], lags[max], n[max]};
+		return new double[] {maxCorr, maxLag, maxSum, maxN};
 	}
 
-
+	
 	/**
 	 * 
 	 * @param base is the base filename for output files
-	 * @param reference is the pixel reference.  An output will be written at each reference pixel == 1.
-	 * @param lags is an array of integer lags to test
 	 * @param nThreads is the number of compute threads to use
-	 * @param maxCorrInterp if true will interpolate the predictor variable
 	 */
-	public void writeImagesParallel(String base, String reference, int[] lags,
-			int nThreads, boolean maxCorrInterp) {
-		this.lags = lags;
-		this.maxCorrInterp = maxCorrInterp;
+	public void writeImagesParallel(String base, int nThreads) {
 
 		// object pool of pixels
 		int numPixels = 5*nThreads;
@@ -268,8 +313,6 @@ public class Correlatr {
 				new ArrayBlockingQueue<Runnable>(nThreads), 
 				new ThreadPoolExecutor.DiscardPolicy());
 		ecs = new ExecutorCompletionService<Pixel>(service);
-		ref = JAIUtils.readImage(reference);
-		JAIUtils.register(ref);
 
 		// read thread
 		PixelEnumeration enumerator = new PixelEnumeration();
@@ -322,14 +365,14 @@ public class Correlatr {
 
 		@Override
 		public Pixel call() {
-			long start = System.nanoTime();
+			//long start = System.nanoTime();
 			// DUMMY, nothing to do
 			if (dummy) {
 				return this;
 			}
 			// sort of arbitrary, but if size=0, below throws an exception and the write thread will stop
 			if (response.size() < 13 || covariate.size() < 13) {
-				correlation = new double[] { 0, 0, 0};
+				correlation = new double[] {0, 0, 0, 0};
 				return this;
 			}
 			// not enough data check
@@ -348,7 +391,7 @@ public class Correlatr {
 			double[] covt = null;
 			for (int t=1; t<covariate.size(); t++) {
 				covt = covariate.get(t);
-				if ((covt[0]-cov0[0]) > 6) { // 8 consecutive, missing 8-day composites (48)
+				if ((covt[0]-cov0[0]) > 64) { // 8 consecutive, missing 8-day composites (64)
 					gap = true;
 					break;
 				}
@@ -371,15 +414,15 @@ public class Correlatr {
 //					cov[i] = arr[0];
 //				}
 //				System.out.println("\t"+Arrays.toString(cov));
-				correlation = new double[] { 0, 0, 0};
+				correlation = new double[] {0, 0, 0, 0};
 				return this;
 			}
 
 			// do the computation
 			if (maxCorrInterp) {
-				correlation = maxCorrelationInterpolated(response, covariate, lags);
+				correlation = maxCorrelationInterpolatedSummed(response, covariate);
 			} else {
-				correlation = maxCorrelation(response, covariate, lags);
+				correlation = maxCorrelationSummed(response, covariate);
 			}
 			
 			// Assume the Spline functions are free to vary everywhere except the control points.
@@ -394,7 +437,7 @@ public class Correlatr {
 			//double z = 0.5*Math.log((1.0 + correlation[0]) / (1.0 - correlation[0]))*Math.sqrt(df-1.0);
 			// replace the cov.N with a p-value
 			if (df < 0) {
-				correlation[2] = 0.5; // undefined
+				correlation[3] = 0.5; // undefined
 			}
 			else {
 				TDistributionImpl tDist = new TDistributionImpl(df);
@@ -408,15 +451,15 @@ public class Correlatr {
 					e.printStackTrace();
 				}
 				if (correlation[0] < 0) {
-					correlation[2] = p;
+					correlation[3] = p;
 				}
 				else {
-					correlation[2] = 1.0 - p;
+					correlation[3] = 1.0 - p;
 				}
 			}
 			
-			long stop = System.nanoTime();
-			double elapsed = (double)(stop - start) / 1000.0;
+			//long stop = System.nanoTime();
+			//double elapsed = (double)(stop - start) / 1000.0;
 			//System.out.println("\t compute time: " + elapsed);
 			return this;
 		}
@@ -451,9 +494,9 @@ public class Correlatr {
 
 		@Override
 		public void run() {
-			long start = System.nanoTime();
+			//long start = System.nanoTime();
 			list = loadr.getSeries(x, y);
-			long stop = System.nanoTime();
+			//long stop = System.nanoTime();
 			//System.out.println("\t read time: " + (double)(stop - start) / 1000.0);
 			//print();
 		}
@@ -663,7 +706,7 @@ public class Correlatr {
 	 */
 	class PixelWrite implements Runnable {
 
-		WritableRaster corr, days, p;
+		WritableRaster corr, days, sum, p;
 		String base;
 
 		/**
@@ -679,6 +722,9 @@ public class Correlatr {
 					width, height, 1, // bands
 					new java.awt.Point(0, 0)); // origin
 			days = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
+					width, height, 1, // bands
+					new java.awt.Point(0, 0)); // origin
+			sum = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
 					width, height, 1, // bands
 					new java.awt.Point(0, 0)); // origin
 			p = RasterFactory.createBandedRaster(DataBuffer.TYPE_BYTE, // unsigned byte
@@ -701,7 +747,7 @@ public class Correlatr {
 		 * @throws ExecutionException
 		 */
 		public void write() {
-			int interval = 1000000; // frequency of write, original value 10000000
+			int interval = 100000; // frequency of write, original value 10000000
 			int counter = 0;
 			long now = System.currentTimeMillis();
 			while (true) {
@@ -711,7 +757,7 @@ public class Correlatr {
 				} catch (InterruptedException | ExecutionException e) {
 					e.printStackTrace();
 					finishedPix = new Pixel(false);
-					finishedPix.correlation = new double[] {0, 0, 0};
+					finishedPix.correlation = new double[] {0, 0, 0, 0};
 				}
 				
 				if (finishedPix.dummy) { // DUMMY
@@ -722,7 +768,8 @@ public class Correlatr {
 
 				writeCorr((short)(255*finishedPix.correlation[0]), finishedPix);
 				writeDays((short) finishedPix.correlation[1], finishedPix);
-				writeP((byte)(255*finishedPix.correlation[2]), finishedPix);
+				writeSum((short) finishedPix.correlation[2], finishedPix);
+				writeP((byte)(255*finishedPix.correlation[3]), finishedPix);
 
 				// periodically write to disk
 				counter++;
@@ -763,6 +810,7 @@ public class Correlatr {
 		private void diskWrite() {
 			JAIUtils.writeTiff(corr, base + "_corr.tif");
 			JAIUtils.writeTiff(days, base + "_days.tif");
+			JAIUtils.writeTiff(sum, base + "_sum.tif");
 			JAIUtils.writeTiff(p, base + "_p.tif");
 		}
 
@@ -773,6 +821,10 @@ public class Correlatr {
 		public synchronized void writeDays(double val, Pixel pix) {
 			days.setSample(pix.x, pix.y, 0, val);
 		}
+		
+		public synchronized void writeSum(double val, Pixel pix) {
+			sum.setSample(pix.x, pix.y, 0, val);
+		}
 
 		public synchronized void writeP(double val, Pixel pix) {
 			p.setSample(pix.x, pix.y, 0, val);
@@ -780,246 +832,87 @@ public class Correlatr {
 
 	} // end writing class
 
+	
+	/**
+	 * Debugging helper
+	 * @param lat
+	 * @param lon
+	 * @return
+	 */
+	public double[] correlation(double lat, double lon) {
+		List<double[]> response = responseLoadr.getSeries(lon, lat);
+		for (double[] d : response) {
+			System.out.print(Arrays.toString(d)+", ");
+		}
+		System.out.println();
+		List<double[]> covariate = predictLoadr.getSeries(lon, lat);
+		for (double[] d : covariate) {
+			System.out.print(Arrays.toString(d)+", ");
+		}
+		System.out.println();
+		return maxCorrelationSummed(response, covariate);
+	}
+	
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
-		// 201310017 From Haohuan's server.  Ran in two separate runs:
-//		Correlatr corr = null;
-//		try {
-//			corr = new Correlatr(new String[] { "/home/nick/MOD13A2/2010",
-//			"/home/nick/MOD13A2/2011" }, new String[] {
-//					"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/" },
-//					new int[] { 2010, 0, 1 });
-//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
-//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-//			corr.writeImagesParallel(base, reference, lags, 10); // well, 10 is a quite reasonable argument
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		// File 1: evi_persiann_126_corr
-		// File 2: evi_persiann_3_corr
-		// This construction method is now deprecated, to decouple construction from the type of imagery
-		// Also, this run never finished processing South America
-		
-//		Correlatr corr = null;
-//		try {
-//			// EVI vegetation index response
-//			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
-//			String eviDir = "EVI";
-//			String eviQCDir = "VI_QC";
-//			BitCheck mod13Checker = new BitCheck() {
-//				@Override
-//				public boolean isOK(int check) {
-//					return BitChecker.mod13ok(check);
-//				}
-//				
-//			};
-//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-//			// PERSIANN rainfall predictor
-//			String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
-//			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
-//			// the Correlatr
-//			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
-//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_";
-//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-//			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		/*
-		 * Note that the previous can result in zero correlation (indicating insufficient data)
-		 * from the following conditions: if a combination of no data (from either data source)
-		 * and/or EVI<0 results in <5 data points.
-		 */
-		
-		// 20131014 Temperature processing
-//		Correlatr corr = null;
-//		try {
-//			// EVI vegetation index response
-//			String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
-//			String eviDir = "EVI";
-//			String eviQCDir = "VI_QC";
-//			BitCheck mod13Checker = new BitCheck() {
-//				@Override
-//				public boolean isOK(int check) {
-//					return BitChecker.mod13ok(check);
-//				}
-//				
-//			};
-//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-//			
-//			// MODIS Aqua daytime temperature
-//			String[] temperature = new String[] {"/home/nick/MYD11A2/2010", "/home/nick/MYD11A2/2011"};
-//			String tempDir = "LST_DAY";
-//			String tempQCDir = "QC_DAY";
-//			BitCheck mod11Checker = new BitCheck() {
-//				@Override
-//				public boolean isOK(int check) {
-//					return BitChecker.mod11ok(check);
-//				}
-//				
-//			};
-//			ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
-//			
-//			// the Correlatr
-//			corr = new Correlatr(responseLoadr, predictLoadr, new int[] { 2010, 0, 1 });
-//			String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-//			String base = "/home/nick/workspace/CLINTON/Open/result/evi_temperature_";
-//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-//			corr.writeImagesParallel(base, reference, lags, 10, true); // well, 10 is a quite reasonable argument
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		
-		// 20140102 Final missing piece at Tierra del Fuego
-		// still not getting that piece down there.  Edit enumerate() and here for debug:
-//		Correlatr corr = null;
-//		try {
-//			// EVI vegetation index response
-//			//String[] evi = new String[] {"/home/nick/MOD13A2/2010", "/home/nick/MOD13A2/2011"};
-//			String[] evi = new String[] {"D:/MOD13A2/2010", "D:/MOD13A2/2011"};
-//			String eviDir = "EVI";
-//			String eviQCDir = "VI_QC";
-//			BitCheck mod13Checker = new BitCheck() {
-//				@Override
-//				public boolean isOK(int check) {
-//					return BitChecker.mod13ok(check);
-//				}
-//				
-//			};
-//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-//			// PERSIANN rainfall predictor
-//			//String[] persiann = new String[] {"/home/nick/PERSIANN/2010/", "/home/nick/PERSIANN/2011/"};
-//			String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
-//			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
-//			// the Correlatr
-//			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
-//			//String reference = "/home/nick/workspace/CLINTON/lib/dfg/land_mask.tif";
-//			String reference = "X:/Documents/global_phenology/land_mask.tif";
-//			//String base = "/home/nick/workspace/CLINTON/Open/result/evi_persiann_tdf_";
-//			String base = "X:/Documents/global_phenology/precipitation/evi_persiann_tdf_";
-//			int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-//					65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
-//			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		
-		// 20140317 redo 
-		// change the quality check 
-		// change the number of measurements required
-		// Added the DOY computation
-		// Added P-value
-//		Correlatr corr = null;
-//		ImageLoadr6 responseLoadr = null;
-//		PERSIANNLoadr predictorLoadr = null;
-//		int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-//				65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150 };
-//		try {
-//			// EVI vegetation index response
-//			String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
-//			String eviDir = "EVI";
-//			String eviQCDir = "VI_QC";
-//			String doyDir = "DOY";
-//			BitCheck mod13Checker = new BitCheck() {
-//				@Override
-//				public boolean isOK(int check) {
-//					return BitChecker.mod13ok(check);
-//				}
-//			};
-//			responseLoadr = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
-//			// PERSIANN rainfall predictor
-//			String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
-//			predictorLoadr = new PERSIANNLoadr(persiann);
-//			// the Correlatr
-//			corr = new Correlatr(responseLoadr, predictorLoadr, new int[] { 2010, 0, 1 });
-//			String reference = "/data/GlobalLandCover/modis/land_mask.tif";
-//			//String base = "/home/nclinton/Documents/evi_persiann_us_20140319"; // eviN>64, mod13usefulness<8, duplicate data from ImageLoadr6
-//			//String base = "/home/nclinton/Documents/evi_persiann_us_20140321"; // eviN>48, mod13usefulness<4, duplicate data fix
-//			//String base = "/home/nclinton/Documents/evi_persiann_us_20140322"; // eviN>64, mod13usefulness<8
-//			//String base = "/home/nclinton/Documents/evi_persiann_us_20140323"; // eviN>48, mod13usefulness<8, smaller df
-//			//String base = "/home/nclinton/Documents/evi_persiann_20140324"; // eviN>64, mod13usefulness<8, smaller df
-//			// never run:
-//			String base = "/home/nclinton/Documents/evi_persiann_us_20140418"; // eviN>64, mod13usefulness<8, lags to 150, N>13
-//			corr.writeImagesParallel(base, reference, lags, 10, false); // well, 10 is a quite reasonable argument
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		
-		// 20140401 Temperature processing
-		Correlatr corr = null;
-		int[] lags = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-				65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150 };
-		ImageLoadr6 responseLoadr = null;
-		ImageLoadr4 predictLoadr = null;
-		try {
+	public static void main(String[] args) throws Exception {
+
+		Correlatr2 corr = null;
+		String reference = "/data/GlobalLandCover/modis/land_mask.tif";
+		int longestLag = 150;
+		int longestSum = 90;
+		int threads = 50;
 		// EVI vegetation index response
-				String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
-				String eviDir = "EVI";
-				String eviQCDir = "VI_QC";
-				String doyDir = "DOY";
-				BitCheck mod13Checker = new BitCheck() {
-					@Override
-					public boolean isOK(int check) {
-						return BitChecker.mod13ok(check);
-					}
-				};
-				responseLoadr = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
-
-				// MODIS Aqua daytime temperature
-				String[] temperature = new String[] {"/data/MYD11A2/2010", "/data/MYD11A2/2011"};
-				String tempDir = "LST_DAY";
-				String tempQCDir = "QC_DAY";
-				BitCheck mod11Checker = new BitCheck() {
-					@Override
-					public boolean isOK(int check) {
-						return BitChecker.mod11ok(check);
-					}
-				};
-				predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
-//			// the Correlatr
-			corr = new Correlatr(responseLoadr, predictLoadr, new int[] { 2010, 0, 1 });
-//			String reference = "/data/GlobalLandCover/modis/land_mask.tif";
-//			//String base = "/home/nclinton/Documents/evi_temp_20140401"; // eviN>64, tempN >48, mod13usefulness<8, lags to 120
-//			String base = "/home/nclinton/Documents/evi_temp_20140407"; // eviN>80, tempN>80, mod13usefulness<8, lags to 150, N>13
-//			corr.writeImagesParallel(base, reference, lags, 10, true);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		// Australia check
-//		String reference = "/data/GlobalLandCover/modis/land_mask.tif";
-//		PlanarImage image = JAIUtils.readImage(reference);
-//		int[] coords;
-//		try {
-//			coords = JAIUtils.getPixelXY(new double[] {133.1, -19.0}, image);
-//			System.out.println(Arrays.toString(coords));
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
+		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
+		String eviDir = "EVI";
+		String eviQCDir = "VI_QC";
+		String doyDir = "DOY";
+		BitCheck mod13Checker = new BitCheck() {
+			@Override
+			public boolean isOK(int check) {
+				return BitChecker.mod13ok(check);
+			}
+		};
+		ImageLoadr6 responseLoadr = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 		
-		// comparison to Correlatr2:
+		// ***************************************************************************
+		// PERSIANN rainfall predictor
+		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
+		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+		// the Correlatr
+		corr = new Correlatr2(responseLoadr, predictorLoadr, reference, new int[] { 2010, 0, 1 }, longestLag, longestSum, false);
+		String base = "/home/nclinton/Documents/evi_persiann_sum_us_20140420"; // eviN>64, PERSIANN>64, mod13usefulness<8, sum to 60, lags to 150, N>13
+		corr.writeImagesParallel(base, threads);
+		
+		
+		// ***************************************************************************
+		// 20140401 Temperature processing
+		// MODIS Aqua daytime temperature
+//		String[] temperature = new String[] {"/data/MYD11A2/2010", "/data/MYD11A2/2011"};
+//		String tempDir = "LST_DAY";
+//		String tempQCDir = "QC_DAY";
+//		BitCheck mod11Checker = new BitCheck() {
+//			@Override
+//			public boolean isOK(int check) {
+//				return BitChecker.mod11ok(check);
+//			}
+//		};
+//		ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
+//
+//		// the Correlatr
+//		corr = new Correlatr2(responseLoadr, predictLoadr, reference, new int[] { 2010, 0, 1 }, lags, longestSum, false);
+//		//String base = "/home/nclinton/Documents/evi_temp_20140401"; // eviN>64, tempN >48, mod13usefulness<8, lags to 120
+//		String base = "/home/nclinton/Documents/evi_temp_20140407"; // eviN>80, tempN>80, mod13usefulness<8, lags to 150, N>13
+//		corr.writeImagesParallel(base, reference, lags, 10, true);
+		
+		// debug
 //		double lat = 38.0;
 //		double lon = -121.0;
-//		List<double[]> response = responseLoadr.getSeries(lon, lat);
-//		for (double[] d : response) {
-//			System.out.print(Arrays.toString(d)+", ");
-//		}
-//		System.out.println();
-//		List<double[]> covariate = predictLoadr.getSeries(lon, lat);
-//		for (double[] d : covariate) {
-//			System.out.print(Arrays.toString(d)+", ");
-//		}
-//		System.out.println();
-//		System.out.println(Arrays.toString(corr.maxCorrelation(response, covariate, lags)));
-		// [0.2993948004981556, 20.0, 687.0] // PERSIANN
-		// [0.5930044644340262, 150.0, 61.0]
+//		System.out.println(Arrays.toString(corr.correlation(lat, lon)));
+		// [0.2993948004981556, 20.0, 0.0, 687.0] // PERSIANN
+		// [0.5930044644340262, 150.0, 0.0, 61.0] // Temp
+		// matches Correlatr
 	}
 
 }

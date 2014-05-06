@@ -79,11 +79,13 @@ public class Crosswalkr {
 		else if (from == 3) {
 			return IPCCcarbon.GRASSLAND;
 		}
-		else if (from == 0) {
+		else if (from == 1) {
 			return IPCCcarbon.CROPLAND;
 		}
 		else if (from == 5) {
 			return IPCCcarbon.WETLAND;
+		} else if(from == 8 || from == 80) {
+			return IPCCcarbon.SETTLEMENT;
 		}
 		else {
 			return IPCCcarbon.OTHER;
