@@ -60,8 +60,21 @@ public class BitChecker {
 		return getBits(check, 3, 11);
 	}
 	
+	public static int mod13adjCloud(int check) {
+		return getBits(check, 1, 8);
+	}
+	
+	public static int mod13mixedClouds(int check) {
+		return getBits(check, 1, 10);
+	}
+	
+	public static int mod13shadow(int check) {
+		return getBits(check, 1, 15);
+	}
+
+	
 	/**
-	 * 
+	 * See Samanta et al. 2012
 	 * @param check
 	 * @return
 	 */
@@ -70,12 +83,20 @@ public class BitChecker {
 		if (mod13landwater(check)==1 || mod13landwater(check)==3 || mod13landwater(check)==4) {
 			if (mod13qa(check) == 0) { // no problems
 				return true;
-			}
-			if (mod13qa(check) == 1) { // other quality
-				if (mod13usefulness(check) < 8) { // value of 9 was criticized by reviewers
+			} else {
+				if ( (mod13aerosols(check) == 1 || mod13aerosols(check) == 2) && // low or average
+					 mod13adjCloud(check) == 0 &&
+					 mod13mixedClouds(check) == 0 &&
+					 mod13shadow(check) == 0) {
 					return true;
 				}
 			}
+			// used up to 20140506
+//			if (mod13qa(check) == 1) { // other quality
+//				if (mod13usefulness(check) < 8) { // value of 9 was criticized by reviewers
+//					return true;
+//				}
+//			}
 		}
 		return false;
 	}

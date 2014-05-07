@@ -7,6 +7,7 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.TreeMap;
 
 import javax.media.jai.PlanarImage;
 import javax.media.jai.iterator.RandomIter;
@@ -128,13 +129,12 @@ public class TSUtils {
 	}
 	
 	/**
-	 * Read out a list into an array.
+	 * Read out a list into an array.  Assumes List is already sorted chronologically.
 	 * @param series is a List<double[]>
 	 * @return a double[2][series.size()]
 	 */
 	public static double[][] getSeriesAsArray(List<double[]> series) {
 		double[][] xy = new double[2][series.size()];
-		double[] y = new double[series.size()];
 		for (int t=0; t<series.size(); t++) {
 			xy[0][t] = series.get(t)[0];
 			xy[1][t] = series.get(t)[1];
@@ -147,7 +147,7 @@ public class TSUtils {
 	 * @param series as a list of double[] where each double[] is {x,y}
 	 * @return the spline
 	 */
-	public Spline getThinPlateSpline(List<double[]> series) {
+	public static Spline getThinPlateSpline(List<double[]> series) {
 		double[][] xy = getSeriesAsArray(series);
 		return duchonSpline(xy[0], xy[1]);
 	}
@@ -596,6 +596,53 @@ public class TSUtils {
 	}
 	
 	
+	/**
+	 * 
+	 * @param series
+	 * @param interval
+	 * @return 
+	 */
+	public static TreeMap<Double, Double> getPieceWise(List<double[]> series, double interval) {
+		TreeMap<Double, Double> map = new TreeMap<Double, Double>();
+		LinkedList<double[]> piece = new LinkedList<double[]>();
+		piece.add(series.get(0));
+		for (int i=1; i<series.size(); i++) {
+			double[] cur = series.get(i);
+			if ((cur[0] - piece.getLast()[0]) > interval) { // interval too big
+				updateTree(piece, map);
+				// start a new piece
+				piece = new LinkedList<double[]>();
+			} 
+			// append the current time point to the new piece, which may be empty
+			piece.add(cur);
+			if (i == series.size()-1) { // it's the last time point
+				updateTree(piece, map);
+			}
+		}
+		return map;
+	}
+	
+	/**
+	 * Helper for {@link #getPieceWise(List, double)}
+	 * @param piece
+	 * @param map
+	 */
+	private static void updateTree(LinkedList<double[]> piece, TreeMap<Double, Double> map) {
+		if (piece.size() > 2) { // big enough to fit a spline
+			Spline spline = getThinPlateSpline(piece);
+			// use the spline to interpolate in the interval
+			for (double t = piece.getFirst()[0]; t <= piece.getLast()[0]; t++) {
+				map.put(t, spline.value(t));
+			}
+		} else { // only one or two values in the piece.  
+			// just insert the known points
+			for (int j=0; j<piece.size(); j++) {
+				double[] obs = piece.get(j);
+				map.put(obs[0], obs[1]);
+			}
+		}
+	}
+	
 	
 	/**
 	 * @param args
@@ -660,12 +707,14 @@ public class TSUtils {
 //		Utils.writeFile(combined, "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/Combined_export.csv");
 		
 		
-		String azimuth = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_export.txt";
-		double[][] az = Utils.readFile(new File(azimuth), 1);
-		ArrayFunction azf = new ArrayFunction(az);
-		double[][] aZsmooth = smoothFunction(azf, 0, 365, 0.992);
-		double[][] azOut = {aZsmooth[0], aZsmooth[1]};
-		Utils.writeFile(azOut, "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_smooth.csv");
+//		String azimuth = "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_export.txt";
+//		double[][] az = Utils.readFile(new File(azimuth), 1);
+//		ArrayFunction azf = new ArrayFunction(az);
+//		double[][] aZsmooth = smoothFunction(azf, 0, 365, 0.992);
+//		double[][] azOut = {aZsmooth[0], aZsmooth[1]};
+//		Utils.writeFile(azOut, "/Users/nclinton/Documents/GlobalPhenology/amazon/Morton_replication/MYD09_azimuth_smooth.csv");
+		
+		
 		
 	}
 
