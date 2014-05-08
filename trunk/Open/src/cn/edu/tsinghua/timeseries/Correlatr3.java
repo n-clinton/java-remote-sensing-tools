@@ -114,6 +114,7 @@ public class Correlatr3 {
 	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate) {
 		// get a TreeMap for the response
 		TreeMap<Double, Double> rMap = TSUtils.getPieceWise(response, longestInterval);
+		System.out.println(rMap);
 		// get a TreeMap for the covariate
 		TreeMap<Double, Double> cMap;
 		if (maxCorrInterp) {
@@ -130,39 +131,44 @@ public class Correlatr3 {
 
 		double t0 = response.get(0)[0]; // minumum t
 		double tn = response.get(response.size() - 1)[0]; // max t
-
 		double minCorr = 1.0;
 		double maxCorr = -1.0;
 		int minLag = 0;
 		int maxLag = 0;
 		int minN = 0;
 		int maxN = 0;
-		for (int l = 0; l <= longestLag; l+=5) {
+		for (int l=0; l<=longestLag; l+=5) {
+//			System.out.println("l="+l);
 			cov.clear();
 			// compute covariance
 			for (double t = t0; t <= tn; t++) { // daily step
+//				System.out.println("\t t="+t);
 				if (t - l < 0) {
+//					System.err.println("\t\t out of bounds"+(t - l));
 					continue; // don't go out of bounds
 				}
 				try {
 					// response---------------
 					Double rDouble = rMap.get(t);
 					if (rDouble == null) { // t was a no data point
+//						System.err.println("\t\t"+t+" was no data rDouble");
 						continue;
 					}
 					double r = rDouble.doubleValue();
 					if (r < 0) { // want only EVI greater than zero
+//						System.err.println("\t\t EVI<0.");
 						continue;
 					}
 					// covariate ----------------------
-					Double cDouble = cMap.get((int) t - l);
+					Double cDouble = cMap.get(t - l);
 					if (cDouble == null) { // t was a no data point
+//						System.err.println("\t\t"+t+" was no data cDouble");
 						continue;
 					}
-					// System.out.println(t+","+r+","+c);
+//					System.out.println(t+","+r+","+cDouble);
 					cov.increment(new double[] { r, cDouble.doubleValue() });
 				} catch (Exception e) {
-					//e.printStackTrace();
+//					e.printStackTrace();
 				}
 			}
 
@@ -170,7 +176,7 @@ public class Correlatr3 {
 			RealMatrix vc = cov.getResult();
 			// if either variable is constant...
 			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
-				//System.err.println("\t No variance.");
+//				System.err.println("\t No variance.");
 				return new double[] { 0, 0, 0};
 			}
 			// normalize by SD
@@ -677,6 +683,25 @@ public class Correlatr3 {
 	} // end writing class
 
 	
+	/**
+	 * Debugging helper
+	 * @param lat
+	 * @param lon
+	 * @return
+	 */
+	public double[] correlation(double lat, double lon) {
+		List<double[]> response = responseLoadr.getSeries(lon, lat);
+		for (double[] d : response) {
+			System.out.print(Arrays.toString(d)+", ");
+		}
+		System.out.println();
+		List<double[]> covariate = predictLoadr.getSeries(lon, lat);
+		for (double[] d : covariate) {
+			System.out.print(Arrays.toString(d)+", ");
+		}
+		System.out.println();
+		return maxCorrelation(response, covariate);
+	}
 	
 	/**
 	 * 20140507 start new processing log
@@ -707,9 +732,11 @@ public class Correlatr3 {
 		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 		// the Correlatr
 		corr = new Correlatr3(responseLoadr, predictorLoadr, reference, new int[] { 2010, 0, 1 }, longestLag, longestInterval, false);
-		String base = "/home/nclinton/Documents/evi_persiann__us_201405--"; // 
-		corr.writeImagesParallel(base, threads);
+//		String base = "/home/nclinton/Documents/evi_persiann_us_20140507"; // 
+//		corr.writeImagesParallel(base, threads);
 		
+		System.out.println(Arrays.toString(corr.correlation(-13.3, 133.4))); // Australia
+		System.out.println(Arrays.toString(corr.correlation(38.0, -121.0))); // CA
 		
 	}
 

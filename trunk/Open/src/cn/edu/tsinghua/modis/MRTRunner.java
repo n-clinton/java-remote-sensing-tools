@@ -77,7 +77,7 @@ public class MRTRunner {
 	 * @param paramFile pathless??
 	 * @param logFile pathless??
 	 */
-	private void runResample(String dir, String paramFile, String logFile) {
+	private void runResampleWin(String dir, String paramFile, String logFile) {
 		try {
 			
 			String exec = "C:/Users/Nicholas/Downloads/MRT_download_Win/MRT/bin/resample.exe";
@@ -112,7 +112,7 @@ public class MRTRunner {
 	 * @param paramFile pathless??
 	 * @param outputFile full path
 	 */
-	private void runMosaic(String dir, String fileList, String outputFile, String subset) {
+	private void runMosaicWin(String dir, String fileList, String outputFile, String subset) {
 		try {
 			
 			String exec = "C:/Users/Nicholas/Downloads/MRT_download_Win/MRT/bin/mrtmosaic.exe";
@@ -141,6 +141,108 @@ public class MRTRunner {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 
+	 * @param paramFile pathless??
+	 * @param logFile pathless??
+	 */
+	private void runResampleLinux(String dir, String paramFile, String logFile) {
+		try {
+			
+			String exec = "/home/nclinton/Downloads/MRT/bin/resample";
+			String arg1 = "-p"; // flag to use the parameter file
+			String arg3 = "-g"; // flag to write the log file
+			ProcessBuilder pb = new ProcessBuilder(exec, arg1, paramFile, arg3, logFile);
+			Map<String, String> env = pb.environment();
+			env.put("MRT_HOME", "/home/nclinton/Downloads/MRT");
+			env.put("MRT_DATA_DIR", "/home/nclinton/Downloads/MRT/data");
+			env.put("PATH", "/home/nclinton/Downloads/MRT/bin");
+			pb.directory(new File(dir));
+			
+			File log = new File( dir+"/"+"java_process_builder.log");
+			pb.redirectErrorStream(true);
+			pb.redirectOutput(Redirect.appendTo(log));
+			Process p = pb.start();
+			assert pb.redirectInput() == Redirect.PIPE;
+			assert pb.redirectOutput().file() == log;
+			assert p.getInputStream().read() == -1;
+
+			p.waitFor();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 
+	 * @param paramFile pathless??
+	 * @param outputFile full path
+	 */
+	private void runMosaicLinux(String dir, String fileList, String outputFile, String subset) {
+		try {
+			String exec = "/home/nclinton/Downloads/MRT/bin/mrtmosaic";
+			String arg1 = "-i"; // flag to use the fileList ??
+			String arg3 = "-s"; // spectral subset
+			String arg4 = subset; // subset array
+			String arg5 = "-o"; // output filename flag ??
+			ProcessBuilder pb = new ProcessBuilder(exec, arg1, fileList, arg3, arg4, arg5, outputFile);
+			Map<String, String> env = pb.environment();
+			env.put("MRT_HOME", "/home/nclinton/Downloads/MRT");
+			env.put("MRT_DATA_DIR", "/home/nclinton/Downloads/MRT/data");
+			env.put("PATH", "/home/nclinton/Downloads/MRT/bin");
+			pb.directory(new File(dir));
+
+			File log = new File( dir+"/"+"java_process_builder.log");
+			pb.redirectErrorStream(true);
+			pb.redirectOutput(Redirect.appendTo(log));
+			Process p = pb.start();
+			assert pb.redirectInput() == Redirect.PIPE;
+			assert pb.redirectOutput().file() == log;
+			assert p.getInputStream().read() == -1;
+			
+			p.waitFor();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * 
+	 * @param paramFile pathless??
+	 * @param logFile pathless??
+	 */
+	private void runResample(String dir, String paramFile, String logFile) {
+		if (System.getProperty("os.name").contains("Win")) {
+			runResampleWin(dir, paramFile, logFile);
+		} else if (System.getProperty("os.name").contains("Linux")) {
+			runResampleLinux(dir, paramFile, logFile);
+		} else {
+			System.err.println("Jackass!  Unrecognized OS.");
+		}
+	}
+	
+	/**
+	 * 
+	 * @param paramFile pathless??
+	 * @param outputFile full path
+	 */
+	private void runMosaic(String dir, String fileList, String outputFile, String subset) {
+		if (System.getProperty("os.name").contains("Win")) {
+			runMosaicWin(dir, fileList, outputFile, subset);
+		} else if (System.getProperty("os.name").contains("Linux")) {
+			runMosaicLinux(dir, fileList, outputFile, subset);
+		} else {
+			System.err.println("Jackass!  Unrecognized OS.");
 		}
 	}
 	
@@ -530,10 +632,21 @@ public class MRTRunner {
 //		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
 		
 		// 20140316
-		String productDir = "D:/MOD13A2/2010";
-		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
-		productDir = "D:/MOD13A2/2011";
-		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
+//		String productDir = "D:/MOD13A2/2010";
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
+//		productDir = "D:/MOD13A2/2011";
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
+		
+		// 20140506 Shangrila
+//		String productDir = "/data/MOD13A2/2009";
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
+		
+//		String productDir = "/data/MOD13A2/2008";
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_EVI);
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.MOD13_VI_QUALITY);
+//		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
 	}
 	
 }

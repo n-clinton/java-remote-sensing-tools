@@ -10,10 +10,10 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
-import org.gdal.gdal.gdal;
+import java.util.TreeMap;
 
 import ru.sscc.spline.Spline;
+import cn.edu.tsinghua.gui.Graph;
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
 
@@ -315,6 +315,9 @@ public class ImageLoadr6 implements Loadr {
 
 			ImageLoadr4 loadr4 = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			ImageLoadr6 loadr6 = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
+			Calendar cal = Calendar.getInstance();
+			cal.set(2010, 0, 1);
+			loadr6.setDateZero(cal);
 //			double x = -87.9108613514;
 //			double y = 40.4467308069;
 //			double x = 135.2;
@@ -326,13 +329,19 @@ public class ImageLoadr6 implements Loadr {
 			System.out.println("Point: "+Arrays.toString(new double[] {x,y})
 //					+"Length 4 = "+series4.size()+" Length 6 = "+series6.size());
 					+" Length 6 = "+series6.size());
+			System.out.println("max "+series6.get(series6.size() - 1)[0]);
 			for (int t=0; t<series6.size(); t++) {
 //				System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
 				System.out.println("\t loadr6:"+Arrays.toString(series6.get(t)));
 			}
 			
 			double[][] xy = TSUtils.getSeriesAsArray(series6);
-			Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
+			// graph = new Graph(xy);
+			//Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
+			TreeMap<Double, Double> map = TSUtils.getPieceWise(series6, 64);
+			for (Double d : map.keySet()) {
+				System.out.println(d+", "+map.get(d));
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
