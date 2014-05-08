@@ -4,6 +4,7 @@
 package cn.edu.tsinghua.timeseries;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.apache.commons.math.complex.Complex;
 import org.apache.commons.math.stat.StatUtils;
 import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 import org.apache.commons.math.transform.FastFourierTransformer;
+import org.apache.commons.math3.transform.DftNormalization;
 
 import JSci.awt.DefaultGraph2DModel;
 import JSci.awt.Graph2D;
@@ -100,7 +102,7 @@ public class TSUtils {
 			Complex[] transform = fft.transform(spline, min, max, n);
 			// symmetric series, keep the zero-frequencies on the ends
 			int keep = (int)(n*(1.0-p))/2;
-			System.out.println(keep);
+			//System.out.println(keep);
 			for (int c=0; c<transform.length; c++) {
 				if (c>keep-1 && c<n-keep) {
 					// blast the high frequency components
@@ -127,6 +129,7 @@ public class TSUtils {
         }
 		return new double[][] {s, smooth};
 	}
+	
 	
 	/**
 	 * Read out a list into an array.  Assumes List is already sorted chronologically.
@@ -192,7 +195,8 @@ public class TSUtils {
         Spline spline = null;
         try {
         	// the pseudo-quadratic RBF w/ polynomial kernel of 1st degree 
-			spline = GSplineCreator.createSpline(2, xPts, y);
+			//spline = GSplineCreator.createSpline(2, xPts, y);
+        	spline = GSplineCreator.createSpline(1, xPts, y);
 		} catch (CalculatingException e) {
 			e.printStackTrace();
 			System.out.println("length: "+x.length);
@@ -608,7 +612,9 @@ public class TSUtils {
 		piece.add(series.get(0));
 		for (int i=1; i<series.size(); i++) {
 			double[] cur = series.get(i);
+			//System.out.println("Processing: "+Arrays.toString(cur));
 			if ((cur[0] - piece.getLast()[0]) > interval) { // interval too big
+				//System.out.println("\t Updating tree.");
 				updateTree(piece, map);
 				// start a new piece
 				piece = new LinkedList<double[]>();
@@ -616,6 +622,7 @@ public class TSUtils {
 			// append the current time point to the new piece, which may be empty
 			piece.add(cur);
 			if (i == series.size()-1) { // it's the last time point
+//				System.out.println("\t End. Updating tree");
 				updateTree(piece, map);
 			}
 		}
@@ -628,11 +635,19 @@ public class TSUtils {
 	 * @param map
 	 */
 	private static void updateTree(LinkedList<double[]> piece, TreeMap<Double, Double> map) {
+		for (double[] d : piece) {
+			System.out.println("\t\t Updating: "+Arrays.toString(d));
+		}
 		if (piece.size() > 2) { // big enough to fit a spline
 			Spline spline = getThinPlateSpline(piece);
-			// use the spline to interpolate in the interval
+//			double[][] data = getSeriesAsArray(piece);
+//			ArrayFunction function = new ArrayFunction(data);
+//			System.out.println("start: "+data[0][0]+", end: "+data[0][data[0].length-1]);
+//			double[][] smooth = smoothFunction(function, data[0][0], data[0][data[0].length-1]+1, 0.99);
+//			function = new ArrayFunction(smooth);
 			for (double t = piece.getFirst()[0]; t <= piece.getLast()[0]; t++) {
 				map.put(t, spline.value(t));
+//				map.put(t, function.value(t));
 			}
 		} else { // only one or two values in the piece.  
 			// just insert the known points
