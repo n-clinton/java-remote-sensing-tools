@@ -38,6 +38,7 @@ import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.SplineFunction;
 import com.berkenviro.imageprocessing.Utils;
 
+import flanagan.complex.ComplexMatrix;
 import ru.sscc.spline.Spline;
 import ru.sscc.spline.analytic.GSplineCreator;
 import ru.sscc.spline.polynomial.POddSplineCreator;
@@ -130,6 +131,42 @@ public class TSUtils {
 		return new double[][] {s, smooth};
 	}
 	
+	
+	public static ComplexMatrix ndftMatrix(double[] times) {
+		ComplexMatrix mult = new ComplexMatrix(times.length, times.length);
+		double period = times[times.length-1] - times[0]; // T
+		flanagan.complex.Complex common = flanagan.complex.Complex.minusJay().times(2.0*Math.PI/period);
+		for (int m=0; m<times.length; m++) { // row 
+			for (int t=0; t<times.length; t++) { // column
+				mult.setElement(m, t, common.times(m*times[t]).exp());
+			}
+		}
+		return mult;
+	}
+	
+	public ComplexMatrix ndftForward(double[][] series) {
+		return ndftMatrix(series[0]).times(new double[][] {series[1]}); // column vector?
+	}
+	
+	public ComplexMatrix ndftReverse(ComplexMatrix mult, ComplexMatrix frequencies) {
+		return mult.inverse().times(frequencies);
+	}
+	
+	public double[] realPart(ComplexMatrix matrix) {
+		double[] reals = new double[matrix.getNrow()];
+		for (int i=0; i<matrix.getNrow(); i++) {
+			reals[i] = matrix.getArrayReference()[0][i].getReal();
+		}
+		return reals;
+	}
+	
+	public double[] logPowerSpectrum(ComplexMatrix frequencies) {
+		double[] power = new double[frequencies.getNrow()];
+		for (int i=0; i<frequencies.getNrow(); i++) {
+			power[i] = Math.log(frequencies.getArrayReference()[0][i].abs());
+		}
+		return power;
+	}
 	
 	/**
 	 * Read out a list into an array.  Assumes List is already sorted chronologically.

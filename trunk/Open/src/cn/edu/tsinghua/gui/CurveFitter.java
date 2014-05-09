@@ -22,9 +22,6 @@ import weka.core.Utils;
 import JSci.awt.*;
 import JSci.maths.*;
 import JSci.maths.polynomials.RealPolynomial;
-import JSci.maths.wavelet.splines.LinearSpline;
-import JSci.maths.wavelet.splines.PiecewiseConstant;
-import JSci.maths.wavelet.splines.QuadraticSpline;
 import JSci.swing.JGraphLayout;
 import JSci.swing.JLineGraph;
 
@@ -133,9 +130,6 @@ public final class CurveFitter extends JFrame implements ActionListener {
         	double[][] data = getDataPoints();
         	int type = Integer.parseInt(splineTypeField.getText());
         	
-            LinearSpline ls = new LinearSpline(data[1]);
-            QuadraticSpline qs = new QuadraticSpline(data[1]);
-            PiecewiseConstant pc = new PiecewiseConstant(data[1]);
             fnLabel.setText("spline");
             
             // JSci implementation (can't figure out the interpolation)
