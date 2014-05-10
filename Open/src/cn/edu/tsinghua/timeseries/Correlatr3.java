@@ -113,8 +113,12 @@ public class Correlatr3 {
 	 */
 	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate) {
 		// get a TreeMap for the response
-		TreeMap<Double, Double> rMap = TSUtils.getPieceWise(response, longestInterval);
-		System.out.println(rMap);
+		//TreeMap<Double, Double> rMap = TSUtils.getPieceWise(response, longestInterval);
+		//System.out.println(rMap);
+		TreeMap<Double, Double> rMap = new TreeMap<Double, Double>();
+		for (double[] tr : response) {
+			rMap.put(tr[0], tr[1]);
+		}
 		// get a TreeMap for the covariate
 		TreeMap<Double, Double> cMap;
 		if (maxCorrInterp) {
@@ -141,7 +145,8 @@ public class Correlatr3 {
 //			System.out.println("l="+l);
 			cov.clear();
 			// compute covariance
-			for (double t = t0; t <= tn; t++) { // daily step
+//			for (double t = t0; t <= tn; t++) { // daily step
+			for (double t : rMap.keySet()) { // only the keys in the map
 //				System.out.println("\t t="+t);
 				if (t - l < 0) {
 //					System.err.println("\t\t out of bounds"+(t - l));
@@ -149,12 +154,7 @@ public class Correlatr3 {
 				}
 				try {
 					// response---------------
-					Double rDouble = rMap.get(t);
-					if (rDouble == null) { // t was a no data point
-//						System.err.println("\t\t"+t+" was no data rDouble");
-						continue;
-					}
-					double r = rDouble.doubleValue();
+					double r = rMap.get(t).doubleValue();
 					if (r < 0) { // want only EVI greater than zero
 //						System.err.println("\t\t EVI<0.");
 						continue;
@@ -168,7 +168,7 @@ public class Correlatr3 {
 //					System.out.println(t+","+r+","+cDouble);
 					cov.increment(new double[] { r, cDouble.doubleValue() });
 				} catch (Exception e) {
-//					e.printStackTrace();
+					e.printStackTrace();
 				}
 			}
 
@@ -177,7 +177,7 @@ public class Correlatr3 {
 			// if either variable is constant...
 			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
 //				System.err.println("\t No variance.");
-				return new double[] { 0, 0, 0};
+				return new double[] {0, 0, 0};
 			}
 			// normalize by SD
 			double correlation = vc.getEntry(0, 1)
@@ -281,21 +281,27 @@ public class Correlatr3 {
 				return this;
 			}
 			// sort of arbitrary, but if size=0, below throws an exception and the write thread will stop
-			if (response.size() < 13 || covariate.size() < 13) {
-				correlation = new double[] { 0, 0, 0};
+			if (response.size() < 9 || covariate.size() < 9) { // 10% of all possible 16 day composites
+				correlation = new double[] {0, 0, 0};
 				return this;
 			}
 
 			correlation = maxCorrelation(response, covariate);
 			
+			if (correlation[2] < 9) {
+				correlation = new double[] {0, 0, 0};
+				return this;
+			}
+			
 			// Assume the Spline functions are free to vary everywhere except the control points.
 			// therefore df = N - (N - responseN - covariateN) - 2, where 2 is for the means?
-			double df = response.size() + covariate.size() - 2.0;
+			//double df = response.size() + covariate.size() - 2.0;
+			double df = correlation[2] - 2.0; // for data that is not interpolated
 			double t = correlation[0] * Math.sqrt(df / (1-Math.pow(correlation[0], 2)));
 			// compare:
 			//double z = 0.5*Math.log((1.0 + correlation[0]) / (1.0 - correlation[0]))*Math.sqrt(df-1.0);
 			// replace the cov.N with a p-value
-			if (df < 0) {
+			if (df <= 0) {
 				correlation[2] = 0.5; // undefined
 			}
 			else {
@@ -603,7 +609,7 @@ public class Correlatr3 {
 		 * @throws ExecutionException
 		 */
 		public void write() {
-			int interval = 1000000; // frequency of write, original value 10000000
+			int interval = 10000; // frequency of write, original value 10000000
 			int counter = 0;
 			long now = System.currentTimeMillis();
 			while (true) {
@@ -625,6 +631,10 @@ public class Correlatr3 {
 				writeCorr((short)(255*finishedPix.correlation[0]), finishedPix);
 				writeDays((short) finishedPix.correlation[1], finishedPix);
 				writeP((byte)(255*finishedPix.correlation[2]), finishedPix);
+				
+//				System.out.println("Corr: "+corr.getSample(finishedPix.x, finishedPix.y, 0));
+//				System.out.println("Days: "+days.getSample(finishedPix.x, finishedPix.y, 0));
+//				System.out.println("P: "+p.getSample(finishedPix.x, finishedPix.y, 0));
 
 				// periodically write to disk
 				counter++;
@@ -713,9 +723,9 @@ public class Correlatr3 {
 		String reference = "/data/GlobalLandCover/modis/land_mask.tif";
 		int longestLag = 150;
 		int longestInterval = 64;
-		int threads = 50;
+		int threads = 10;
 		// EVI vegetation index response
-		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
+		String[] evi = new String[] {"/data/MOD13A2/2008", "/data/MOD13A2/2009", "/data/MOD13A2/2010", "/data/MOD13A2/2011"};
 		String eviDir = "EVI";
 		String eviQCDir = "VI_QC";
 		String doyDir = "DOY";
@@ -728,15 +738,15 @@ public class Correlatr3 {
 		ImageLoadr6 responseLoadr = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 
 		// PERSIANN rainfall predictor
-		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
+		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2008/", "/data/PERSIANN/8km_daily/2009/", "/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
 		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 		// the Correlatr
-		corr = new Correlatr3(responseLoadr, predictorLoadr, reference, new int[] { 2010, 0, 1 }, longestLag, longestInterval, false);
-//		String base = "/home/nclinton/Documents/evi_persiann_us_20140507"; // 
-//		corr.writeImagesParallel(base, threads);
+		corr = new Correlatr3(responseLoadr, predictorLoadr, reference, new int[] { 2008, 0, 1 }, longestLag, longestInterval, false);
+		String base = "/home/nclinton/Documents/evi_persiann_us_20140509"; // no interpolation, 4 years
+		corr.writeImagesParallel(base, threads);
 		
-		System.out.println(Arrays.toString(corr.correlation(-13.3, 133.4))); // Australia
-		System.out.println(Arrays.toString(corr.correlation(38.0, -121.0))); // CA
+//		System.out.println(Arrays.toString(corr.correlation(-13.3, 133.4))); // Australia
+//		System.out.println(Arrays.toString(corr.correlation(38.0, -121.0))); // CA
 		
 	}
 
