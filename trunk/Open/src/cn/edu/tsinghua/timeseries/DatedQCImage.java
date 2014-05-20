@@ -14,10 +14,10 @@ public class DatedQCImage implements Comparable {
 	String imageName;
 	String qcImageName;
 	String dateName;
-	Calendar cal;
+	final Calendar cal;
 	
-	public DatedQCImage() {
-		// do nothing
+	public DatedQCImage(Calendar cal) {
+		this.cal = cal;
 	}
 	
 	public DatedQCImage(String imageFileName, String qcFileName, Calendar c) {

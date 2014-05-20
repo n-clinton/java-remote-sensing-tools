@@ -131,16 +131,17 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 //		System.err.println(Thread.currentThread().getId());
 		this.seek(offset);
 		
-		READ_TIMES++;
-		
-		long start = System.nanoTime();
-		float ret = this.readFloat(); // it is critical slow
-		long stop = System.nanoTime();
-		double elapse = (stop - start);
-//		System.err.println("offset: " + offset + ", elapse: " + elapse);
-		
-//		System.out.println(ret);
-		return ret;
+//		READ_TIMES++;
+//		
+//		long start = System.nanoTime();
+//		float ret = this.readFloat(); // it is critical slow
+//		long stop = System.nanoTime();
+//		double elapse = (stop - start);
+////		System.err.println("offset: " + offset + ", elapse: " + elapse);
+//		
+////		System.out.println(ret);
+//		return ret;
+		return this.readFloat();
 	}
 	
 	public float pseudoReadPixel(int pixel, int line) throws Exception {
@@ -191,13 +192,14 @@ public class PERSIANNFile extends RandomAccessFile implements Comparable {
 	public float imageValue(double x, double y) throws Exception {
 		int[] pixelXY = getPixelXY(new double[] {x, y});
 		//System.out.println("("+pixelXY[0]+","+pixelXY[1]+")");
-		long start = System.nanoTime();
-		float ret = readPixel(pixelXY[0], pixelXY[1]);
-//		float ret = pseudoReadPixel(pixelXY[0], pixelXY[1]);;
-		long stop = System.nanoTime();
-//		System.err.println(stop - start);
-		return ret;
-//		return pseudoReadPixel(pixelXY[0], pixelXY[1]);
+//		long start = System.nanoTime();
+//		float ret = readPixel(pixelXY[0], pixelXY[1]);
+////		float ret = pseudoReadPixel(pixelXY[0], pixelXY[1]);;
+//		long stop = System.nanoTime();
+////		System.err.println(stop - start);
+//		return ret;
+////		return pseudoReadPixel(pixelXY[0], pixelXY[1]);
+		return readPixel(pixelXY[0], pixelXY[1]);
 	}
 	
 	/**

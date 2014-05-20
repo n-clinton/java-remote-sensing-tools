@@ -42,6 +42,7 @@ import com.berkenviro.imageprocessing.JAIUtils;
  * 
  * 
  */
+@Deprecated
 public class Correlatr2 {
 	
 	int longestLag;
@@ -747,7 +748,7 @@ public class Correlatr2 {
 		 * @throws ExecutionException
 		 */
 		public void write() {
-			int interval = 100000; // frequency of write, original value 10000000
+			int interval = 10000; // frequency of write, original value 10000000
 			int counter = 0;
 			long now = System.currentTimeMillis();
 			while (true) {
@@ -882,7 +883,8 @@ public class Correlatr2 {
 		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 		// the Correlatr
 		corr = new Correlatr2(responseLoadr, predictorLoadr, reference, new int[] { 2010, 0, 1 }, longestLag, longestSum, false);
-		String base = "/home/nclinton/Documents/evi_persiann_sum_us_20140420"; // eviN>64, PERSIANN>64, mod13usefulness<8, sum to 60, lags to 150, N>13
+		//String base = "/home/nclinton/Documents/evi_persiann_sum_us_20140420"; // eviN>64, PERSIANN>64, mod13usefulness<8, sum to 60, lags to 150, N>13
+		String base = "/home/nclinton/Documents/evi_persiann_sum_us_20140509"; // check and debug
 		corr.writeImagesParallel(base, threads);
 		
 		

@@ -18,7 +18,11 @@ import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
 
 import com.berkenviro.imageprocessing.ImageData;
+import com.berkenviro.imageprocessing.SplineFunction;
 import com.vividsolutions.jts.geom.Point;
+
+import flanagan.complex.Complex;
+import flanagan.complex.ComplexMatrix;
 
 /**
  * @author Nicholas Clinton
@@ -34,6 +38,7 @@ public class ImageLoadr6 implements Loadr {
 	private ImageData[] _doy_image_data;
 	
 	private BitCheck bitChecker;
+	private Calendar date0;
 
 	/**
 	 * @param directories is an array of top-level directories expected to contain 
@@ -60,14 +65,13 @@ public class ImageLoadr6 implements Loadr {
 			for (File f : dates) {
 				// skip files that may be in the directory
 				if (f.isFile()) { continue; }
-				// Instantiate a new image Object
-				DatedQCImage image = new DatedQCImage();
 				// parse the directory name to get a date
 				// this will be adjusted by the 
 				String[] ymd = f.getName().split("\\.");
 				Calendar c = Calendar.getInstance();
 				c.set(Integer.parseInt(ymd[0]), Integer.parseInt(ymd[1])-1, Integer.parseInt(ymd[2]));
-				image.cal = c;
+				// Instantiate a new image Object
+				DatedQCImage image = new DatedQCImage(c);
 				// find the image in a subdirectory
 				File imageDir = new File(f.getPath()+"/"+dataDir);
 				for (File iFile : imageDir.listFiles()) {
@@ -187,15 +191,10 @@ public class ImageLoadr6 implements Loadr {
 	/**
 	 * @param x is a georeferenced coordinate
 	 * @param y is a georeferenced coordinate
-	 * @return a list of {t, value} double arrays.
+	 * @return a list of {t, value} double arrays with t=NaN if the DOY is not in [0,366]
 	 */
 	public synchronized List<double[]> getSeries(double x, double y) {		
 		LinkedList<double[]> out = new LinkedList<double[]>();
-
-		// zero reference for this time series
-		Calendar cal0 = imageList.get(0).cal;
-		int doy0 = (int)_doy_image_data[0].imageValue(x, y, 1);
-		cal0.set(Calendar.DAY_OF_YEAR, doy0);
 		
 		for (int i=0; i<imageList.size(); i++) {
 			try {
@@ -206,7 +205,7 @@ public class ImageLoadr6 implements Loadr {
 				}
 				
 				// time
-				Calendar cal = imageList.get(i).cal;
+				Calendar cal = (Calendar)imageList.get(i).cal.clone();
 				int doy = (int)_doy_image_data[i].imageValue(x, y, 1);
 				// account for annual roll-overs
 				if ((cal.get(Calendar.DAY_OF_YEAR) - doy) > 16) {
@@ -219,8 +218,18 @@ public class ImageLoadr6 implements Loadr {
 				} else {
 					cal.set(Calendar.DAY_OF_YEAR, doy);
 				}
-				
-				double t = diffDays(cal0, cal);
+				double t;
+				if (date0 == null) {
+					// use the first date as the reference point
+					System.err.println("WARNING: No zero time reference for the time series!");
+					t = diffDays(imageList.get(0).cal, cal);
+				} else {
+					t = diffDays(date0, cal);
+				}
+				// check the input
+				if (doy < 0 || doy > 366) { // undefined
+					t = Double.NaN;
+				}
 				// check if this is a duplicate data point
 				// can happen at the annual boundary of composites
 				if (out.size() > 0) {
@@ -251,10 +260,10 @@ public class ImageLoadr6 implements Loadr {
 		}
 	}
 
-	
-	// The following three need to be re-implemented
 	@Override
-	public void setDateZero(Calendar cal) {}
+	public void setDateZero(Calendar cal) {
+		date0 = cal;
+	}
 
 	@Override
 	public double[] getY(Point pt) throws Exception {
@@ -336,12 +345,27 @@ public class ImageLoadr6 implements Loadr {
 			}
 			
 			double[][] xy = TSUtils.getSeriesAsArray(series6);
-			// graph = new Graph(xy);
-			//Spline rSpline = TSUtils.duchonSpline(xy[0], xy[1]);
-			TreeMap<Double, Double> map = TSUtils.getPieceWise(series6, 64);
-			for (Double d : map.keySet()) {
-				System.out.println(d+", "+map.get(d));
-			}
+			Graph graph = new Graph(xy);
+			SplineFunction rSpline = new SplineFunction(xy);
+			double[][] sVals = TSUtils.splineValues(rSpline, new double[] {22, 714});
+			//graph.addSeries(sVals);
+			
+			ComplexMatrix mult = TSUtils.ndftMatrix(xy[0]);
+			ComplexMatrix freqs = TSUtils.ndftForward(mult, xy);
+			double[] power = TSUtils.logPowerSpectrum(freqs);
+			int highest = weka.core.Utils.minIndex(power);
+			//freqs.setElement(highest, 0, Complex.zero());
+			System.out.println(Arrays.toString(power));
+			ComplexMatrix back = TSUtils.ndftReverse(mult, freqs);
+			double[] reals = TSUtils.realPart(back);
+			System.out.println(Arrays.toString(reals));
+			graph.addSeries(new double[][] {xy[0], reals});
+			//graph.addSeries(new double[][] {Arrays.copyOfRange(xy[0], 1, xy[0].length-2), Arrays.copyOfRange(reals, 1, reals.length-2)});
+			
+//			TreeMap<Double, Double> map = TSUtils.getPieceWise(series6, 64);
+//			for (Double d : map.keySet()) {
+//				System.out.println(d+", "+map.get(d));
+//			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

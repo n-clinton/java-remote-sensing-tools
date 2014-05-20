@@ -5,10 +5,15 @@ import it.sauronsoftware.ftp4j.FTPException;
 import it.sauronsoftware.ftp4j.FTPFile;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -411,6 +416,31 @@ public class Getter {
 //		} finally {
 //			getter.disconnect();
 //		}
+		
+		URL url = null;
+		URLConnection con = null;
+		int i;
+		try {
+			url = new URL("http://e4ftl01.cr.usgs.gov/MOLA/MYD11A2.005/");
+			con = url.openConnection();
+			System.out.println(con.getContentType());
+			File file = new File("/home/nclinton/Documents/BROWSE.MYD11A2.A2008001.h08v07.005.2008010084634.2.jpg");
+			BufferedInputStream bis = new BufferedInputStream(
+					con.getInputStream());
+//			BufferedOutputStream bos = new BufferedOutputStream(
+//					new FileOutputStream(file.getPath()));
+//			System.out.println(file.getName());
+			while ((i = bis.read()) != -1) {
+				System.out.println(i);
+//				bos.write(i);
+			}
+//			bos.flush();
+//			bos.close();
+			bis.close();
+		} catch (IOException ioException) {
+			ioException.printStackTrace();
+		}
+		
 		
 	}
 	

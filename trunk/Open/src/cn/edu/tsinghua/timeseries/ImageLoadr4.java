@@ -10,10 +10,12 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.gdal.gdal.gdal;
 
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
+
 import com.berkenviro.imageprocessing.ImageData;
 import com.vividsolutions.jts.geom.Point;
 
@@ -59,13 +61,12 @@ public class ImageLoadr4 implements Loadr {
 			for (File f : dates) {
 				// skip files that may be in the directory
 				if (f.isFile()) { continue; }
-				// Instantiate a new image Object
-				DatedQCImage image = new DatedQCImage();
 				// parse the directory name to get a date
 				String[] ymd = f.getName().split("\\.");
 				Calendar c = Calendar.getInstance();
 				c.set(Integer.parseInt(ymd[0]), Integer.parseInt(ymd[1])-1, Integer.parseInt(ymd[2]));
-				image.cal = c;
+				// Instantiate a new image Object
+				DatedQCImage image = new DatedQCImage(c);
 				// find the image in a subdirectory
 				File imageDir = new File(f.getPath()+"/"+dataDir);
 				for (File iFile : imageDir.listFiles()) {

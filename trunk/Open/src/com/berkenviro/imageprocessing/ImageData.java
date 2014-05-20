@@ -40,7 +40,12 @@ public class ImageData {
 	/**
 	 * Initialize GDAL.
 	 */
-	static { gdal.AllRegister(); }
+	static { 
+		gdal.AllRegister();
+		// not sure what advantage these config options may confer
+//		gdal.SetConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "512");
+//		gdal.SetCacheMax(1074000000);
+	}
 
 	/**
 	 * Just do the initialization, such as initialize the data member and  
@@ -54,7 +59,8 @@ public class ImageData {
 		_image = gdal.Open(image_file.getAbsolutePath(), gdalconst.GA_ReadOnly);
 		reconfigBand(band_index);
 		_buffer_size = gdal.GetDataTypeSize(_data_type) / 8 * _block_xsize;
-		_pixel_buffer = ByteBuffer.allocate(_buffer_size);
+		//_pixel_buffer = ByteBuffer.allocate(_buffer_size);
+		_pixel_buffer = ByteBuffer.allocateDirect(_buffer_size);
 		_pixel_buffer.order(ByteOrder.nativeOrder());
 	}
 
@@ -70,14 +76,14 @@ public class ImageData {
 	private void reconfigBand(int band_index) {
 		_band_index = band_index;
 		_band = _image.GetRasterBand(_band_index);
-		//_block_xsize = _band.GetBlockXSize();
-		//System.out.println("\t BlockXSize: "+_band.GetBlockXSize());
-		//System.out.println("\t New BlockXSize: "+_image.GetRasterXSize());
 		/*
 		 * In the class variable declaration, it says that _block_xsize is
 		 * "the length of a row of the image".  While it may coincidentally
 		 * correspond to the line length, it is not necessarily true.
 		 */
+		//System.out.println("\t BlockXSize: "+_band.GetBlockXSize());
+		//System.out.println("\t New BlockXSize: "+_image.GetRasterXSize());
+		//_block_xsize = _band.GetBlockXSize();
 		_block_xsize = _image.GetRasterXSize();
 		_data_type = _band.getDataType();
 	}
@@ -134,16 +140,23 @@ public class ImageData {
 			// 1. do some configuration
 			reconfigBand(band_index);
 			_y_index = y_index;
-			_pixel_buffer = ByteBuffer.allocate(_buffer_size);
-			_pixel_buffer.order(ByteOrder.nativeOrder());
+//			_pixel_buffer = ByteBuffer.allocateDirect(_buffer_size);
+//			_pixel_buffer.order(ByteOrder.nativeOrder());
+			_pixel_buffer.clear(); // I don't see why this buffer would need to be allocated again
 
 			// 2. perform a read operation
-			_band.ReadRaster(
+//			_band.ReadRaster(
+//					0, y_index,       // (x_begin, y_begin), it reads from begining of the line
+//					_block_xsize, 1,  // (x size; y size), |_block_size| is the length of a line
+//					_block_xsize, 1,  // buffer x size; buffer y size
+//					_data_type, 
+//					_pixel_buffer.array()); 
+			_band.ReadRaster_Direct(
 					0, y_index,       // (x_begin, y_begin), it reads from begining of the line
 					_block_xsize, 1,  // (x size; y size), |_block_size| is the length of a line
 					_block_xsize, 1,  // buffer x size; buffer y size
 					_data_type, 
-					_pixel_buffer.array()); 
+					_pixel_buffer);
 		}
 
 		return getValueFromRightDataType(x_index);

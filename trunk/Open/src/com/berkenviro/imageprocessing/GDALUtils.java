@@ -758,15 +758,34 @@ public class GDALUtils {
 //		toFile = "/home/nclinton/Documents/evi_temp_20140407_p.tif";
 //		transferGeo(fromFile, toFile);
 		
-		String toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_merge.tif";
+//		String toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_sum.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_p.tif";
+//		transferGeo(fromFile, toFile);
+		
+		
+//		String toFile = "/home/nclinton/Documents/evi_persiann_us_20140509_merge.tif";
+//		//transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140509_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140509_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_us_20140509_p.tif";
+//		transferGeo(fromFile, toFile);
+		
+		String toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_merge.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_corr.tif";
+		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_corr.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_days.tif";
+		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_days.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_sum.tif";
-		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_us_20140420_p.tif";
+		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_p.tif";
 		transferGeo(fromFile, toFile);
 	}
 

@@ -5,6 +5,9 @@ import java.awt.event.*;
 
 import javax.swing.JFrame;
 
+import JSci.awt.DefaultGraph2DModel;
+import JSci.awt.Graph2D;
+import JSci.swing.JLineGraph;
 import ru.sscc.spline.Spline;
 import ru.sscc.spline.analytic.GSplineCreator;
 import ru.sscc.spline.polynomial.PEvenSplineCreator;
@@ -19,11 +22,6 @@ import ru.sscc.util.data.DoubleVectors;
 import ru.sscc.util.data.RealVectors;
 import weka.core.Utils;
 
-import JSci.awt.*;
-import JSci.maths.*;
-import JSci.maths.polynomials.RealPolynomial;
-import JSci.swing.JGraphLayout;
-import JSci.swing.JLineGraph;
 
 /**
 * Sample program demonstrating use of LinearMath.leastSquaresFit method
@@ -106,19 +104,19 @@ public final class CurveFitter extends JFrame implements ActionListener {
         }
         
         private void fitCurve() {
-        	
-        		double[][] data = getDataPoints();
-                
-                int degree = Integer.parseInt(polyDegreeField.getText());
-                RealPolynomial poly = LinearMath.leastSquaresFit(degree, data);
-                fnLabel.setText(poly.toString());
-                
-                float[] polyvals = new float[model.seriesLength()];
-                for(int i=0; i<polyvals.length; i++) {
-                    polyvals[i]= (float)poly.map(Integer.valueOf(i+1).doubleValue());
-                }
-        		
-                model.addSeries(polyvals);
+        	// this functionality part of the defunct JSci library
+//        		double[][] data = getDataPoints();
+//                
+//                int degree = Integer.parseInt(polyDegreeField.getText());
+//                RealPolynomial poly = LinearMath.leastSquaresFit(degree, data);
+//                fnLabel.setText(poly.toString());
+//                
+//                float[] polyvals = new float[model.seriesLength()];
+//                for(int i=0; i<polyvals.length; i++) {
+//                    polyvals[i]= (float)poly.map(Integer.valueOf(i+1).doubleValue());
+//                }
+//        		
+//                model.addSeries(polyvals);
         }
         /*
          * This basically does nothing except fit linear functions between the 

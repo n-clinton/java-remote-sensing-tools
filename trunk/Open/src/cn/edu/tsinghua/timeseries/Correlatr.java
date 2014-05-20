@@ -43,6 +43,7 @@ import com.berkenviro.imageprocessing.JAIUtils;
  * @author Cong Hui He
  * 
  */
+@Deprecated
 public class Correlatr {
 	Loadr responseLoadr;
 	Loadr predictLoadr;
