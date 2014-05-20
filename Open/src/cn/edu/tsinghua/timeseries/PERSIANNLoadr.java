@@ -89,7 +89,11 @@ public class PERSIANNLoadr implements Loadr {
 	 * @return
 	 */
 	public int diffDays(PERSIANNFile pf) {
-		return ImageLoadr2.diffDays(date0, pf.cal);
+		long milliseconds1 = date0.getTimeInMillis();
+	    long milliseconds2 = pf.cal.getTimeInMillis();
+	    long diff = milliseconds2 - milliseconds1;
+	    //return Math.round(diff / (24 * 60 * 60 * 1000));
+	    return (int)(diff / (24 * 60 * 60 * 1000));
 	}
 	
 	
@@ -188,34 +192,57 @@ public class PERSIANNLoadr implements Loadr {
 		return TSUtils.evaluateSpline(spline, t);
 	}
 	
+	@Override
+	public String toString() {
+		String ret = "";
+		for (PERSIANNFile pf : this.imageList) {
+			ret += (pf.toString()+"\t");
+		}
+		return ret;
+	}
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		// PERSIANN rainfall predictor
 		//String[] persiann = new String[] {"D:/PERSIANN/8km_daily/2010/", "D:/PERSIANN/8km_daily/2011/"};
-		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
+//		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
+//		try {
+//			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+//			Calendar cal = Calendar.getInstance();
+//			cal.set(2010, 0, 1);
+//			predictorLoadr.setDateZero(cal);
+////			double x = -71.0;
+////			for (double y=-48.0; y>-70.0; y-=0.5) {
+////				List<double[]> series = predictorLoadr.getSeries(x,y);
+////				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
+////				for (double[] t : series) {
+////					System.out.println("\t"+Arrays.toString(t));
+////				}
+////			}
+////			double x = 133.1;
+////			double y = -19.0;
+////			List<double[]> series = predictorLoadr.getSeries(x,y);
+////			for (int t=0; t<series.size(); t++) {
+////				System.out.println("\t predictorLoadr:"+Arrays.toString(series.get(t)));
+////			}
+//			// consistent with Correlatr, 6 months of missing PERSIANN
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2008/", "/data/PERSIANN/8km_daily/2009/", "/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
 		try {
 			PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
 			Calendar cal = Calendar.getInstance();
-			cal.set(2010, 0, 1);
+			cal.set(Calendar.YEAR, 2008);
+			cal.set(Calendar.DAY_OF_YEAR, 0); // first two days are both time=0 if this is not set to 0
 			predictorLoadr.setDateZero(cal);
-//			double x = -71.0;
-//			for (double y=-48.0; y>-70.0; y-=0.5) {
-//				List<double[]> series = predictorLoadr.getSeries(x,y);
-//				System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
-//				for (double[] t : series) {
-//					System.out.println("\t"+Arrays.toString(t));
-//				}
-//			}
-//			double x = 133.1;
-//			double y = -19.0;
-//			List<double[]> series = predictorLoadr.getSeries(x,y);
-//			for (int t=0; t<series.size(); t++) {
-//				System.out.println("\t predictorLoadr:"+Arrays.toString(series.get(t)));
-//			}
-			// consistent with Correlatr, 6 months of missing PERSIANN
+			System.out.println(predictorLoadr);
+			System.out.println(Arrays.toString(predictorLoadr.t));
 		} catch (Exception e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

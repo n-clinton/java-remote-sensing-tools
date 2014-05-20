@@ -132,6 +132,14 @@ public class TSUtils {
 	}
 	
 	
+	/*
+	 * Not sure about the following.  Work in progress...........***************************************
+	 */
+	/**
+	 * 
+	 * @param times are the t-values of the time series
+	 * @return an MxM matrix, where M = times.length
+	 */
 	public static ComplexMatrix ndftMatrix(double[] times) {
 		ComplexMatrix mult = new ComplexMatrix(times.length, times.length);
 		double period = times[times.length-1] - times[0]; // T
@@ -144,29 +152,35 @@ public class TSUtils {
 		return mult;
 	}
 	
-	public ComplexMatrix ndftForward(double[][] series) {
-		return ndftMatrix(series[0]).times(new double[][] {series[1]}); // column vector?
+	public static ComplexMatrix ndftForward(ComplexMatrix ndftMatrix, double[][] series) {
+		return ndftMatrix.times(ComplexMatrix.toComplexColumnMatrix(series[1]));
 	}
 	
-	public ComplexMatrix ndftReverse(ComplexMatrix mult, ComplexMatrix frequencies) {
+	public static ComplexMatrix ndftReverse(ComplexMatrix mult, ComplexMatrix frequencies) {
 		return mult.inverse().times(frequencies);
 	}
 	
-	public double[] realPart(ComplexMatrix matrix) {
+	public static double[] realPart(ComplexMatrix matrix) {
 		double[] reals = new double[matrix.getNrow()];
 		for (int i=0; i<matrix.getNrow(); i++) {
-			reals[i] = matrix.getArrayReference()[0][i].getReal();
+			reals[i] = matrix.getArrayReference()[i][0].getReal();
 		}
 		return reals;
 	}
 	
-	public double[] logPowerSpectrum(ComplexMatrix frequencies) {
+	public static double[] logPowerSpectrum(ComplexMatrix frequencies) {
+		System.out.println("cols: "+frequencies.getNcol());
+		System.out.println("rows: "+frequencies.getNrow());
 		double[] power = new double[frequencies.getNrow()];
 		for (int i=0; i<frequencies.getNrow(); i++) {
-			power[i] = Math.log(frequencies.getArrayReference()[0][i].abs());
+			power[i] = Math.log(frequencies.getArrayReference()[i][0].squareAbs());
 		}
 		return power;
 	}
+	/*
+	 * ***************************************************************************
+	 */
+	
 	
 	/**
 	 * Read out a list into an array.  Assumes List is already sorted chronologically.
@@ -296,10 +310,10 @@ public class TSUtils {
         for (int j=0; j<n; j++) {
         	splineVals[0][j] = x;
         	splineVals[1][j] = spline.value(x);
-        	System.out.print(splineVals[1][j]+",");
+        	//System.out.print(splineVals[1][j]+",");
         	x += step;
         }
-        System.out.println();
+        //System.out.println();
         return splineVals;
 	}
 	

@@ -8,7 +8,6 @@ import java.awt.image.WritableRaster;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -24,19 +23,11 @@ import javax.media.jai.RasterFactory;
 import javax.media.jai.iterator.RandomIter;
 import javax.media.jai.iterator.RandomIterFactory;
 
-import org.apache.commons.math.MathException;
-import org.apache.commons.math.distribution.NormalDistributionImpl;
-import org.apache.commons.math.distribution.TDistributionImpl;
-import org.apache.commons.math.linear.RealMatrix;
-import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
+import org.apache.commons.math3.distribution.TDistribution;
+import org.apache.commons.math3.stat.correlation.StorelessCovariance;
 
-import ru.sscc.spline.Spline;
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
-import cn.edu.tsinghua.timeseries.Correlatr2.Pixel;
-import cn.edu.tsinghua.timeseries.Correlatr2.PixelCompute;
-import cn.edu.tsinghua.timeseries.Correlatr2.PixelEnumeration;
-import cn.edu.tsinghua.timeseries.Correlatr2.PixelWrite;
 
 import com.berkenviro.imageprocessing.JAIUtils;
 
@@ -49,13 +40,20 @@ import com.berkenviro.imageprocessing.JAIUtils;
  */
 public class Correlatr3 {
 	
-	int longestLag;
-	int longestInterval;
-	boolean maxCorrInterp;
+	final int longestLag;
+	final int longestSum;
+	final int longestInterval;
+	final boolean maxCorrInterp;
 	
 	Loadr responseLoadr;
 	Loadr predictLoadr;
 	PlanarImage ref;
+	
+	// image dimensions
+	final int width_begin;
+	final int width_end;
+	final int height_begin;
+	final int height_end;
 	
 	BlockingQueue<Pixel> pixels; // reusable objects
 	BlockingQueue<Pixel> queue; // read, but not processed
@@ -69,29 +67,57 @@ public class Correlatr3 {
 	 * @param reference is the pixel reference.  An output will be written at each reference pixel == 1.
 	 * @param ymd is {year, month, day} where month is zero-referenced
 	 * @param longestLag is the longest lag (in days) to check
-	 * @param longestInterval is 
+	 * 
+	 * @param longestInterval is the longest interval permitted between samples (only used if maxCorrInterp=true)
 	 * @param maxCorrInterp if true will interpolate the predictor variable
 	 * @throws Exception
 	 */
 	public Correlatr3(Loadr response, Loadr predictor, String reference, 
-			int[] ymd, int longestLag, int longestInterval, boolean maxCorrInterp) throws Exception {
+			int[] ymd, int longestLag, int longestSum, int longestInterval, boolean maxCorrInterp) throws Exception {
 		System.out.println("Initializing... ");
-		this.maxCorrInterp = maxCorrInterp;
-		System.out.println("Interpolation is "+this.maxCorrInterp);
-		this.longestLag = longestLag;
-		System.out.println("longestLag: "+this.longestLag);
-		this.longestInterval = longestInterval;
-		System.out.println("longestInterval: "+this.longestInterval);
-		
-		ref = JAIUtils.readImage(reference);
-		JAIUtils.register(ref);
 		responseLoadr = response;
 		predictLoadr = predictor;
 		Calendar cal = Calendar.getInstance();
 		cal.set(ymd[0], ymd[1], ymd[2]);
-		System.out.println("Setting zero-reference to: " + cal.getTime());
+		System.out.println("Setting time series zero reference to " + cal.getTime());
 		responseLoadr.setDateZero(cal);
 		predictLoadr.setDateZero(cal);
+		this.maxCorrInterp = maxCorrInterp;
+		System.out.println("Interpolation is "+this.maxCorrInterp);
+		this.longestInterval = longestInterval;
+		System.out.println("longestInterval: "+this.longestInterval);
+		
+		this.longestLag = longestLag;
+		System.out.println("longestLag: "+this.longestLag);
+		this.longestSum = longestSum;
+		System.out.println("Sum days: "+this.longestSum);
+		
+		ref = JAIUtils.readImage(reference);
+		JAIUtils.register(ref);
+		
+		// Procesing extents
+		// North America
+//		int width_begin = 888;
+//		int width_end = 15358;
+//		int height_begin = 700;
+//		int height_end = 12372;
+		// US
+//		width_begin = 6500;
+//		width_end = 13000;
+//		height_begin = 2500;
+//		height_end = 5500;
+		
+		// Australia
+//		int width_begin = 37427;
+//		int height_begin =  10639;
+//		int width_end = 37463;
+//		int height_end = 9957;
+
+		width_begin = 0;
+		width_end = ref.getWidth();
+		height_begin = 0;
+		height_end = ref.getHeight();
+		
 	}
 
 	/**
@@ -100,106 +126,6 @@ public class Correlatr3 {
 	public void close() {
 		responseLoadr.close();
 		predictLoadr.close();
-	}
-
-
-	/**
-	 * This version is meant for daily predictor data (PERSIANN), for which it makes no
-	 * sense to fit a spline.  The response (EVI) must be greater than zero and n>=5.
-	 * 
-	 * @param response
-	 * @param covariate
-	 * @return
-	 */
-	public double[] maxCorrelation(List<double[]> response, List<double[]> covariate) {
-		// get a TreeMap for the response
-		//TreeMap<Double, Double> rMap = TSUtils.getPieceWise(response, longestInterval);
-		//System.out.println(rMap);
-		TreeMap<Double, Double> rMap = new TreeMap<Double, Double>();
-		for (double[] tr : response) {
-			rMap.put(tr[0], tr[1]);
-		}
-		// get a TreeMap for the covariate
-		TreeMap<Double, Double> cMap;
-		if (maxCorrInterp) {
-			cMap = TSUtils.getPieceWise(covariate, longestInterval);
-		} else {
-			// insert the covariate into a TreeMap as-is, with key=time
-			cMap = new TreeMap<Double, Double>();
-			for (double[] tc : covariate) {
-				cMap.put(tc[0], tc[1]);
-			}
-		}
-		
-		VectorialCovariance cov = new VectorialCovariance(2, false);
-
-		double t0 = response.get(0)[0]; // minumum t
-		double tn = response.get(response.size() - 1)[0]; // max t
-		double minCorr = 1.0;
-		double maxCorr = -1.0;
-		int minLag = 0;
-		int maxLag = 0;
-		int minN = 0;
-		int maxN = 0;
-		for (int l=0; l<=longestLag; l+=5) {
-//			System.out.println("l="+l);
-			cov.clear();
-			// compute covariance
-//			for (double t = t0; t <= tn; t++) { // daily step
-			for (double t : rMap.keySet()) { // only the keys in the map
-//				System.out.println("\t t="+t);
-				if (t - l < 0) {
-//					System.err.println("\t\t out of bounds"+(t - l));
-					continue; // don't go out of bounds
-				}
-				try {
-					// response---------------
-					double r = rMap.get(t).doubleValue();
-					if (r < 0) { // want only EVI greater than zero
-//						System.err.println("\t\t EVI<0.");
-						continue;
-					}
-					// covariate ----------------------
-					Double cDouble = cMap.get(t - l);
-					if (cDouble == null) { // t was a no data point
-//						System.err.println("\t\t"+t+" was no data cDouble");
-						continue;
-					}
-//					System.out.println(t+","+r+","+cDouble);
-					cov.increment(new double[] { r, cDouble.doubleValue() });
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-			// the variance/covariance matrix
-			RealMatrix vc = cov.getResult();
-			// if either variable is constant...
-			if (vc.getEntry(0, 0) == 0 || vc.getEntry(1, 1) == 0) {
-//				System.err.println("\t No variance.");
-				return new double[] {0, 0, 0};
-			}
-			// normalize by SD
-			double correlation = vc.getEntry(0, 1)
-					/ Math.sqrt(vc.getEntry(0, 0) * vc.getEntry(1, 1));
-			// check
-			if (correlation < minCorr) {
-				minCorr = correlation;
-				minLag = l;
-				minN = (int)cov.getN();
-			}
-			if (correlation > maxCorr) {
-				maxCorr = correlation;
-				maxLag = l;
-				maxN = (int)cov.getN();
-			}
-
-		}
-
-		if (maxCorr < 0) {
-			return new double[] {minCorr, minLag, minN};
-		}
-		return new double[] {maxCorr, maxLag, maxN};
 	}
 	
 
@@ -217,7 +143,6 @@ public class Correlatr3 {
 			pixels.add(new Pixel(false));
 		}
 		queue = new ArrayBlockingQueue<Pixel>(nThreads);
-		// ecs = new ExecutorCompletionService<Pixel>(Executors.newFixedThreadPool(nThreads));
 		service = new ThreadPoolExecutor(nThreads, nThreads, 0L,
 				TimeUnit.MILLISECONDS, 
 				new ArrayBlockingQueue<Runnable>(nThreads), 
@@ -237,12 +162,10 @@ public class Correlatr3 {
 		new Thread(write).start();
 	}
 
+	
 	/**
 	 * A Pixel object that holds time series. 
-	 * As soon as it is instantiated, it starts the read operations in other threads.
 	 * When called, it computes the correlation between the series.
-	 * 
-	 * @author Nicholas
 	 * 
 	 */
 	class Pixel implements Callable<Pixel> {
@@ -273,62 +196,171 @@ public class Correlatr3 {
 			y = -1;
 		}
 
+		public double[] maxCorrelation() {
+			// get a Map for the response
+			Double[] rDoub = new Double[(int)response.get(response.size()-1)[0]+1];
+			for (double[] tr : response) {
+				rDoub[(int)tr[0]] = tr[1];
+			}
+			// get a Map for the covariate
+			Double[] cDoub = new Double[
+			         Math.max((int)covariate.get(covariate.size()-1)[0]+1,
+			        		  (int)response.get(response.size()-1)[0]+1)];
+			for (double[] tc : covariate) {
+				cDoub[(int)tc[0]] = tc[1];
+			}
+
+			double minCorr = 1.0;
+			double maxCorr = -1.0;
+			int minLag = 0;
+			int maxLag = 0;
+			int minSum = 0;
+			int maxSum = 0;
+			int minN = 0;
+			int maxN = 0;
+			for (int sum=0; sum<=longestSum; sum+=7) {
+				//System.out.print("sum="+sum+", ");
+				for (int l=0; l<=longestLag; l+=7) {
+					//System.out.println("l="+l);
+					StorelessCovariance cov = new StorelessCovariance(2, false);
+					int n = 0;
+					for (double[] rt : response) { // iterate over every t for the response
+						double t = rt[0];
+						//System.out.println("\t t="+t);
+						if (t - l - sum < 0) {
+							//System.err.println("\t\t out of bounds: "+(t - l - sum));
+							continue; // don't go out of bounds
+						}
+						try {
+							// response---------------
+							double r = rDoub[(int)t];
+							if (r < 0) { // want only EVI greater than zero
+								//System.err.println("\t\t EVI<0.");
+								continue;
+							}
+							// summation
+							double cSum = 0;
+							int index = (int) t - l;
+							//System.out.println("\t\t Summing from "+(t - lags[l])+"...");
+							
+							for (int s=0; s<=sum; s++) { // DAILY time step on the covariate
+								//System.out.println("\t\t\t time="+index);
+								Double cDouble = cDoub[index];
+								if (cDouble == null) { // index was a no data point
+									//System.err.println("\t\t\t"+index+" was no data.");
+									continue;
+								}
+								//System.out.println("\t\t\t adding: "+cDouble.doubleValue());
+								cSum += cDouble.doubleValue();
+								index--;
+							}
+							if (index < (t - l)) { // don't increment a false zero (all no-data)
+								//System.out.println("\t\t incrementing: "+t+","+r+","+cSum);
+								cov.increment(new double[] { r, cSum });
+								n++;
+							}
+							
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+					} // end responses
+
+					// if not enough data (arbitrary number)
+					if (n < 9) {
+						continue;
+					}
+					// if either variable is constant...
+					if (cov.getCovariance(0, 0) == 0 || cov.getCovariance(1, 1) == 0) {
+						//System.err.println("\t No variance: var(r)="+cov.getCovariance(0, 0)+", var(c)="+cov.getCovariance(1, 1));
+						continue;
+					}
+					// normalize by SD
+					double correlation = cov.getCovariance(0, 1)
+							/ Math.sqrt(cov.getCovariance(0, 0) * cov.getCovariance(1, 1));
+					if (correlation < minCorr) {
+						minCorr = correlation;
+						minLag = l;
+						minSum = sum;
+						minN = n;
+					}
+					if (correlation > maxCorr) {
+						maxCorr = correlation;
+						maxLag = l;
+						maxSum = sum;
+						maxN = n;
+					}
+
+				} // end lags
+			} // end summations
+			
+			if (maxCorr < 0) {
+				return new double[] {minCorr, minLag, minSum, minN};
+			}
+			return new double[] {maxCorr, maxLag, maxSum, maxN};
+		}
+		
 		@Override
 		public Pixel call() {
-			long start = System.nanoTime();
+			//long start = System.nanoTime();
 			// DUMMY, nothing to do
 			if (dummy) {
 				return this;
 			}
 			// sort of arbitrary, but if size=0, below throws an exception and the write thread will stop
 			if (response.size() < 9 || covariate.size() < 9) { // 10% of all possible 16 day composites
-				correlation = new double[] {0, 0, 0};
+				//System.err.println("Not enough data. Response="+response.size()+", Covariate="+covariate.size());
+				correlation = new double[] {0, 0, 0, 0};
 				return this;
 			}
 
-			correlation = maxCorrelation(response, covariate);
+			correlation = maxCorrelation();
 			
-			if (correlation[2] < 9) {
-				correlation = new double[] {0, 0, 0};
+			if (correlation[3] < 9) { // arbitrary, already checked in maxCorrelation
+				//System.err.println("Not enough data. N="+correlation[3]);
+				correlation = new double[] {0, 0, 0, 0};
 				return this;
 			}
 			
-			// Assume the Spline functions are free to vary everywhere except the control points.
-			// therefore df = N - (N - responseN - covariateN) - 2, where 2 is for the means?
-			//double df = response.size() + covariate.size() - 2.0;
-			double df = correlation[2] - 2.0; // for data that is not interpolated
+			double df = correlation[3] - 2.0; // for data that is not interpolated
 			double t = correlation[0] * Math.sqrt(df / (1-Math.pow(correlation[0], 2)));
 			// compare:
 			//double z = 0.5*Math.log((1.0 + correlation[0]) / (1.0 - correlation[0]))*Math.sqrt(df-1.0);
+			
 			// replace the cov.N with a p-value
 			if (df <= 0) {
-				correlation[2] = 0.5; // undefined
+				correlation[3] = 0.5; // undefined
 			}
 			else {
-				TDistributionImpl tDist = new TDistributionImpl(df);
+				TDistribution tDist = new TDistribution(df);
 				//NormalDistributionImpl zDist = new NormalDistributionImpl();
 				double p = 0;
-				try {
-					p = tDist.cumulativeProbability(t);
-					// quick check: t is bigger
-					//System.out.println("\t\t T-dist: "+(1.0-p)+" Normal dist: "+(1.0-zDist.cumulativeProbability(t)));
-				} catch (MathException e) {
-					e.printStackTrace();
-				}
+				p = tDist.cumulativeProbability(t);
+				// quick check: t is bigger
+				//System.out.println("\t\t T-dist: "+(1.0-p)+" Normal dist: "+(1.0-zDist.cumulativeProbability(t)));
+
 				if (correlation[0] < 0) {
-					correlation[2] = p;
+					correlation[3] = p;
 				}
 				else {
-					correlation[2] = 1.0 - p;
+					correlation[3] = 1.0 - p;
 				}
 			}
 			
-			long stop = System.nanoTime();
-			double elapsed = (double)(stop - start) / 1000.0;
+			//long stop = System.nanoTime();
+			//double elapsed = (double)(stop - start) / 1000.0;
 			//System.out.println("\t compute time: " + elapsed);
 			return this;
 		}
 
+		private String toString(List<double[]> list) {
+			String listString = "";
+			for (double[] arr : list) {
+				listString+=(Arrays.toString(arr)+",");
+			}
+			return listString;
+		}
+		
 		@Override
 		public String toString() {
 			return "(" + x + "," + y + "): " + Arrays.toString(correlation)
@@ -336,6 +368,7 @@ public class Correlatr3 {
 		}
 	}
 
+	
 	/**
 	 * A Runnable reading object.
 	 * @author Nicholas
@@ -391,7 +424,7 @@ public class Correlatr3 {
 		 * @param reference
 		 */
 		public PixelEnumeration() {
-			// two read threads, but only one is used
+			// two read threads
 			es = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
 					new ArrayBlockingQueue<Runnable>(2),
 					new ThreadPoolExecutor.DiscardPolicy());
@@ -410,18 +443,26 @@ public class Correlatr3 {
 				System.out.println("Finished enumerating.");
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
 			long stop = System.currentTimeMillis();
 			long time_elapsed_millis = stop - start;
 			System.out.println("Time used: " + time_elapsed_millis + " milliseconds");
 			System.out.println("Read Times: " + PERSIANNFile.READ_TIMES);
+			
+			// shut down the reading service
+			es.shutdown();
+			System.out.println("The ExecutorService has been issued a shutdown command.");
+			try {
+				if (!es.awaitTermination(120, TimeUnit.SECONDS)) {
+					System.err.println("Pool did not terminate");
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 
 		/**
 		 * 
-		 * @throws InterruptedException
 		 */
 		public void enumerate() {
 			// center coords
@@ -435,28 +476,6 @@ public class Correlatr3 {
 			
 			ReadRunner responseReader = new ReadRunner();
 			ReadRunner covariateReader = new ReadRunner();
-
-			// North America
-//			int width_begin = 888;
-//			int width_end = 15358;
-//			int height_begin = 700;
-//			int height_end = 12372;
-			// US
-			int width_begin = 6500;
-			int width_end = 13000;
-			int height_begin = 2500;
-			int height_end = 5500;
-			
-			// Australia
-//			int width_begin = 37427;
-//			int height_begin =  10639;
-//			int width_end = 37463;
-//			int height_end = 9957;
-
-//			int width_begin = 0;
-//			int width_end = ref.getWidth();
-//			int height_begin = 0;
-//			int height_end = ref.getHeight();
 			
 			for (int  y = height_begin; y < height_end; y++) {
 				for (int x = width_begin; x < width_end; x++) {
@@ -487,7 +506,7 @@ public class Correlatr3 {
 						Future f1 = es.submit(responseReader); 
 						Future f2 = es.submit(covariateReader);
 						while (true) {
-							if (f1.isDone() && f2.isDone()) {
+							if (f1.get()==null && f2.get()==null) {
 								break;
 							}
 						}
@@ -502,18 +521,10 @@ public class Correlatr3 {
 						//System.out.println("\t\t queue size: "+queue.size());
 					} catch (InterruptedException  e) {
 						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
 					}
 				}
-			}
-			// shut 'er down
-			es.shutdown();
-			System.out.println("The ExecutorService has been issued a shutdown command.");
-			try {
-			if (!es.awaitTermination(120, TimeUnit.SECONDS)) {
-				System.err.println("Pool did not terminate");
-			}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
 			}
 		}
 	}
@@ -530,17 +541,9 @@ public class Correlatr3 {
 
 		@Override
 		public void run() {
-			try {
-				compute();
-				System.out.println("Finished computing.");
-				ecs.submit(new Pixel(true)); // DUMMY
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			compute();
+			System.out.println("Finished computing!!");
+			ecs.submit(new Pixel(true)); // DUMMY
 		}
 
 		/**
@@ -549,11 +552,16 @@ public class Correlatr3 {
 		 * @throws InterruptedException
 		 * @throws Exception
 		 */
-		public void compute() throws InterruptedException, ExecutionException {
-			Pixel pix;
+		public void compute() {
 			while (true) {
-				// take off the first queue, read, but unprocessed
-				pix = queue.take();
+				Pixel pix;
+				try {
+					// take off the first queue, read, but unprocessed
+					pix = queue.take();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					continue;
+				}
 				if (pix.dummy) { // DUMMY
 					break; // done, exit the loop
 				}
@@ -571,7 +579,7 @@ public class Correlatr3 {
 	 */
 	class PixelWrite implements Runnable {
 
-		WritableRaster corr, days, p;
+		WritableRaster corr, days, sum, p;
 		String base;
 
 		/**
@@ -581,12 +589,16 @@ public class Correlatr3 {
 		public PixelWrite(String base) {
 			this.base = base;
 			// initialize outputs
-			int width = ref.getWidth();
-			int height = ref.getHeight();
+			int width = width_end - width_begin;
+			int height = height_end - height_begin;
+			
 			corr = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
 					width, height, 1, // bands
 					new java.awt.Point(0, 0)); // origin
 			days = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
+					width, height, 1, // bands
+					new java.awt.Point(0, 0)); // origin
+			sum = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
 					width, height, 1, // bands
 					new java.awt.Point(0, 0)); // origin
 			p = RasterFactory.createBandedRaster(DataBuffer.TYPE_BYTE, // unsigned byte
@@ -601,6 +613,18 @@ public class Correlatr3 {
 		public void run() {
 			write();
 			System.out.println("Finished writing!!");
+			
+			// shut down the computing service
+			service.shutdown();
+			System.out.println("The ThreadPoolExector has been issued a shutdown command.");
+			try {
+				if (!service.awaitTermination(120, TimeUnit.SECONDS)) {
+					System.err.println("The service did not terminate");
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			close();
 		}
 
 		/**
@@ -609,7 +633,7 @@ public class Correlatr3 {
 		 * @throws ExecutionException
 		 */
 		public void write() {
-			int interval = 10000; // frequency of write, original value 10000000
+			int interval = 1000000; // frequency of write, original value 10000000
 			int counter = 0;
 			long now = System.currentTimeMillis();
 			while (true) {
@@ -618,23 +642,19 @@ public class Correlatr3 {
 					finishedPix = ecs.take().get();
 				} catch (InterruptedException | ExecutionException e) {
 					e.printStackTrace();
-					finishedPix = new Pixel(false);
-					finishedPix.correlation = new double[] {0, 0, 0};
+					continue;
 				}
 				
 				if (finishedPix.dummy) { // DUMMY
 					break;
 				}
 				
-				System.out.println(finishedPix);
+				//System.out.println(finishedPix);
 
 				writeCorr((short)(255*finishedPix.correlation[0]), finishedPix);
 				writeDays((short) finishedPix.correlation[1], finishedPix);
-				writeP((byte)(255*finishedPix.correlation[2]), finishedPix);
-				
-//				System.out.println("Corr: "+corr.getSample(finishedPix.x, finishedPix.y, 0));
-//				System.out.println("Days: "+days.getSample(finishedPix.x, finishedPix.y, 0));
-//				System.out.println("P: "+p.getSample(finishedPix.x, finishedPix.y, 0));
+				writeSum((short) finishedPix.correlation[2], finishedPix);
+				writeP((byte)(255*finishedPix.correlation[3]), finishedPix);
 
 				// periodically write to disk
 				counter++;
@@ -652,6 +672,9 @@ public class Correlatr3 {
 					diskWrite();
 					counter = 0;
 					now = System.currentTimeMillis();
+					System.gc();
+					System.gc();
+					System.gc();
 				}
 
 				// re-use the finished pixel
@@ -659,14 +682,6 @@ public class Correlatr3 {
 				pixels.add(finishedPix);
 			}
 			diskWrite();
-			service.shutdown();
-			try {
-				if (!service.awaitTermination(120, TimeUnit.SECONDS)) {
-					System.err.println("The service did not terminate");
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
 		}
 
 		/**
@@ -675,19 +690,24 @@ public class Correlatr3 {
 		private void diskWrite() {
 			JAIUtils.writeTiff(corr, base + "_corr.tif");
 			JAIUtils.writeTiff(days, base + "_days.tif");
+			JAIUtils.writeTiff(sum, base + "_sum.tif");
 			JAIUtils.writeTiff(p, base + "_p.tif");
 		}
 
 		public synchronized void writeCorr(double val, Pixel pix) {
-			corr.setSample(pix.x, pix.y, 0, val);
+			corr.setSample(pix.x - width_begin, pix.y - height_begin, 0, val);
 		}
 
 		public synchronized void writeDays(double val, Pixel pix) {
-			days.setSample(pix.x, pix.y, 0, val);
+			days.setSample(pix.x - width_begin, pix.y - height_begin, 0, val);
+		}
+		
+		public synchronized void writeSum(double val, Pixel pix) {
+			sum.setSample(pix.x - width_begin, pix.y - height_begin, 0, val);
 		}
 
 		public synchronized void writeP(double val, Pixel pix) {
-			p.setSample(pix.x, pix.y, 0, val);
+			p.setSample(pix.x - width_begin, pix.y - height_begin, 0, val);
 		}
 
 	} // end writing class
@@ -710,7 +730,9 @@ public class Correlatr3 {
 			System.out.print(Arrays.toString(d)+", ");
 		}
 		System.out.println();
-		return maxCorrelation(response, covariate);
+		Pixel testPixel = new Pixel(false);
+		testPixel.set(response, covariate, -9, -9);
+		return testPixel.maxCorrelation();
 	}
 	
 	/**
@@ -721,8 +743,9 @@ public class Correlatr3 {
 		// 
 		Correlatr3 corr = null;
 		String reference = "/data/GlobalLandCover/modis/land_mask.tif";
-		int longestLag = 150;
-		int longestInterval = 64;
+		int longestLag = 168; // 24 weeks, 6 months
+		int longestSum = 84; // 12 weeks, 3 months
+		int longestInterval = 64; // not used unless interpolation
 		int threads = 10;
 		// EVI vegetation index response
 		String[] evi = new String[] {"/data/MOD13A2/2008", "/data/MOD13A2/2009", "/data/MOD13A2/2010", "/data/MOD13A2/2011"};
@@ -737,17 +760,47 @@ public class Correlatr3 {
 		};
 		ImageLoadr6 responseLoadr = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 
-		// PERSIANN rainfall predictor
-		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2008/", "/data/PERSIANN/8km_daily/2009/", "/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
-		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
-		// the Correlatr
-		corr = new Correlatr3(responseLoadr, predictorLoadr, reference, new int[] { 2008, 0, 1 }, longestLag, longestInterval, false);
-		String base = "/home/nclinton/Documents/evi_persiann_us_20140509"; // no interpolation, 4 years
-		corr.writeImagesParallel(base, threads);
+//		// PERSIANN rainfall predictor
+//		String[] persiann = new String[] {"/data/PERSIANN/8km_daily/2008/", "/data/PERSIANN/8km_daily/2009/", "/data/PERSIANN/8km_daily/2010/", "/data/PERSIANN/8km_daily/2011/"};
+//		PERSIANNLoadr predictorLoadr = new PERSIANNLoadr(persiann);
+//		// the Correlatr
+//		corr = new Correlatr3(responseLoadr, predictorLoadr, reference, new int[] { 2008, 0, 0 }, longestLag, longestSum, longestInterval, false);
+//		//String base = "/home/nclinton/Documents/evi_persiann_sum_us_20140514"; // no interpolation, 4 years, lag 168, sum 84
+//		String base = "/home/nclinton/Documents/evi_persiann_sum_20140515"; // no interpolation, 4 years, lag 168, sum 84
+//		corr.writeImagesParallel(base, threads);
+		// Looks good!
 		
 //		System.out.println(Arrays.toString(corr.correlation(-13.3, 133.4))); // Australia
 //		System.out.println(Arrays.toString(corr.correlation(38.0, -121.0))); // CA
 		
+//		WritableRaster check = RasterFactory.createBandedRaster(DataBuffer.TYPE_SHORT, // signed short
+//				1000, 1000, 1, // bands
+//				new java.awt.Point(0, 0)); // origin
+//		for (int i=0; i<1000; i++) {
+//			for(int j=0; j<1000; j++) {
+//				check.setSample(i, j, 0, i*j);
+//			}
+//		}
+//		String checkFile = "/home/nclinton/Documents/check_image_20140509";
+//		JAIUtils.writeTiff(check, checkFile);
+		// OK. 
+		
+		// 20140520 temperature
+		String[] temperature = new String[] {"/data/MYD11A2/2008", "/data/MYD11A2/2009", "/data/MYD11A2/2010", "/data/MYD11A2/2011"};
+		String tempDir = "LST_DAY";
+		String tempQCDir = "QC_DAY";
+		BitCheck mod11Checker = new BitCheck() {
+			@Override
+			public boolean isOK(int check) {
+				return BitChecker.mod11ok(check);
+			}
+		};
+		ImageLoadr4 predictLoadr = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
+
+		// the Correlatr
+		corr = new Correlatr3(responseLoadr, predictLoadr, reference, new int[] { 2008, 0, 0 }, longestLag, longestSum, longestInterval, false);
+		String base = "/home/nclinton/Documents/evi_temperature_sum_20140520"; // no interpolation, 4 years, lag 168, sum 84
+		corr.writeImagesParallel(base, threads);
 	}
 
 }

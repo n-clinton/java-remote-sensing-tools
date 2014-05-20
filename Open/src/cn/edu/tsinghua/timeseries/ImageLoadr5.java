@@ -55,14 +55,11 @@ public class ImageLoadr5 implements Loadr  {
 			for (File f : dates) {
 				// skip non-tif files that may be in the directory
 				if (!f.getName().endsWith(".tif")) { continue; }
-				
-				// Instantiate a new image Object
-				DatedQCImage image = new DatedQCImage();
-				
 				Calendar c = Calendar.getInstance();
 				// for WorldClim, average over 1950-2000, so set date to the first of the month in 2000
 				c.set(2000, Integer.parseInt(f.getName().substring(f.getName().length()-6, f.getName().length()-4))-1, 1);
-				image.cal = c;
+				// Instantiate a new image Object
+				DatedQCImage image = new DatedQCImage(c);
 				image.imageName = f.getAbsolutePath();
 				imageList.add(image);
 			}

@@ -54,13 +54,12 @@ public class ImageLoadr2 implements Loadr {
 			for (File f : dates) {
 				// skip files that may be in the directory
 				if (f.isFile()) { continue; }
-				// Instantiate a new image Object
-				DatedQCImage image = new DatedQCImage();
 				// parse the directory name to get a date
 				String[] ymd = f.getName().split("\\.");
 				Calendar c = Calendar.getInstance();
 				c.set(Integer.parseInt(ymd[0]), Integer.parseInt(ymd[1])-1, Integer.parseInt(ymd[2]));
-				image.cal = c;
+				// Instantiate a new image Object
+				DatedQCImage image = new DatedQCImage(c);
 				// find the image in a subdirectory
 				File imageDir = new File(f.getPath()+"/EVI");
 				for (File iFile : imageDir.listFiles()) {
