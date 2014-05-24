@@ -95,23 +95,17 @@ public class Correlatr3 {
 		ref = JAIUtils.readImage(reference);
 		JAIUtils.register(ref);
 		
-		// Procesing extents
+		// Processing extents
 		// North America
-//		int width_begin = 888;
-//		int width_end = 15358;
-//		int height_begin = 700;
-//		int height_end = 12372;
+//		width_begin = 888;
+//		width_end = 15358;
+//		height_begin = 700;
+//		height_end = 12372;
 		// US
 //		width_begin = 6500;
 //		width_end = 13000;
 //		height_begin = 2500;
 //		height_end = 5500;
-		
-		// Australia
-//		int width_begin = 37427;
-//		int height_begin =  10639;
-//		int width_end = 37463;
-//		int height_end = 9957;
 
 		width_begin = 0;
 		width_end = ref.getWidth();
@@ -218,9 +212,9 @@ public class Correlatr3 {
 			int maxSum = 0;
 			int minN = 0;
 			int maxN = 0;
-			for (int sum=0; sum<=longestSum; sum+=7) {
+			for (int sum=0; sum<=longestSum; sum+=8) {
 				//System.out.print("sum="+sum+", ");
-				for (int l=0; l<=longestLag; l+=7) {
+				for (int l=0; l<=longestLag; l+=8) {
 					//System.out.println("l="+l);
 					StorelessCovariance cov = new StorelessCovariance(2, false);
 					int n = 0;
@@ -267,7 +261,8 @@ public class Correlatr3 {
 					} // end responses
 
 					// if not enough data (arbitrary number)
-					if (n < 9) {
+					if (n < 5) {
+						//System.err.println("\t Not enough data. n="+n);
 						continue;
 					}
 					// if either variable is constant...
@@ -308,7 +303,7 @@ public class Correlatr3 {
 				return this;
 			}
 			// sort of arbitrary, but if size=0, below throws an exception and the write thread will stop
-			if (response.size() < 9 || covariate.size() < 9) { // 10% of all possible 16 day composites
+			if (response.size() < 9 || covariate.size() < 9) {
 				//System.err.println("Not enough data. Response="+response.size()+", Covariate="+covariate.size());
 				correlation = new double[] {0, 0, 0, 0};
 				return this;
@@ -316,7 +311,7 @@ public class Correlatr3 {
 
 			correlation = maxCorrelation();
 			
-			if (correlation[3] < 9) { // arbitrary, already checked in maxCorrelation
+			if (correlation[3] < 5) { // arbitrary, already checked in maxCorrelation
 				//System.err.println("Not enough data. N="+correlation[3]);
 				correlation = new double[] {0, 0, 0, 0};
 				return this;
@@ -495,8 +490,8 @@ public class Correlatr3 {
 					responseReader.x = _x;
 					responseReader.y = _y;
 					responseReader.loadr = responseLoadr;
-					covariateReader.x = (_x < 0 ? _x + 360.0 : _x); // PERSIANN
-					//covariateReader.x = _x; // LST
+					//covariateReader.x = (_x < 0 ? _x + 360.0 : _x); // PERSIANN
+					covariateReader.x = _x; // LST
 					covariateReader.y = _y;
 					covariateReader.loadr = predictLoadr;
 
@@ -744,7 +739,7 @@ public class Correlatr3 {
 		Correlatr3 corr = null;
 		String reference = "/data/GlobalLandCover/modis/land_mask.tif";
 		int longestLag = 168; // 24 weeks, 6 months
-		int longestSum = 84; // 12 weeks, 3 months
+		int longestSum = 8; // 12 weeks, 3 months
 		int longestInterval = 64; // not used unless interpolation
 		int threads = 10;
 		// EVI vegetation index response
@@ -799,8 +794,14 @@ public class Correlatr3 {
 
 		// the Correlatr
 		corr = new Correlatr3(responseLoadr, predictLoadr, reference, new int[] { 2008, 0, 0 }, longestLag, longestSum, longestInterval, false);
-		String base = "/home/nclinton/Documents/evi_temperature_sum_20140520"; // no interpolation, 4 years, lag 168, sum 84
+		//String base = "/home/nclinton/Documents/evi_temperature_sum_20140520"; // no interpolation, 4 years, lag 168, sum 84, n>9
+		//String base = "/home/nclinton/Documents/evi_temperature_sum_20140522"; // no interpolation, 4 years, lag 168, sum 84, n>5
+		String base = "/home/nclinton/Documents/evi_temperature_sum_20140523"; // no interpolation, 4 years, lag 168, sum 8, n>5
 		corr.writeImagesParallel(base, threads);
+		
+		//System.out.println(Arrays.toString(corr.correlation(-13.3, 133.4))); // Australia
+		//System.out.println(Arrays.toString(corr.correlation(38.0, -121.0))); // CA
+		
 	}
 
 }

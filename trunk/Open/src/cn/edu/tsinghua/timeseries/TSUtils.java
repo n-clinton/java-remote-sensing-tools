@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import javax.media.jai.PlanarImage;
@@ -96,14 +97,15 @@ public class TSUtils {
 	 */
 	public static double[][] smoothFunction(UnivariateRealFunction spline, double min, double max, double p) {
 		double[] smooth = null;
-		int n = 1024;
+		int n = Utils.nearestPowerOf2((int)(max-min));
+		System.out.println("FFT interpolating at "+n+" points");
 		FastFourierTransformer fft = new FastFourierTransformer();
 		try {
 			// transform
 			Complex[] transform = fft.transform(spline, min, max, n);
 			// symmetric series, keep the zero-frequencies on the ends
 			int keep = (int)(n*(1.0-p))/2;
-			//System.out.println(keep);
+			System.out.println("FFT keeping "+keep+" terms");
 			for (int c=0; c<transform.length; c++) {
 				if (c>keep-1 && c<n-keep) {
 					// blast the high frequency components
@@ -246,8 +248,9 @@ public class TSUtils {
         Spline spline = null;
         try {
         	// the pseudo-quadratic RBF w/ polynomial kernel of 1st degree 
-			//spline = GSplineCreator.createSpline(2, xPts, y);
-        	spline = GSplineCreator.createSpline(1, xPts, y);
+			spline = GSplineCreator.createSpline(2, xPts, y);
+			//spline = GSplineCreator.createSpline(1, xPts, y); // equivalent to Arrayfunction?
+			//spline = GSplineCreator.createSpline(3, xPts, y); // this is equivalent to SplineFunction
 		} catch (CalculatingException e) {
 			e.printStackTrace();
 			System.out.println("length: "+x.length);
@@ -657,8 +660,8 @@ public class TSUtils {
 	 * @param interval
 	 * @return 
 	 */
-	public static TreeMap<Double, Double> getPieceWise(List<double[]> series, double interval) {
-		TreeMap<Double, Double> map = new TreeMap<Double, Double>();
+	public static Double[] getPieceWise(List<double[]> series, double interval) {
+		Double[] map = new Double[(int)series.get(series.size()-1)[0]+1];
 		LinkedList<double[]> piece = new LinkedList<double[]>();
 		piece.add(series.get(0));
 		for (int i=1; i<series.size(); i++) {
@@ -685,26 +688,26 @@ public class TSUtils {
 	 * @param piece
 	 * @param map
 	 */
-	private static void updateTree(LinkedList<double[]> piece, TreeMap<Double, Double> map) {
+	private static void updateTree(LinkedList<double[]> piece, Double[] map) {
 		for (double[] d : piece) {
-			System.out.println("\t\t Updating: "+Arrays.toString(d));
+//			System.out.println("\t\t Updating: "+Arrays.toString(d));
 		}
-		if (piece.size() > 2) { // big enough to fit a spline
-			Spline spline = getThinPlateSpline(piece);
-//			double[][] data = getSeriesAsArray(piece);
-//			ArrayFunction function = new ArrayFunction(data);
+		if (piece.size() > 2) { // big enough to interpolate
+//			Spline spline = getThinPlateSpline(piece);
+			double[][] data = getSeriesAsArray(piece);
+			ArrayFunction function = new ArrayFunction(data);
 //			System.out.println("start: "+data[0][0]+", end: "+data[0][data[0].length-1]);
-//			double[][] smooth = smoothFunction(function, data[0][0], data[0][data[0].length-1]+1, 0.99);
-//			function = new ArrayFunction(smooth);
+			double[][] smooth = smoothFunction(function, data[0][0], data[0][data[0].length-1]+1, 0.98);
+			function = new ArrayFunction(smooth);
 			for (double t = piece.getFirst()[0]; t <= piece.getLast()[0]; t++) {
-				map.put(t, spline.value(t));
-//				map.put(t, function.value(t));
+//				map.put(t, spline.value(t));
+				map[(int)t] = function.value(t);
 			}
 		} else { // only one or two values in the piece.  
 			// just insert the known points
 			for (int j=0; j<piece.size(); j++) {
 				double[] obs = piece.get(j);
-				map.put(obs[0], obs[1]);
+				map[(int)obs[0]] = obs[1];
 			}
 		}
 	}

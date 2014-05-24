@@ -779,13 +779,49 @@ public class GDALUtils {
 //		toFile = "/home/nclinton/Documents/evi_persiann_us_20140509_p.tif";
 //		transferGeo(fromFile, toFile);
 		
-		String toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_merge.tif";
+//		String toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_p.tif";
+//		transferGeo(fromFile, toFile);
+		
+//		String toFile = "/home/nclinton/Documents/evi_temperature_sum_20140520_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140520_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140520_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140520_p.tif";
+//		transferGeo(fromFile, toFile);
+		
+//		String toFile = "/home/nclinton/Documents/evi_temperature_sum_20140522_merge.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140522_corr.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140522_days.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140522_p.tif";
+//		transferGeo(fromFile, toFile);
+		
+//		String toFile = "/home/nclinton/Documents/evi_temperature_sum_20140522_sum.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140520_sum.tif";
+//		transferGeo(fromFile, toFile);
+//		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_sum.tif";
+//		transferGeo(fromFile, toFile);
+		
+		String toFile = "/home/nclinton/Documents/evi_temperature_sum_20140523_merge.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_corr.tif";
+		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140523_corr.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_days.tif";
+		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140523_days.tif";
 		transferGeo(fromFile, toFile);
-		toFile = "/home/nclinton/Documents/evi_persiann_sum_20140515_p.tif";
+		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140523_sum.tif";
+		transferGeo(fromFile, toFile);
+		toFile = "/home/nclinton/Documents/evi_temperature_sum_20140523_p.tif";
 		transferGeo(fromFile, toFile);
 	}
 
