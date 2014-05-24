@@ -17,6 +17,7 @@ import cn.edu.tsinghua.gui.Graph;
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
 
+import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.ImageData;
 import com.berkenviro.imageprocessing.SplineFunction;
 import com.vividsolutions.jts.geom.Point;
@@ -322,7 +323,6 @@ public class ImageLoadr6 implements Loadr {
 		};
 		try {
 
-			ImageLoadr4 loadr4 = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
 			ImageLoadr6 loadr6 = new ImageLoadr6(evi, eviDir, eviQCDir, doyDir, mod13Checker);
 			Calendar cal = Calendar.getInstance();
 			cal.set(2010, 0, 1);
@@ -333,39 +333,48 @@ public class ImageLoadr6 implements Loadr {
 //			double y = -24.0;
 			double x = 133.4;
 			double y = -13.3;
-//			List<double[]> series4 = loadr4.getSeries(x,y);
 			List<double[]> series6 = loadr6.getSeries(x,y);
 			System.out.println("Point: "+Arrays.toString(new double[] {x,y})
-//					+"Length 4 = "+series4.size()+" Length 6 = "+series6.size());
 					+" Length 6 = "+series6.size());
 			System.out.println("max "+series6.get(series6.size() - 1)[0]);
 			for (int t=0; t<series6.size(); t++) {
-//				System.out.println("\tloadr4:"+Arrays.toString(series4.get(t))+" loadr6:"+Arrays.toString(series6.get(t)));
-				System.out.println("\t loadr6:"+Arrays.toString(series6.get(t)));
+				System.out.println(Arrays.toString(series6.get(t)));
 			}
 			
 			double[][] xy = TSUtils.getSeriesAsArray(series6);
 			Graph graph = new Graph(xy);
-			SplineFunction rSpline = new SplineFunction(xy);
-			double[][] sVals = TSUtils.splineValues(rSpline, new double[] {22, 714});
-			//graph.addSeries(sVals);
+			DuchonSplineFunction rSpline = new DuchonSplineFunction(xy);
+			double[][] sVals = TSUtils.splineValues(rSpline, new double[] {22, 714}, 1000);
+			graph.addSeries(sVals);
+			SplineFunction rSpline2 = new SplineFunction(xy);
+			double[][] sVals2 = TSUtils.splineValues(rSpline2, new double[] {36, 714}, 1000);
+			graph.addSeries(sVals2);
 			
-			ComplexMatrix mult = TSUtils.ndftMatrix(xy[0]);
-			ComplexMatrix freqs = TSUtils.ndftForward(mult, xy);
-			double[] power = TSUtils.logPowerSpectrum(freqs);
-			int highest = weka.core.Utils.minIndex(power);
-			//freqs.setElement(highest, 0, Complex.zero());
-			System.out.println(Arrays.toString(power));
-			ComplexMatrix back = TSUtils.ndftReverse(mult, freqs);
-			double[] reals = TSUtils.realPart(back);
-			System.out.println(Arrays.toString(reals));
-			graph.addSeries(new double[][] {xy[0], reals});
+			ArrayFunction function = new ArrayFunction(xy);
+			System.out.println("start: "+xy[0][0]+", end: "+xy[0][xy[0].length-1]);
+			double[][] smooth = TSUtils.smoothFunction(function, xy[0][0], xy[0][xy[0].length-1]+1, 0.99);
+			graph.addSeries(smooth);
+			// The smooth one actually doesn't look too bad.  This is nice chart, too.
+			
+			// The following looks sketchy.  Still not right.
+//			ComplexMatrix mult = TSUtils.ndftMatrix(xy[0]);
+//			ComplexMatrix freqs = TSUtils.ndftForward(mult, xy);
+//			double[] power = TSUtils.logPowerSpectrum(freqs);
+//			int highest = weka.core.Utils.minIndex(power);
+//			//freqs.setElement(highest, 0, Complex.zero());
+//			System.out.println(Arrays.toString(power));
+//			ComplexMatrix back = TSUtils.ndftReverse(mult, freqs);
+//			double[] reals = TSUtils.realPart(back);
+//			System.out.println(Arrays.toString(reals));
+//			graph.addSeries(new double[][] {xy[0], reals});
 			//graph.addSeries(new double[][] {Arrays.copyOfRange(xy[0], 1, xy[0].length-2), Arrays.copyOfRange(reals, 1, reals.length-2)});
 			
-//			TreeMap<Double, Double> map = TSUtils.getPieceWise(series6, 64);
-//			for (Double d : map.keySet()) {
-//				System.out.println(d+", "+map.get(d));
-//			}
+			Double[] map = TSUtils.getPieceWise(series6, 64);
+			for (int d=0; d<map.length; d++) {
+				if (map[d] != null) {
+					System.out.println(d+","+map[d]);
+				}
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

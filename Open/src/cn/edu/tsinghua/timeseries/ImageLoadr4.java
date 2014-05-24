@@ -13,11 +13,16 @@ import java.util.List;
 
 import org.gdal.gdal.gdal;
 
+import cn.edu.tsinghua.gui.Graph;
 import cn.edu.tsinghua.lidar.BitChecker;
 import cn.edu.tsinghua.modis.BitCheck;
 
+import com.berkenviro.imageprocessing.ArrayFunction;
 import com.berkenviro.imageprocessing.ImageData;
+import com.berkenviro.imageprocessing.SplineFunction;
 import com.vividsolutions.jts.geom.Point;
+
+import flanagan.complex.ComplexMatrix;
 
 /**
  * @author Nicholas Clinton
@@ -316,23 +321,77 @@ public class ImageLoadr4 implements Loadr {
 //		}
 		
 		// 20140321 check blank spots
-		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
-		String eviDir = "EVI";
-		String eviQCDir = "VI_QC";
-		BitCheck mod13Checker = new BitCheck() {
-			@Override
-			public boolean isOK(int check) {
-				return BitChecker.mod13ok(check);
-			}
-		};
+//		String[] evi = new String[] {"/data/MOD13A2/2010", "/data/MOD13A2/2011"};
+//		String eviDir = "EVI";
+//		String eviQCDir = "VI_QC";
+//		BitCheck mod13Checker = new BitCheck() {
+//			@Override
+//			public boolean isOK(int check) {
+//				return BitChecker.mod13ok(check);
+//			}
+//		};
+//		try {
+//			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
+//			double x = -87.9108613514;
+//			double y = 40.4467308069;
+//			List<double[]> series = responseLoadr.getSeries(x,y);
+//			System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
+//			for (double[] t : series) {
+//				System.out.println("\t"+Arrays.toString(t));
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		
+		
 		try {
-			ImageLoadr4 responseLoadr = new ImageLoadr4(evi, eviDir, eviQCDir, mod13Checker);
-			double x = -87.9108613514;
-			double y = 40.4467308069;
-			List<double[]> series = responseLoadr.getSeries(x,y);
-			System.out.println("Point: "+Arrays.toString(new double[] {x,y})+"Length: "+series.size());
-			for (double[] t : series) {
-				System.out.println("\t"+Arrays.toString(t));
+			String[] temperature = new String[] {"/data/MYD11A2/2008", "/data/MYD11A2/2009", "/data/MYD11A2/2010", "/data/MYD11A2/2011"};
+			String tempDir = "LST_DAY";
+			String tempQCDir = "QC_DAY";
+			BitCheck mod11Checker = new BitCheck() {
+				@Override
+				public boolean isOK(int check) {
+					return BitChecker.mod11ok(check);
+				}
+			};
+			ImageLoadr4 loadr4 = new ImageLoadr4(temperature, tempDir, tempQCDir, mod11Checker);
+			Calendar cal = Calendar.getInstance();
+			cal.set(2008, 0, 0);
+			loadr4.setDateZero(cal);
+			//		double x = -87.9108613514;
+			//		double y = 40.4467308069;
+			//		double x = 135.2;
+			//		double y = -24.0;
+			double x = 133.4;
+			double y = -13.3;
+			List<double[]> series4 = loadr4.getSeries(x,y);
+			System.out.println("Point: "+Arrays.toString(new double[] {x,y})
+					+"Length 4 = "+series4.size());
+
+			System.out.println("max "+series4.get(series4.size() - 1)[0]);
+			for (int t=0; t<series4.size(); t++) {
+				System.out.println(Arrays.toString(series4.get(t)).replace("[", "").replace("]", ""));
+			}
+			System.out.println();
+			
+			double[][] xy = TSUtils.getSeriesAsArray(series4);
+			Graph graph = new Graph(xy);
+			SplineFunction rSpline = new SplineFunction(xy);
+			double[][] sVals = TSUtils.splineValues(rSpline, new double[] {16, 1432}, 1000);
+			graph.addSeries(sVals);
+			DuchonSplineFunction rSpline2 = new DuchonSplineFunction(xy);
+			double[][] sVals2 = TSUtils.splineValues(rSpline2, new double[] {16, 1432}, 1000);
+			graph.addSeries(sVals2);
+			ArrayFunction function = new ArrayFunction(xy);
+			System.out.println("start: "+xy[0][0]+", end: "+xy[0][xy[0].length-1]);
+			double[][] smooth = TSUtils.smoothFunction(function, xy[0][0], xy[0][xy[0].length-1]+1, 0.98);
+			graph.addSeries(smooth);
+
+			Double[] map = TSUtils.getPieceWise(series4, 32);
+			for (int d=0; d<map.length; d++) {
+				if (map[d] != null) {
+					System.out.println(d+","+map[d]);
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

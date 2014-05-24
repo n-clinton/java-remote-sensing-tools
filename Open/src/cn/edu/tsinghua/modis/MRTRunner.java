@@ -649,9 +649,15 @@ public class MRTRunner {
 //		new MRTRunner(MRTRunner.MOD13).processDirs(productDir, MRTRunner.COMPOSITE_DOY);
 		
 		// 20140520
-		String productDir = "/data/MYD11A2/2009";
+//		String productDir = "/data/MYD11A2/2009";
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
+//		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
+		
+		// 20140521
+		String productDir = "/data/MYD11A2/2008";
 		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_LST_DAY);
 		new MRTRunner(MRTRunner.MOD11).processDirs(productDir, MRTRunner.MOD11_QC_DAY);
+		
 	}
 	
 }
