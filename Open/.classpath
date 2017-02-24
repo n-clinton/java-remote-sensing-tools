@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/standalone/earthengine/extensions/jars/gdal.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/CommonsMath"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/imageio-ext"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JAI"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Weka"/>
-	<classpathentry kind="lib" path="C:/Program Files/GDAL/java/gdal.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/jai-1_1_3-lib/jai-1_1_3/lib/jai_codec.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/jai-1_1_3-lib/jai-1_1_3/lib/jai_core.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/jai_imageio-1.1.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/weka-3-6-13/weka.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/GeoTools"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/commons-math-2.0/commons-math-2.0.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/commons-math3-3.5/commons-math3-3.5.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/SavitskyGolay/sgfilter_v1r5_src/sgfilter_v1r5.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/JSpline/lib/jspline.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/JSci/flanagan.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/JSci/classes/jsci-core.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/JSci/classes/jsci-xtra.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/ftp4j-1.7.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/jsoup-1.7.3.jar"/>
+	<classpathentry kind="lib" path="/Users/nclinton/Documents/Java_libs/JavaAPIforKml.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

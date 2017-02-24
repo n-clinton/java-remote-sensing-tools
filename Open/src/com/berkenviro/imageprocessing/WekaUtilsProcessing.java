@@ -2453,112 +2453,112 @@ public class WekaUtilsProcessing extends WekaUtils {
 		//		}
 
 
-		// 60/40 split
-		String filename = "/Users/nclinton/Documents/Global_metaprediction/test3/AllMethodAcc_Simplified_nominalized.arff";
-		Instances instances = loadArff(filename);
-		instances.setClassIndex(2); // "interpretation"
-		System.out.println(instances.toSummaryString());
-		instances.randomize(new Random());
-
-		// Classifiers.  All defaults.
-		Classifier[] cls = new Classifier[2];
-		OneR oneR = new OneR();
-		cls[1] = oneR;
-		J48 j48 = new J48();
-		cls[0] = j48;
-
-		for (Classifier cl : cls) {
-			System.out.println("n,\tacc1,\tacc2,\tsd2");
-			for (int n=10; n<instances.numInstances(); n+=100) { 
-				System.out.print(n+",\t");
-				// partition
-				Random rand = new Random(1);   // create seeded number generator
-				Instances randData = new Instances(instances, 0, n);   // subset of training
-				randData.randomize(rand);         // randomize data with number generator
-				int pivot = (int)(0.6*n);
-				Instances train = new Instances(randData, 0, pivot);
-				Instances test = new Instances(randData, pivot+1, n-pivot-1);
-
-				// prediction of class
-				DecimalFormat myFormatter = new DecimalFormat("##.###");
-				try {
-					cl.buildClassifier(train);
-					Evaluation eval = new Evaluation(test);
-					eval.evaluateModel(cl, test);
-					System.out.print(myFormatter.format(eval.pctCorrect())+",\t");
-				} catch (Exception e1) {
-					e1.printStackTrace();
-				}
-
-				// prediction of base classifier label
-				double accuracy = 0.0;
-				try {
-					// make meta training **************************************************
-					train.setClassIndex(2); // "interpreted"
-					Attribute[] predictors = {
-							train.attribute("J48"),
-							train.attribute("MLC"),
-							train.attribute("RF"),
-							train.attribute("SVM"),
-							train.attribute("Seg"),
-							train.attribute("Agg"),
-					};
-					double[] costs = new double[predictors.length];
-					int a=0;
-					for (Attribute att : predictors) {
-						AttributeClassifier classy = new AttributeClassifier(att);
-						Evaluation evaluation = new Evaluation(train);
-						evaluation.evaluateModel(classy, train);
-						costs[a] = evaluation.errorRate();
-						a++;
-					}
-					Instances metatrain = makeTraining(train, predictors, costs);
-
-					// remove the old class index, the true response
-					metatrain.deleteAttributeAt(2); // "interpreted"
-					// set the new class index to the level1 response
-					metatrain.setClassIndex(metatrain.numAttributes()-1);
-					Attribute classAtt = metatrain.classAttribute(); // "response"
-
-					cl.buildClassifier(metatrain);
-					// this classifier is now trained to predict an attribute name
-
-					// meta-prediction
-					// give the test a level1 response
-					test.insertAttributeAt(classAtt, test.numAttributes()); 
-					test.setClassIndex(test.numAttributes()-1);
-					// copy the test
-					Instances metatest = new Instances(test);
-
-					// remove the level0 response prior to classification
-					Remove rm = new Remove();
-					rm.setAttributeIndicesArray(new int[] {2}); // "interpreted"
-					rm.setInputFormat(metatest);
-					rm.setInvertSelection(true);
-					FilteredClassifier fc = new FilteredClassifier();
-					fc.setClassifier(cl);
-					fc.setFilter(rm);
-					// predict the level1 response
-					for (int i = 0; i < test.numInstances(); i++) {
-						double clsLabel = fc.classifyInstance(test.instance(i));
-						metatest.instance(i).setClassValue(clsLabel);
-						//System.out.println(metatest.instance(i));
-					}
-					// the metatest instances now have predicted best level0 labels
-
-					metatest.setClassIndex(2); // "interpreted"
-					Attribute level1response = test.attribute("response");
-					MetaAttributeClassifier classy = new MetaAttributeClassifier(level1response);
-					Evaluation evaluation = new Evaluation(metatest);
-					evaluation.evaluateModel(classy, metatest);
-					accuracy = evaluation.pctCorrect();
-					System.out.printf(myFormatter.format(accuracy)+"\n");
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			} // end learning size
-			System.out.println(cl.toString());
-		}
+//		// 60/40 split
+//		String filename = "/Users/nclinton/Documents/Global_metaprediction/test3/AllMethodAcc_Simplified_nominalized.arff";
+//		Instances instances = loadArff(filename);
+//		instances.setClassIndex(2); // "interpretation"
+//		System.out.println(instances.toSummaryString());
+//		instances.randomize(new Random());
+//
+//		// Classifiers.  All defaults.
+//		Classifier[] cls = new Classifier[2];
+//		OneR oneR = new OneR();
+//		cls[1] = oneR;
+//		J48 j48 = new J48();
+//		cls[0] = j48;
+//
+//		for (Classifier cl : cls) {
+//			System.out.println("n,\tacc1,\tacc2,\tsd2");
+//			for (int n=10; n<instances.numInstances(); n+=100) { 
+//				System.out.print(n+",\t");
+//				// partition
+//				Random rand = new Random(1);   // create seeded number generator
+//				Instances randData = new Instances(instances, 0, n);   // subset of training
+//				randData.randomize(rand);         // randomize data with number generator
+//				int pivot = (int)(0.6*n);
+//				Instances train = new Instances(randData, 0, pivot);
+//				Instances test = new Instances(randData, pivot+1, n-pivot-1);
+//
+//				// prediction of class
+//				DecimalFormat myFormatter = new DecimalFormat("##.###");
+//				try {
+//					cl.buildClassifier(train);
+//					Evaluation eval = new Evaluation(test);
+//					eval.evaluateModel(cl, test);
+//					System.out.print(myFormatter.format(eval.pctCorrect())+",\t");
+//				} catch (Exception e1) {
+//					e1.printStackTrace();
+//				}
+//
+//				// prediction of base classifier label
+//				double accuracy = 0.0;
+//				try {
+//					// make meta training **************************************************
+//					train.setClassIndex(2); // "interpreted"
+//					Attribute[] predictors = {
+//							train.attribute("J48"),
+//							train.attribute("MLC"),
+//							train.attribute("RF"),
+//							train.attribute("SVM"),
+//							train.attribute("Seg"),
+//							train.attribute("Agg"),
+//					};
+//					double[] costs = new double[predictors.length];
+//					int a=0;
+//					for (Attribute att : predictors) {
+//						AttributeClassifier classy = new AttributeClassifier(att);
+//						Evaluation evaluation = new Evaluation(train);
+//						evaluation.evaluateModel(classy, train);
+//						costs[a] = evaluation.errorRate();
+//						a++;
+//					}
+//					Instances metatrain = makeTraining(train, predictors, costs);
+//
+//					// remove the old class index, the true response
+//					metatrain.deleteAttributeAt(2); // "interpreted"
+//					// set the new class index to the level1 response
+//					metatrain.setClassIndex(metatrain.numAttributes()-1);
+//					Attribute classAtt = metatrain.classAttribute(); // "response"
+//
+//					cl.buildClassifier(metatrain);
+//					// this classifier is now trained to predict an attribute name
+//
+//					// meta-prediction
+//					// give the test a level1 response
+//					test.insertAttributeAt(classAtt, test.numAttributes()); 
+//					test.setClassIndex(test.numAttributes()-1);
+//					// copy the test
+//					Instances metatest = new Instances(test);
+//
+//					// remove the level0 response prior to classification
+//					Remove rm = new Remove();
+//					rm.setAttributeIndicesArray(new int[] {2}); // "interpreted"
+//					rm.setInputFormat(metatest);
+//					rm.setInvertSelection(true);
+//					FilteredClassifier fc = new FilteredClassifier();
+//					fc.setClassifier(cl);
+//					fc.setFilter(rm);
+//					// predict the level1 response
+//					for (int i = 0; i < test.numInstances(); i++) {
+//						double clsLabel = fc.classifyInstance(test.instance(i));
+//						metatest.instance(i).setClassValue(clsLabel);
+//						//System.out.println(metatest.instance(i));
+//					}
+//					// the metatest instances now have predicted best level0 labels
+//
+//					metatest.setClassIndex(2); // "interpreted"
+//					Attribute level1response = test.attribute("response");
+//					MetaAttributeClassifier classy = new MetaAttributeClassifier(level1response);
+//					Evaluation evaluation = new Evaluation(metatest);
+//					evaluation.evaluateModel(classy, metatest);
+//					accuracy = evaluation.pctCorrect();
+//					System.out.printf(myFormatter.format(accuracy)+"\n");
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}
+//			} // end learning size
+//			System.out.println(cl.toString());
+//		}
 
 
 	}
